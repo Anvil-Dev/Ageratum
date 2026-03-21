@@ -1,0 +1,11 @@
+[versions]
+minecraft = "1.21.1"
+neoForge = "21.1.220"
+modDevGradle = "2.0.78"
+lombok = "8.7.1"
+
+[libraries]
+
+[plugins]
+modDevGradle = { id = "net.neoforged.moddev", version.ref = "modDevGradle" }
+lombok = { id = "io.freefair.lombok", version.ref = "lombok" }

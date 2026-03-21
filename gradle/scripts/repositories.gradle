@@ -1,0 +1,34 @@
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { // Anvil Lib
+        name = "Cjsah Maven"
+        url = "https://server.cjsah.net:1002/maven/"
+        content {
+            includeGroup "dev.anvilcraft.lib"
+            includeGroup "dev.dubhe"
+        }
+    }
+    maven { // Registrate Fork
+        name = "Ithundxr Maven"
+        url = "https://maven.ithundxr.dev/snapshots"
+        content {
+            includeGroup "com.tterrag.registrate"
+        }
+    }
+    maven { // KubeJS, Rhino
+        name = "Saps Maven"
+        url = "https://maven.latvian.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
+    maven {// ProbeJS
+        name = "CurseForge Maven"
+        url = "https://beta.cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+}

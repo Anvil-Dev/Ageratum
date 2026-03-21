@@ -1,0 +1,44 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'idea'
+    alias libs.plugins.modDevGradle
+    alias libs.plugins.lombok
+}
+
+String buildNumber
+String buildType = 'build'
+if (System.getenv("CI_BUILD") == 'false') buildNumber = null
+else {
+    if (System.getenv("PR_BUILD") != 'false') buildType = 'pr'
+    buildNumber = System.getenv("GITHUB_RUN_NUMBER")
+}
+def envVersion = System.getenv("GITHUB_REF")
+if (envVersion != null && envVersion.startsWith("refs/tags/")) {
+    version = envVersion.substring(envVersion.lastIndexOf('/') + 1)
+} else {
+    version = "${mod_version}" + (buildNumber != null ? "+${buildType}.${buildNumber}" : "")
+}
+group = maven_group
+
+apply from: "$rootDir/gradle/scripts/moddevgradle.gradle"
+apply from: "$rootDir/gradle/scripts/repositories.gradle"
+apply from: "$rootDir/gradle/scripts/jars.gradle"
+apply from: "$rootDir/gradle/scripts/publishing.gradle"
+apply from: "$rootDir/gradle/scripts/resources.gradle"
+apply from: "$rootDir/dependencies.gradle"
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
+
+lombok {
+    version = "1.18.34"
+}
