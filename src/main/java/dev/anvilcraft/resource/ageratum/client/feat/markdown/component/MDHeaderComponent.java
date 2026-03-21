@@ -9,15 +9,29 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+/**
+ * Markdown 标题组件。
+ *
+ * <p>支持 ATX 形式标题（{@code # ~ ######}），并根据标题级别调整缩放比例。</p>
+ */
 public class MDHeaderComponent extends MDComponent {
     private static final Pattern HEADER_PATTERN = Pattern.compile("^\\s{0,3}(#{1,6})\\s+(.+?)\\s*#*\\s*$");
     protected final int level;
 
+    /**
+     * 创建标题组件。
+     *
+     * @param level 标题级别（1-6）
+     * @param text  标题文本
+     */
     public MDHeaderComponent(int level, String text) {
         super(text);
         this.level = level;
     }
 
+    /**
+     * 尝试从单行文本解析标题组件。
+     */
     public static @Nullable MDHeaderComponent parse(String text) {
         Matcher matcher = HEADER_PATTERN.matcher(text);
         if (!matcher.matches()) return null;
@@ -26,6 +40,9 @@ public class MDHeaderComponent extends MDComponent {
         return new MDHeaderComponent(level, headerText);
     }
 
+    /**
+     * 按标题级别计算渲染缩放比例。
+     */
     private float getScale() {
         return Math.max(1.5f - (this.level - 1) * 0.2f, 1.0f);
     }
@@ -38,6 +55,9 @@ public class MDHeaderComponent extends MDComponent {
         return (int) Math.floor(value / this.getScale());
     }
 
+    /**
+     * 渲染标题文本；一级标题额外绘制一条分隔线。
+     */
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         PoseStack pose = guiGraphics.pose();
@@ -51,6 +71,9 @@ public class MDHeaderComponent extends MDComponent {
         pose.popPose();
     }
 
+    /**
+     * 计算标题渲染高度（含一级标题分隔线高度）。
+     */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int height = this.scale(super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY)));

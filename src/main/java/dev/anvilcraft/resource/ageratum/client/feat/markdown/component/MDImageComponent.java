@@ -15,16 +15,28 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
+/**
+ * 图片组件。
+ *
+ * <p>支持独占一行的 Markdown 图片语法，图片资源会被映射到
+ * {@code textures/} 目录下并按可用区域等比缩放。</p>
+ */
 public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
     private final ResourceLocation imageLocation;
 
+    /**
+     * 创建图片组件。
+     */
     public MDImageComponent(ResourceLocation imageLocation) {
         super(FormattedText.EMPTY);
         this.imageLocation = imageLocation;
     }
 
+    /**
+     * 尝试将一行文本解析为图片组件。
+     */
     public static @Nullable MDImageComponent parse(String text) {
         Matcher matcher = IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
@@ -43,6 +55,9 @@ public class MDImageComponent extends MDComponent {
         }
     }
 
+    /**
+     * 按缩放后的尺寸渲染图片。
+     */
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         Size size = this.resolveSize(minecraft);
@@ -59,12 +74,18 @@ public class MDImageComponent extends MDComponent {
         pose.popPose();
     }
 
+    /**
+     * 返回图片在目标区域中的渲染高度。
+     */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         Size size = this.resolveSize(minecraft);
         return this.computeRenderSize(size, maxX, maxY).height();
     }
 
+    /**
+     * 在可用宽高约束下计算等比缩放后的尺寸。
+     */
     private Size computeRenderSize(Size source, int maxX, int maxY) {
         int availableWidth = Math.max(1, maxX);
         int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : Math.max(1, maxY);
@@ -75,6 +96,9 @@ public class MDImageComponent extends MDComponent {
         return new Size(width, height);
     }
 
+    /**
+     * 获取图片原始尺寸，缺失时使用缓存或回退默认值。
+     */
     private Size resolveSize(Minecraft minecraft) {
         Size cachedSize = IMAGE_SIZE_CACHE.get(this.imageLocation);
         if (cachedSize != null) {
@@ -95,6 +119,9 @@ public class MDImageComponent extends MDComponent {
         return size;
     }
 
+    /**
+     * 简单尺寸值对象。
+     */
     private record Size(int width, int height) {
     }
 }

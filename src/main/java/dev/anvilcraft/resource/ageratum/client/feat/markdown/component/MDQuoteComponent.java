@@ -9,6 +9,11 @@ import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
 
+/**
+ * 引用块组件。
+ *
+ * <p>按层级渲染左侧竖线，并对引用文本使用较浅默认颜色。</p>
+ */
 public class MDQuoteComponent extends MDComponent {
     private static final int LEVEL_INDENT = 10;
     private static final int TEXT_PADDING = 4;
@@ -21,11 +26,17 @@ public class MDQuoteComponent extends MDComponent {
     };
     private final List<QuoteLine> lines;
 
+    /**
+     * 使用解析后的引用行创建组件。
+     */
     public MDQuoteComponent(List<QuoteLine> lines) {
         super(FormattedText.EMPTY);
         this.lines = List.copyOf(lines);
     }
 
+    /**
+     * 渲染引用块内容与层级竖线。
+     */
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         int y = 0;
@@ -59,6 +70,9 @@ public class MDQuoteComponent extends MDComponent {
         }
     }
 
+    /**
+     * 计算引用块总高度。
+     */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int totalHeight = 0;
@@ -75,7 +89,9 @@ public class MDQuoteComponent extends MDComponent {
         return LEVEL_LINE_COLORS[level % LEVEL_LINE_COLORS.length];
     }
 
-
+    /**
+     * 单行引用数据，包含层级与文本。
+     */
     public record QuoteLine(int level, String text) {
     }
 }

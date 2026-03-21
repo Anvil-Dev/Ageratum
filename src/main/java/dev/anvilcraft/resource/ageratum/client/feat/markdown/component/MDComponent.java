@@ -14,6 +14,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
+/**
+ * Markdown 渲染组件基类。
+ *
+ * <p>该类封装了通用文本渲染能力，以及内联 Markdown 语法（粗体、斜体、删除线、链接、
+ * 自动链接、代码跨度）与自定义样式标签（如 {@code <color=#xxxxxx>}）的解析逻辑。</p>
+ */
 public abstract class MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("!\\[([^]]*)]\\(([^)]+)\\)");
     private static final Pattern LINK_PATTERN = Pattern.compile("\\[([^]]+)]\\(([^)]+)\\)");
@@ -37,14 +43,23 @@ public abstract class MDComponent {
         registerBaseStyleParser();
     }
 
+    /**
+     * 使用原始文本创建组件，文本会按默认规则进行 Markdown 内联解析。
+     */
     public MDComponent(String text) {
         this(MDComponent.textFormat(text));
     }
 
+    /**
+     * 使用已格式化文本创建组件。
+     */
     public MDComponent(FormattedText text) {
         this.text = text;
     }
 
+    /**
+     * 在给定区域内渲染组件内容。
+     */
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
         PoseStack pose = guiGraphics.pose();
@@ -56,19 +71,31 @@ public abstract class MDComponent {
         }
     }
 
+    /**
+     * 计算组件在指定宽度下的渲染高度。
+     */
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         return minecraft.font.wordWrapHeight(this.text, maxX);
     }
 
+    /**
+     * 使用默认样式解析一段 Markdown 内联文本。
+     */
     public static FormattedText textFormat(String text) {
         return textFormat(text, Style.EMPTY);
     }
 
+    /**
+     * 基于指定基础样式解析 Markdown 内联文本。
+     */
     public static FormattedText textFormat(String text, Style baseStyle) {
         EscapeContext escapeContext = protectMarkdownEscapes(text);
         return parseMixedTextWithCodeSpan(escapeContext.text(), escapeContext, baseStyle);
     }
 
+    /**
+     * 解析混合文本中的代码跨度与普通 Markdown 片段。
+     */
     private static FormattedText parseMixedTextWithCodeSpan(String text, EscapeContext escapeContext, Style baseStyle) {
         List<FormattedText> parts = new ArrayList<>();
         int pos = 0;
@@ -110,6 +137,9 @@ public abstract class MDComponent {
         return FormattedText.composite(parts);
     }
 
+    /**
+     * 在文本中查找与开头反引号数量一致的闭合反引号区间。
+     */
     private static int findMatchingBackticks(String text, int startPos, int tickCount) {
         int pos = startPos;
         while (pos < text.length()) {
@@ -123,6 +153,9 @@ public abstract class MDComponent {
         return -1;
     }
 
+    /**
+     * 追加一段普通 Markdown 文本片段到结果列表。
+     */
     private static void appendMarkdownPart(List<FormattedText> parts, String text, Style style, EscapeContext escapeContext) {
         if (text.isEmpty()) {
             return;
@@ -130,6 +163,9 @@ public abstract class MDComponent {
         parts.add(parseMarkdownInlineText(text, style, escapeContext));
     }
 
+    /**
+     * 解析不含代码跨度的 Markdown 内联语法。
+     */
     private static FormattedText parseMarkdownInlineText(String text, Style parentStyle, EscapeContext escapeContext) {
         List<FormattedText> parts = new ArrayList<>();
         int pos = 0;
@@ -198,6 +234,9 @@ public abstract class MDComponent {
         return current;
     }
 
+    /**
+     * 保护反斜杠转义字符，避免在后续内联解析阶段被误处理。
+     */
     private static EscapeContext protectMarkdownEscapes(String text) {
         StringBuilder builder = new StringBuilder();
         List<EscapedLiteral> escapedLiterals = new ArrayList<>();
@@ -220,6 +259,9 @@ public abstract class MDComponent {
         return ch < 128 && COMMONMARK_ESCAPABLE_PUNCTUATION.indexOf(ch) >= 0;
     }
 
+    /**
+     * 恢复此前保护的转义字面量。
+     */
     private static String restoreEscapedLiterals(String text, EscapeContext escapeContext) {
         String restored = text;
         for (EscapedLiteral escapedLiteral : escapeContext.escapedLiterals()) {
@@ -228,11 +270,20 @@ public abstract class MDComponent {
         return restored;
     }
 
+    /**
+     * 注册一个自定义内联样式解析器。
+     *
+     * @param priority 优先级；数值越小越先匹配
+     * @param parser   样式解析器
+     */
     public static synchronized void registerStyleParser(int priority, InlineStyleParser parser) {
         INLINE_STYLE_PARSER_HOLDERS.add(new InlineStyleParserHolder(priority, nextInlineStyleParserOrder++, parser));
         INLINE_STYLE_PARSER_HOLDERS.sort(null);
     }
 
+    /**
+     * 注册基于起止标签的自定义内联样式解析器。
+     */
     public static void registerStyleParser(
         int priority,
         Pattern openTagPattern,
@@ -260,6 +311,9 @@ public abstract class MDComponent {
         registerStyleParser(0, Pattern.compile("<o>"), "</o>", (parentStyle, matcher) -> parentStyle.withObfuscated(true));
     }
 
+    /**
+     * 解析并应用自定义样式标签文本。
+     */
     public static FormattedText parseStyledText(String text, Style parentStyle) {
         List<FormattedText> parts = new ArrayList<>();
         int pos = 0;
@@ -309,11 +363,17 @@ public abstract class MDComponent {
         }
     }
 
+    /**
+     * 自定义内联样式解析接口。
+     */
     public @FunctionalInterface interface InlineStyleParser {
         @Nullable
         InlineStyleMatch parse(String text, int pos);
     }
 
+    /**
+     * 一次内联样式匹配结果，保存起止标签与样式生成逻辑。
+     */
     public static final class InlineStyleMatch {
         private final Pattern openTagPattern;
         private final Matcher matcher;
@@ -439,7 +499,7 @@ public abstract class MDComponent {
     }
 
     /**
-     * 查找与开始标签匹配的结束标签位置（处理嵌套）
+     * 查找与开始标签匹配的结束标签位置（支持同标签嵌套）。
      */
     private static int findMatchingCloseTag(String text, int startPos, InlineStyleMatch match) {
         int depth = 1;

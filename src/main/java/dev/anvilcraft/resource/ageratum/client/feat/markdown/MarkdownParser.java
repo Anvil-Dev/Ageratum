@@ -21,6 +21,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
+/**
+ * Markdown 解析器。
+ *
+ * <p>负责将原始 Markdown 文本按块级语义拆分为一组 {@link MDComponent}，
+ * 并在解析阶段处理引用链接、代码块、列表、表格、引用块等结构。</p>
+ *
+ * <p>解析器支持通过 {@link #registerComponentParser(int, MDComponentParser)}
+ * 注入额外的行级组件解析器，用于扩展自定义语法。</p>
+ */
 public class MarkdownParser {
     // ── Block patterns ──────────────────────────────────────────────
     private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.+)$");
@@ -43,10 +52,19 @@ public class MarkdownParser {
 
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
 
+    /**
+     * 创建解析器并注册内置组件解析器。
+     */
     public MarkdownParser() {
         this.registerBaseComponentParser();
     }
 
+    /**
+     * 注册一个行级组件解析器。
+     *
+     * @param priority 解析优先级；值越小优先级越高
+     * @param parser   组件解析函数
+     */
     public void registerComponentParser(int priority, MDComponentParser parser) {
         this.mdComponentParserHolders.add(new MDComponentParserHolder(priority, parser));
     }
@@ -57,6 +75,15 @@ public class MarkdownParser {
     }
 
     // ── Public entry point ───────────────────────────────────────────
+    /**
+     * 将 Markdown 文本解析为组件列表。
+     *
+     * <p>解析流程分为两阶段：先做引用链接预处理，再做逐行块级扫描；
+     * 最终会将段落、引用、列表、表格与代码块等临时缓冲区统一刷新为组件。</p>
+     *
+     * @param markdown 原始 Markdown 文本
+     * @return 按渲染顺序排列的组件列表
+     */
     public List<MDComponent> parse(String markdown) {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         String[] split = normalized.split("\n", -1);
@@ -148,7 +175,7 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Task list ────────────────────────────���──────────────
+            // ── Task list ───────────────────────────────────────────
             Matcher taskMatcher = TASK_LIST_PATTERN.matcher(s);
             if (taskMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
@@ -235,6 +262,9 @@ public class MarkdownParser {
     }
 
     // ── Flush helpers ─────────────────────────────────────────────────
+    /**
+     * 将所有临时缓冲区刷新为对应组件。
+     */
     private static void flushAll(
         List<MDComponent> components,
         StringBuilder paragraph,
@@ -250,6 +280,9 @@ public class MarkdownParser {
         flushIndentedCodeComponent(components, indentedCode);
     }
 
+    /**
+     * 刷新段落文本缓冲区。
+     */
     private static void flushParagraphComponent(List<MDComponent> components, StringBuilder builder) {
         if (builder.isEmpty()) return;
         builder.deleteCharAt(builder.length() - 1);
@@ -257,24 +290,36 @@ public class MarkdownParser {
         builder.setLength(0);
     }
 
+    /**
+     * 刷新引用块缓冲区。
+     */
     private static void flushQuoteComponent(List<MDComponent> components, List<MDQuoteComponent.QuoteLine> lines) {
         if (lines.isEmpty()) return;
         components.add(new MDQuoteComponent(lines));
         lines.clear();
     }
 
+    /**
+     * 刷新列表缓冲区。
+     */
     private static void flushListComponent(List<MDComponent> components, List<MDListComponent.ListItem> items) {
         if (items.isEmpty()) return;
         components.add(new MDListComponent(items));
         items.clear();
     }
 
+    /**
+     * 刷新表格缓冲区。
+     */
     private static void flushTableComponent(List<MDComponent> components, List<String> tableRows) {
         if (tableRows.isEmpty()) return;
         components.add(MDTableComponent.parse(tableRows));
         tableRows.clear();
     }
 
+    /**
+     * 刷新缩进代码块缓冲区，并处理尾部空行。
+     */
     private static void flushIndentedCodeComponent(List<MDComponent> components, StringBuilder builder) {
         if (builder.isEmpty()) return;
         String content = builder.toString();
@@ -285,6 +330,9 @@ public class MarkdownParser {
     }
 
     // ── Link reference helpers ────────────────────────────────────────
+    /**
+     * 收集文档中的引用链接定义（如 {@code [id]: url}）。
+     */
     private static Map<String, String> collectLinkRefs(String[] lines) {
         Map<String, String> refs = new LinkedHashMap<>();
         for (String line : lines) {
@@ -294,6 +342,9 @@ public class MarkdownParser {
         return refs;
     }
 
+    /**
+     * 展开引用链接语法为普通内联链接。
+     */
     private static String expandLinkRefs(String markdown, Map<String, String> refs) {
         // Replace [text][id] → [text](url)
         Matcher full = LINK_REF_FULL_PATTERN.matcher(markdown);
@@ -320,6 +371,9 @@ public class MarkdownParser {
     }
 
     // ── Misc helpers ──────────────────────────────────────────────────
+    /**
+     * 统计引用块前缀中的 {@code >} 层级。
+     */
     private static int countQuoteLevel(String markers) {
         int level = 0;
         for (int i = 0; i < markers.length(); i++) {
@@ -328,6 +382,9 @@ public class MarkdownParser {
         return Math.max(1, level);
     }
 
+    /**
+     * 统计列表缩进层级（2 个空格视为 1 级，Tab 按 2 空格处理）。
+     */
     private static int countIndentLevel(String indent) {
         int width = 0;
         for (int i = 0; i < indent.length(); i++) {
@@ -338,6 +395,12 @@ public class MarkdownParser {
         return Math.max(0, width / 2);
     }
 
+    /**
+     * 使用已注册解析器尝试将一行文本解析为组件。
+     *
+     * @param string 单行文本
+     * @return 命中时返回组件，否则返回 {@code null}
+     */
     public @Nullable MDComponent parseComponent(String string) {
         for (MDComponentParserHolder parserHolder : this.mdComponentParserHolders) {
             MDComponent component = parserHolder.parser().apply(string);
@@ -346,10 +409,16 @@ public class MarkdownParser {
         return null;
     }
 
+    /**
+     * 行级组件解析函数接口。
+     */
     @FunctionalInterface
     public interface MDComponentParser extends Function<String, MDComponent> {
     }
 
+    /**
+     * 解析器持有器，按优先级排序。
+     */
     private record MDComponentParserHolder(int priority, MDComponentParser parser)
         implements Comparable<MDComponentParserHolder> {
         @Override

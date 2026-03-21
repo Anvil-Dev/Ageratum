@@ -11,6 +11,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Markdown 表格组件。
+ *
+ * <p>支持解析管道表格语法、列对齐声明行，并渲染表头高亮与隔行背景。</p>
+ */
 public class MDTableComponent extends MDComponent {
     private static final int PADDING_H = 4;
     private static final int PADDING_V = 2;
@@ -19,6 +24,9 @@ public class MDTableComponent extends MDComponent {
     private static final int BORDER_COLOR = 0x88444444;
     private static final int HEADER_SEP_COLOR = 0xBB444444;
 
+    /**
+     * 表格列对齐方式。
+     */
     public enum Alignment {LEFT, CENTER, RIGHT}
 
     private final List<String[]> rows;
@@ -26,6 +34,9 @@ public class MDTableComponent extends MDComponent {
     private final int columnCount;
     private final boolean hasHeader;
 
+    /**
+     * 创建表格组件。
+     */
     private MDTableComponent(List<String[]> rows, Alignment[] alignments, boolean hasHeader) {
         super(FormattedText.EMPTY);
         this.rows = List.copyOf(rows);
@@ -34,6 +45,9 @@ public class MDTableComponent extends MDComponent {
         this.hasHeader = hasHeader;
     }
 
+    /**
+     * 从连续表格行文本解析出表格组件。
+     */
     public static MDTableComponent parse(List<String> tableRowStrings) {
         List<String[]> rows = new ArrayList<>();
         Alignment[] alignments = null;
@@ -66,6 +80,9 @@ public class MDTableComponent extends MDComponent {
         return new MDTableComponent(rows, alignments, hasHeader);
     }
 
+    /**
+     * 将单行表格文本拆分为单元格数组。
+     */
     private static String[] splitRow(String row) {
         String s = row.trim();
         if (s.startsWith("|")) s = s.substring(1);
@@ -75,6 +92,9 @@ public class MDTableComponent extends MDComponent {
         return cells;
     }
 
+    /**
+     * 判断一行是否为对齐分隔行（如 {@code |:---|---:|}）。
+     */
     private static boolean isSeparator(String[] cells) {
         if (cells.length == 0) return false;
         for (String cell : cells) {
@@ -83,6 +103,9 @@ public class MDTableComponent extends MDComponent {
         return true;
     }
 
+    /**
+     * 根据分隔行内容解析每列对齐方式。
+     */
     private static Alignment[] parseAlignments(String[] cells) {
         Alignment[] result = new Alignment[cells.length];
         for (int i = 0; i < cells.length; i++) {
@@ -94,6 +117,9 @@ public class MDTableComponent extends MDComponent {
         return result;
     }
 
+    /**
+     * 渲染表格边框、背景与单元格文本。
+     */
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         if (rows.isEmpty()) return;
@@ -147,6 +173,9 @@ public class MDTableComponent extends MDComponent {
         }
     }
 
+    /**
+     * 计算表格总高度。
+     */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         if (rows.isEmpty()) return 0;
@@ -158,10 +187,16 @@ public class MDTableComponent extends MDComponent {
         return total;
     }
 
+    /**
+     * 计算等宽列宽（包含左右内边距预算）。
+     */
     private int computeColWidth(int maxX) {
         return Math.max(10, (maxX - PADDING_H * 2 * columnCount) / columnCount);
     }
 
+    /**
+     * 计算单行表格的渲染高度。
+     */
     private int rowHeight(Minecraft minecraft, String[] row, int colWidth) {
         int maxLines = 1;
         for (int col = 0; col < columnCount; col++) {

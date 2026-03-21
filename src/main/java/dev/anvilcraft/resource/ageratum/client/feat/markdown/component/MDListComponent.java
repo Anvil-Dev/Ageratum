@@ -8,6 +8,11 @@ import net.minecraft.util.FormattedCharSequence;
 
 import java.util.List;
 
+/**
+ * Markdown 列表组件。
+ *
+ * <p>统一渲染无序列表、有序列表与任务列表，并支持按缩进层级绘制视觉引导带。</p>
+ */
 public class MDListComponent extends MDComponent {
     private static final String[] BULLETS = {"•", "▪", "◆", "▸"};
     private static final String TASK_UNCHECKED = "☐";
@@ -24,23 +29,38 @@ public class MDListComponent extends MDComponent {
     private static final int TASK_CHECKED_COLOR = 0x2E7D32;
     private final List<ListItem> items;
 
+    /**
+     * 使用解析后的列表项创建组件。
+     */
     public MDListComponent(List<ListItem> items) {
         super(FormattedText.EMPTY);
         this.items = List.copyOf(items);
     }
 
+    /**
+     * 创建无序列表项。
+     */
     public static ListItem unordered(int level, String text) {
         return new ListItem(ListKind.UNORDERED, Math.max(0, level), 0, false, text);
     }
 
+    /**
+     * 创建有序列表项。
+     */
     public static ListItem ordered(int level, int index, String text) {
         return new ListItem(ListKind.ORDERED, Math.max(0, level), Math.max(1, index), false, text);
     }
 
+    /**
+     * 创建任务列表项。
+     */
     public static ListItem task(int level, boolean checked, String text) {
         return new ListItem(ListKind.TASK, Math.max(0, level), 0, checked, text);
     }
 
+    /**
+     * 渲染整组列表项。
+     */
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         int y = 0;
@@ -89,6 +109,9 @@ public class MDListComponent extends MDComponent {
         }
     }
 
+    /**
+     * 计算列表总高度。
+     */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int totalHeight = 0;
@@ -115,12 +138,18 @@ public class MDListComponent extends MDComponent {
         return 0x000000;
     }
 
+    /**
+     * 列表类型。
+     */
     public enum ListKind {
         UNORDERED,
         ORDERED,
         TASK
     }
 
+    /**
+     * 单个列表项的数据结构。
+     */
     public record ListItem(ListKind kind, int level, int index, boolean checked, String text) {
     }
 }
