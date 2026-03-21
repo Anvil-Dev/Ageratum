@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * 文档加载工具类，负责从资源包中读取 Markdown 文档。
@@ -24,6 +27,9 @@ public final class GuideDocumentLoader {
     /** Markdown 文档在各命名空间内的根目录名称。 */
     private static final String GUIDE_ROOT = "ageratum";
 
+    /** 默认语言目录。 */
+    public static final String DEFAULT_LANGUAGE_CODE = "en_us";
+
     /** 工具类，禁止实例化。 */
     private GuideDocumentLoader() {
     }
@@ -31,17 +37,53 @@ public final class GuideDocumentLoader {
     /**
      * 将命名空间与文件参数组合为标准 {@link ResourceLocation}。
      *
+     * <p>该重载默认使用 {@link #DEFAULT_LANGUAGE_CODE} 目录。</p>
+     */
+    public static ResourceLocation toDocumentLocation(String namespace, String fileArgument) {
+        return toDocumentLocation(namespace, DEFAULT_LANGUAGE_CODE, fileArgument);
+    }
+
+    /**
+     * 将命名空间、语言代码与文件参数组合为标准 {@link ResourceLocation}。
+     *
      * <p>文件名会经过规范化处理（见 {@link #normalizeFileArgument}）:
      * 缺省时使用 {@code index}，自动补全 {@code .md} 后缀。</p>
      *
      * @param namespace    文档所属命名空间
+     * @param languageCode 语言代码（如 {@code en_us}、{@code zh_cn}）
      * @param fileArgument 文件名参数（可为 {@code null} 或空字符串）
      * @return 指向该文档的资源位置，格式为
-     *         {@code namespace:ageratum/<normalizedFile>.md}
+     *         {@code namespace:ageratum/<languageCode>/<normalizedFile>.md}
      */
-    public static ResourceLocation toDocumentLocation(String namespace, String fileArgument) {
+    public static ResourceLocation toDocumentLocation(String namespace, String languageCode, String fileArgument) {
+        String normalizedLanguage = normalizeLanguageCode(languageCode);
         String normalizedFile = normalizeFileArgument(fileArgument);
-        return ResourceLocation.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizedFile);
+        return ResourceLocation.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/" + normalizedFile);
+    }
+
+    /**
+     * 按“当前语言 -> en_us -> 旧路径”顺序解析第一个存在的文档位置。
+     */
+    public static Optional<ResourceLocation> resolveExistingLocation(
+        ResourceManager resourceManager,
+        String namespace,
+        String languageCode,
+        String fileArgument
+    ) {
+        String normalizedLanguage = normalizeLanguageCode(languageCode);
+        List<ResourceLocation> candidates = new ArrayList<>();
+        candidates.add(toDocumentLocation(namespace, normalizedLanguage, fileArgument));
+        if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
+            candidates.add(toDocumentLocation(namespace, DEFAULT_LANGUAGE_CODE, fileArgument));
+        }
+        // 兼容旧目录结构：assets/<namespace>/ageratum/<file>.md
+        candidates.add(ResourceLocation.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizeFileArgument(fileArgument)));
+        for (ResourceLocation location : candidates) {
+            if (exists(resourceManager, location)) {
+                return Optional.of(location);
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -82,21 +124,16 @@ public final class GuideDocumentLoader {
      * @param resourceManager 当前游戏资源管理器
      * @return 包含至少一个文档的命名空间名称列表（升序排列）
      */
-    public static List<String> listNamespaces(ResourceManager resourceManager) {
-        // 扫描所有命名空间下 ageratum/ 目录中的 .md 文件
-        Map<ResourceLocation, Resource> files = resourceManager.listResources(
-            GUIDE_ROOT,
-            location -> location.getPath().endsWith(".md")
-        );
-        List<String> namespaces = new ArrayList<>();
-        for (ResourceLocation location : files.keySet()) {
-            // 去重：每个命名空间只添加一次
-            if (!namespaces.contains(location.getNamespace())) {
-                namespaces.add(location.getNamespace());
-            }
+    public static List<String> listNamespaces(ResourceManager resourceManager, String languageCode) {
+        String normalizedLanguage = normalizeLanguageCode(languageCode);
+        Set<String> namespaces = new TreeSet<>();
+        namespaces.addAll(listNamespacesForLanguage(resourceManager, normalizedLanguage));
+        if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
+            namespaces.addAll(listNamespacesForLanguage(resourceManager, DEFAULT_LANGUAGE_CODE));
         }
-        namespaces.sort(Comparator.naturalOrder());
-        return namespaces;
+        // 合并旧目录结构，确保迁移期间命令补全不中断
+        namespaces.addAll(listNamespacesForRoot(resourceManager, GUIDE_ROOT + "/"));
+        return new ArrayList<>(namespaces);
     }
 
     /**
@@ -108,17 +145,47 @@ public final class GuideDocumentLoader {
      * @param namespace       目标命名空间
      * @return 该命名空间下所有文档的相对路径列表（不含扩展名，升序排列）
      */
-    public static List<String> listFiles(ResourceManager resourceManager, String namespace) {
-        // 仅扫描目标命名空间下的 .md 文件
+    public static List<String> listFiles(ResourceManager resourceManager, String namespace, String languageCode) {
+        String normalizedLanguage = normalizeLanguageCode(languageCode);
+        Set<String> result = new TreeSet<>();
+        result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/"));
+        if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
+            result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/" + DEFAULT_LANGUAGE_CODE + "/"));
+        }
+        // 合并旧目录结构，确保迁移期间命令补全不中断
+        result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/"));
+        return new ArrayList<>(result);
+    }
+
+    private static List<String> listNamespacesForLanguage(ResourceManager resourceManager, String languageCode) {
+        return listNamespacesForRoot(resourceManager, GUIDE_ROOT + "/" + languageCode + "/");
+    }
+
+    private static List<String> listNamespacesForRoot(ResourceManager resourceManager, String rootPrefix) {
+        String rootDirectory = rootPrefix.substring(0, rootPrefix.length() - 1);
         Map<ResourceLocation, Resource> files = resourceManager.listResources(
-            GUIDE_ROOT,
-            location -> location.getNamespace().equals(namespace) && location.getPath().endsWith(".md")
+            rootDirectory,
+            location -> location.getPath().startsWith(rootPrefix) && location.getPath().endsWith(".md")
+        );
+        Set<String> namespaces = new TreeSet<>();
+        for (ResourceLocation location : files.keySet()) {
+            namespaces.add(location.getNamespace());
+        }
+        return new ArrayList<>(namespaces);
+    }
+
+    private static List<String> listFilesForRoot(ResourceManager resourceManager, String namespace, String rootPrefix) {
+        String rootDirectory = rootPrefix.substring(0, rootPrefix.length() - 1);
+        Map<ResourceLocation, Resource> files = resourceManager.listResources(
+            rootDirectory,
+            location -> location.getNamespace().equals(namespace)
+                && location.getPath().startsWith(rootPrefix)
+                && location.getPath().endsWith(".md")
         );
         List<String> result = new ArrayList<>();
         for (ResourceLocation location : files.keySet()) {
-            // 去掉 "ageratum/" 前缀和 ".md" 后缀，得到相对文件名
             String path = location.getPath();
-            String relativePath = path.substring((GUIDE_ROOT + "/").length());
+            String relativePath = path.substring(rootPrefix.length());
             if (relativePath.endsWith(".md")) {
                 relativePath = relativePath.substring(0, relativePath.length() - 3);
             }
@@ -157,6 +224,16 @@ public final class GuideDocumentLoader {
             file += ".md";
         }
         return file;
+    }
+
+    /**
+     * 规范化语言代码（小写并使用下划线分隔）。
+     */
+    private static String normalizeLanguageCode(String languageCode) {
+        if (languageCode == null || languageCode.isBlank()) {
+            return DEFAULT_LANGUAGE_CODE;
+        }
+        return languageCode.trim().toLowerCase().replace('-', '_');
     }
 }
 

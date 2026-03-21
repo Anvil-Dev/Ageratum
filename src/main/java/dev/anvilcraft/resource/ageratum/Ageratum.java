@@ -18,6 +18,8 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
+import java.util.Optional;
+
 /**
  * Ageratum 模组主类。
  *
@@ -79,7 +81,7 @@ public class Ageratum {
                             }
                             // 枚举资源包中所有含有 ageratum/*.md 的命名空间
                             return SharedSuggestionProvider.suggest(
-                                GuideDocumentLoader.listNamespaces(minecraft.getResourceManager()),
+                                GuideDocumentLoader.listNamespaces(minecraft.getResourceManager(), getClientLanguageCode(minecraft)),
                                 builder
                             );
                         })
@@ -96,7 +98,11 @@ public class Ageratum {
                                     String namespace = StringArgumentType.getString(context, "namespace");
                                     // 枚举该命名空间下的所有 .md 文件（返回不含扩展名的相对路径）
                                     return SharedSuggestionProvider.suggest(
-                                        GuideDocumentLoader.listFiles(minecraft.getResourceManager(), namespace),
+                                        GuideDocumentLoader.listFiles(
+                                            minecraft.getResourceManager(),
+                                            namespace,
+                                            getClientLanguageCode(minecraft)
+                                        ),
                                         builder
                                     );
                                 })
@@ -125,10 +131,24 @@ public class Ageratum {
             return 0;
         }
 
-        // 将 namespace + fileArgument 规范化为完整 ResourceLocation
+        String languageCode = getClientLanguageCode(minecraft);
+
+        // 将 namespace + languageCode + fileArgument 解析为存在的 ResourceLocation（带回退）
         ResourceLocation documentLocation;
         try {
-            documentLocation = GuideDocumentLoader.toDocumentLocation(namespace, fileArgument);
+            Optional<ResourceLocation> resolved = GuideDocumentLoader.resolveExistingLocation(
+                minecraft.getResourceManager(),
+                namespace,
+                languageCode,
+                fileArgument
+            );
+            if (resolved.isEmpty()) {
+                context.getSource().sendFailure(Component.literal(
+                    "Guide file not found for language '" + languageCode + "'."
+                ));
+                return 0;
+            }
+            documentLocation = resolved.get();
         } catch (RuntimeException exception) {
             context.getSource().sendFailure(Component.literal("Invalid guide path."));
             return 0;
@@ -136,16 +156,23 @@ public class Ageratum {
 
         ResourceManager resourceManager = minecraft.getResourceManager();
 
-        // 检查文件是否存在于当前资源包中
-        if (!GuideDocumentLoader.exists(resourceManager, documentLocation)) {
-            context.getSource().sendFailure(Component.literal("Guide file not found: assets/"
-                + documentLocation.getNamespace() + "/" + documentLocation.getPath()));
-            return 0;
-        }
-
         // 读取文件内容并打开文档界面
         String content = GuideDocumentLoader.read(resourceManager, documentLocation);
         minecraft.setScreen(new GuideScreen(documentLocation, content));
         return 1;
+    }
+
+    /**
+     * 获取客户端当前语言代码。
+     *
+     * <p>若无法读取语言管理器，回退到 {@code en_us}。</p>
+     */
+    private static String getClientLanguageCode(Minecraft minecraft) {
+        try {
+            return minecraft.getLanguageManager().getSelected();
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Failed to read client language code, fallback to en_us", exception);
+            return GuideDocumentLoader.DEFAULT_LANGUAGE_CODE;
+        }
     }
 }
