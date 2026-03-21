@@ -309,6 +309,60 @@ public abstract class MDComponent {
             (parentStyle, matcher) -> parentStyle.withColor(Integer.parseInt(matcher.group(1), 16))
         );
         registerStyleParser(0, Pattern.compile("<o>"), "</o>", (parentStyle, matcher) -> parentStyle.withObfuscated(true));
+        
+        // 注册 hover 事件支持
+        registerStyleParser(
+            0,
+            Pattern.compile("<hover\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\">"),
+            "</hover>",
+            (parentStyle, matcher) -> {
+                String hoverType = matcher.group(1).toUpperCase();
+                String hoverData = matcher.group(2);
+                try {
+                    if ("SHOW_TEXT".equals(hoverType)) {
+                        return parentStyle.withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                            net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                            net.minecraft.network.chat.Component.literal(hoverData)
+                        ));
+                    }
+                } catch (Exception e) {
+                    // 如果处理失败，保持原样式
+                }
+                return parentStyle;
+            }
+        );
+        
+        // 注册 click 事件支持
+        registerStyleParser(
+            0,
+            Pattern.compile("<click\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\">"),
+            "</click>",
+            (parentStyle, matcher) -> {
+                String clickType = matcher.group(1).toUpperCase();
+                String clickData = matcher.group(2);
+                try {
+                    if ("OPEN_URL".equals(clickType)) {
+                        return parentStyle.withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                            net.minecraft.network.chat.ClickEvent.Action.OPEN_URL,
+                            clickData
+                        ));
+                    } else if ("COPY_TO_CLIPBOARD".equals(clickType)) {
+                        return parentStyle.withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                            net.minecraft.network.chat.ClickEvent.Action.COPY_TO_CLIPBOARD,
+                            clickData
+                        ));
+                    } else if ("SUGGEST_COMMAND".equals(clickType)) {
+                        return parentStyle.withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                            net.minecraft.network.chat.ClickEvent.Action.SUGGEST_COMMAND,
+                            clickData
+                        ));
+                    }
+                } catch (Exception e) {
+                    // 如果处理失败，保持原样式
+                }
+                return parentStyle;
+            }
+        );
     }
 
     /**

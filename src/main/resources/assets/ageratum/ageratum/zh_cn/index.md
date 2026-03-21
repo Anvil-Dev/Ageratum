@@ -24,6 +24,21 @@
 
 ---
 
+## 已实现：悬停和点击事件
+
+悬停事件可在鼠标悬停时显示额外文本：
+<hover type="SHOW_TEXT" data="这是一条有用的提示信息！">鼠标悬停在我上面</hover>
+
+点击事件允许文本响应点击操作：
+<click type="OPEN_URL" data="https://example.com">点击打开链接</click>
+<click type="COPY_TO_CLIPBOARD" data="一些要复制的文本">点击复制文本</click>
+<click type="SUGGEST_COMMAND" data="/ageratum ageratum">点击建议命令</click>
+
+您可以在同一文本中组合多种样式：
+<hover type="SHOW_TEXT" data="组合事件！"><click type="OPEN_URL" data="https://example.com">在我上面悬停或点击我！</click></hover>
+
+---
+
 ::: info
 这是一个信息框。
 :::

@@ -33,6 +33,7 @@
 - [超链接](https://example.com) 与自动链接
 - 转义字符支持
 - 自定义颜色标签
+- **悬停与点击事件**（`<hover>` 与 `<click>` 标签）
 
 ✅ **高级特性**
 - 引用链接定义与引用链接语法
@@ -87,6 +88,44 @@
 - `ageratum:tip` - 绿色建议框
 - `ageratum:warning` - 橙色警告框
 - `ageratum:danger` - 红色危险框
+
+### 悬停与点击事件
+
+支持交互式文本，允许玩家悬停查看提示或点击执行操作。
+
+#### 悬停事件（`<hover>`）
+
+在文本上悬停时显示提示信息：
+
+```markdown
+<hover type="SHOW_TEXT" data="这是提示文本">在我上面悬停</hover>
+```
+
+**支持的类型：**
+- `SHOW_TEXT`：显示纯文本提示信息（`data` 为提示文本内容）
+
+#### 点击事件（`<click>`）
+
+点击文本时执行相应操作：
+
+```markdown
+<click type="OPEN_URL" data="https://example.com">点击打开链接</click>
+<click type="COPY_TO_CLIPBOARD" data="复制的内容">点击复制</click>
+<click type="SUGGEST_COMMAND" data="/say hello">点击建议命令</click>
+```
+
+**支持的类型：**
+- `OPEN_URL`：打开网址（`data` 为完整 URL）
+- `COPY_TO_CLIPBOARD`：复制文本到剪贴板（`data` 为要复制的内容）
+- `SUGGEST_COMMAND`：在聊天框中建议命令（`data` 为命令文本）
+
+#### 组合使用
+
+可在同一文本中组合多种样式：
+
+```markdown
+<hover type="SHOW_TEXT" data="这是一条提示"><click type="OPEN_URL" data="https://example.com">点击查看官网</click></hover>
+```
 
 ### 预加载与缓存
 

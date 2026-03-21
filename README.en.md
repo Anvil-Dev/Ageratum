@@ -33,6 +33,7 @@ A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game
 - [Links](https://example.com) and autolinks
 - Escape character support
 - Custom color tags
+- **Hover and Click Events** (`<hover>` and `<click>` tags)
 
 ✅ **Advanced Features**
 - Reference link definitions and reference link syntax
@@ -87,6 +88,44 @@ Namespace can be omitted (defaults to `ageratum:`).
 - `ageratum:tip` - Green tip box
 - `ageratum:warning` - Orange warning box
 - `ageratum:danger` - Red danger box
+
+### Hover and Click Events
+
+Support interactive text that allows players to hover for tooltips or click to perform actions.
+
+#### Hover Events (`<hover>`)
+
+Display tooltip text when hovering over text:
+
+```markdown
+<hover type="SHOW_TEXT" data="This is the tooltip">Hover over me</hover>
+```
+
+**Supported Types:**
+- `SHOW_TEXT` - Display plain text tooltip (`data` is the tooltip content)
+
+#### Click Events (`<click>`)
+
+Execute an action when clicking on text:
+
+```markdown
+<click type="OPEN_URL" data="https://example.com">Click to open link</click>
+<click type="COPY_TO_CLIPBOARD" data="Text to copy">Click to copy</click>
+<click type="SUGGEST_COMMAND" data="/say hello">Click to suggest command</click>
+```
+
+**Supported Types:**
+- `OPEN_URL` - Open a URL (`data` is the complete URL)
+- `COPY_TO_CLIPBOARD` - Copy text to clipboard (`data` is the text to copy)
+- `SUGGEST_COMMAND` - Suggest a command in chat (`data` is the command text)
+
+#### Combining Styles
+
+You can combine multiple styles in the same text:
+
+```markdown
+<hover type="SHOW_TEXT" data="This is a tooltip"><click type="OPEN_URL" data="https://example.com">Click and hover on me!</click></hover>
+```
 
 ### Preloading & Caching
 
