@@ -4,8 +4,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinExtensionComponents;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
@@ -16,7 +18,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
@@ -33,6 +37,19 @@ public class AgeratumClient {
      * 模组日志记录器。
      */
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    /**
+     * 模组客户端侧构造函数，由 NeoForge 在加载时调用。
+     *
+     * @param modEventBus  模组专属事件总线
+     * @param modContainer 模组容器
+     */
+    public AgeratumClient(IEventBus modEventBus, ModContainer modContainer) {
+        // 注册自定义注册表
+        AgeratumRegistries.register(modEventBus);
+        // 触发内置扩展组件注册项的类加载
+        BuiltinExtensionComponents.init();
+    }
 
     /**
      * 获取客户端当前语言代码。
