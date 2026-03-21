@@ -26,43 +26,43 @@ public class GuideScreen extends Screen {
     protected static final float CONTENT_SCALE = 0.6f;
     protected static final float SCROLL_STEP = 16.0f;
     private static final String TEST_TEXT = """
-        # Praesent scelerisque
-        ## Vivamus euismod
-        Donec <color=#66ccff>molestie, sem ac varius
-        <color=#39c5bb>vulputate, <i>diam</i> <b>risus</b> pretium
-        enim</color>, ut fermentum velit velit</color> id tellus.
-        ### Aliquam convallis
-        Sed elementum lacinia magna, ut pulvinar justo pharetra at.
-        Vestibulum et imperdiet nulla.
+        # Markdown coverage demo
+        ## Headings and paragraph
+        This line covers **bold**, *italic*, ~~strike~~, [link text](https://example.com), and ![image alt](textures/gui/icon.png).
+        It also keeps custom tags: <color=#39c5bb>color text</color> and <o>obfuscated text</o>.
+        HTML-like markdown tags should now stay literal: <b>bold?</b> <i>italic?</i> <u>underline?</u> <s>strike?</s>.
 
-        # Fusce sit
-        ## Vivamus interdum
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
-        vel nulla nec dui mollis vulputate. Nulla et nulla sodales,
-        vulputate urna sed, viverra nulla.
+        ### Inline code and escaping
+        Inline code keeps literals: `**not bold** _not italic_ <color=#ff0000>not color</color> \\* \\_ \\~ \\``.
+        Escaped markdown punctuation should render as literals:
+        \\* \\_ \\~ \\` \\[ \\] \\( \\) \\# \\+ \\- \\. \\! \\| \\{ \\} \\< \\> \\@
 
+        ---
 
-        Vivamus euismod, nulla <u>molestie</u> vestibulum faucibus, est purus
-        dapibus mauris, sit amet <s>pellentesque</s> nulla diam quis nulla.
-        Vestibulum ut erat semper, ultrices <o>lacus</o> id, maximus mi.
-        Integer ut pretium orci.
-        ### Duis vestibulum
-        Aliquam <color=#39c5bb><b><i>convallis</i></b></color> ut
-        erat vel iaculis. Praesent faucibus
-        ultrices odio, a ornare tellus faucibus sit amet. Integer
-        ut nunc nunc. Nunc in mauris in eros bibendum dapibus.
-        Quisque pulvinar, arcu feugiat lacinia scelerisque, nisi
-        nunc sollicitudin mi, ultricies vulputate ante tortor
-        eleifend purus.
+        ## Blockquote
+        > Quote line one with **bold** and escaped \\*asterisk\\*.
+        > Quote line two with `code` and [link](https://example.com/docs).
 
+        ## Lists
+        - unordered item with *italic*
+        - unordered item with ~~strike~~ and escaped \\_underscore\\_
+        - unordered item with nested style **bold and _italic_**
 
-        Nam gravida libero lorem, vel fringilla velit cursus consequat.
-        Vivamus interdum vulputate lectus, vel malesuada odio blandit
-        ut. Etiam posuere faucibus nunc, vitae volutpat elit gravida ut.
-        Ut auctor sodales felis, ac ullamcorper ante placerat id. Orci
-        varius natoque penatibus et magnis dis parturient montes, nascetur
-        ridiculus mus. Nam consectetur ante ut tellus egestas condimentum.
-        Duis at lacus nec nisl efficitur hendrerit.
+        1. ordered item one
+        2. ordered item two with [link](https://example.com/list)
+        3. ordered item three with ![img](assets/test.png)
+
+        ## Fenced code block
+        ```
+        # everything in this block is literal
+        **not bold** _not italic_ ~~not strike~~
+        [not-link](https://example.com)
+        <b>not html style</b>
+        \\* \\_ \\~ \\` \\[ \\] \\(
+        ```
+
+        ## Mixed tail section
+        Final line with **bold + `code` + [link](https://example.com/end)** and escaped punctuation: \\? \\: \\; \\" \\' \\\\.
         """;
     protected final MarkdownParser parser;
     protected final List<MDComponent> parsedComponents;

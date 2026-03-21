@@ -4,9 +4,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.annotation.Nullable;
 
 public class MDHeaderComponent extends MDComponent {
+    private static final Pattern HEADER_PATTERN = Pattern.compile("^\\s{0,3}(#{1,6})\\s+(.+?)\\s*#*\\s*$");
     protected final int level;
 
     public MDHeaderComponent(int level, String text) {
@@ -15,13 +19,10 @@ public class MDHeaderComponent extends MDComponent {
     }
 
     public static @Nullable MDHeaderComponent parse(String text) {
-        if (!text.startsWith("#")) return null;
-        String[] split = text.split(" ");
-        if (split.length < 2) return null;
-        String levelStr = split[0];
-        if (!levelStr.matches("^#+$")) return null;
-        int level = levelStr.length();
-        String headerText = text.substring(level).trim();
+        Matcher matcher = HEADER_PATTERN.matcher(text);
+        if (!matcher.matches()) return null;
+        int level = matcher.group(1).length();
+        String headerText = matcher.group(2).trim();
         return new MDHeaderComponent(level, headerText);
     }
 

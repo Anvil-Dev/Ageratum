@@ -1,17 +1,25 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHorizontalRuleComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
 public class MarkdownParser {
+    private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^\\s*(\\d+)\\.\\s+(.+)$");
+    private static final Pattern UNORDERED_LIST_PATTERN = Pattern.compile("^\\s*[-+*]\\s+(.+)$");
+    private static final Pattern BLOCKQUOTE_PATTERN = Pattern.compile("^\\s*>\\s?(.*)$");
+    private static final Pattern HORIZONTAL_RULE_PATTERN = Pattern.compile("^\\s*([-*_])(?:\\s*\\1){2,}\\s*$");
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
 
     public MarkdownParser() {
@@ -27,27 +35,107 @@ public class MarkdownParser {
     }
 
     public List<MDComponent> parse(String markdown) {
-        String[] split = markdown.split("\n");
+        String[] split = markdown.replace("\r\n", "\n").replace('\r', '\n').split("\n", -1);
         List<MDComponent> components = new ArrayList<>();
-        StringBuilder waitStrBuilder = new StringBuilder();
+        StringBuilder paragraphBuilder = new StringBuilder();
+        StringBuilder quoteBuilder = new StringBuilder();
+        StringBuilder listBuilder = new StringBuilder();
+        StringBuilder codeBlockBuilder = new StringBuilder();
+        boolean inCodeBlock = false;
+
         for (String s : split) {
+            if (inCodeBlock) {
+                if (s.trim().startsWith("```")) {
+                    inCodeBlock = false;
+                    if (!codeBlockBuilder.isEmpty()) {
+                        codeBlockBuilder.deleteCharAt(codeBlockBuilder.length() - 1);
+                    }
+                    components.add(new MDCodeBlockComponent(codeBlockBuilder.toString()));
+                    codeBlockBuilder = new StringBuilder();
+                } else {
+                    codeBlockBuilder.append(s).append("\n");
+                }
+                continue;
+            }
+
+            if (s.trim().startsWith("```")) {
+                flushTextComponent(components, paragraphBuilder);
+                flushTextComponent(components, quoteBuilder);
+                flushTextComponent(components, listBuilder);
+                inCodeBlock = true;
+                continue;
+            }
+
+            Matcher quoteMatcher = BLOCKQUOTE_PATTERN.matcher(s);
+            if (quoteMatcher.matches()) {
+                flushTextComponent(components, paragraphBuilder);
+                flushTextComponent(components, listBuilder);
+                quoteBuilder.append("> ").append(quoteMatcher.group(1)).append("\n");
+                continue;
+            }
+
+            Matcher unorderedListMatcher = UNORDERED_LIST_PATTERN.matcher(s);
+            if (unorderedListMatcher.matches()) {
+                flushTextComponent(components, paragraphBuilder);
+                flushTextComponent(components, quoteBuilder);
+                listBuilder.append("- ").append(unorderedListMatcher.group(1)).append("\n");
+                continue;
+            }
+
+            Matcher orderedListMatcher = ORDERED_LIST_PATTERN.matcher(s);
+            if (orderedListMatcher.matches()) {
+                flushTextComponent(components, paragraphBuilder);
+                flushTextComponent(components, quoteBuilder);
+                listBuilder.append(orderedListMatcher.group(1)).append(". ").append(orderedListMatcher.group(2)).append("\n");
+                continue;
+            }
+
+            if (HORIZONTAL_RULE_PATTERN.matcher(s).matches()) {
+                flushTextComponent(components, paragraphBuilder);
+                flushTextComponent(components, quoteBuilder);
+                flushTextComponent(components, listBuilder);
+                components.add(new MDHorizontalRuleComponent());
+                continue;
+            }
+
             MDComponent component = this.parseComponent(s);
             if (component == null) {
-                waitStrBuilder.append(s).append("\n");
-            } else {
-                if (!waitStrBuilder.isEmpty()) {
-                    waitStrBuilder.deleteCharAt(waitStrBuilder.length() - 1);
-                    components.add(new MDTextComponent(waitStrBuilder.toString()));
-                    waitStrBuilder = new StringBuilder();
+                if (s.isBlank()) {
+                    flushTextComponent(components, paragraphBuilder);
+                    flushTextComponent(components, quoteBuilder);
+                    flushTextComponent(components, listBuilder);
+                } else {
+                    paragraphBuilder.append(s).append("\n");
                 }
+            } else {
+                flushTextComponent(components, paragraphBuilder);
+                flushTextComponent(components, quoteBuilder);
+                flushTextComponent(components, listBuilder);
                 components.add(component);
             }
         }
-        if (!waitStrBuilder.isEmpty()) {
-            waitStrBuilder.deleteCharAt(waitStrBuilder.length() - 1);
-            components.add(new MDTextComponent(waitStrBuilder.toString()));
+
+        if (inCodeBlock) {
+            if (!codeBlockBuilder.isEmpty()) {
+                codeBlockBuilder.deleteCharAt(codeBlockBuilder.length() - 1);
+            }
+            components.add(new MDCodeBlockComponent(codeBlockBuilder.toString()));
         }
+
+        flushTextComponent(components, paragraphBuilder);
+        flushTextComponent(components, quoteBuilder);
+        flushTextComponent(components, listBuilder);
+
         return components;
+    }
+
+    private static void flushTextComponent(List<MDComponent> components, StringBuilder builder) {
+        if (builder.isEmpty()) {
+            return;
+        }
+        builder.deleteCharAt(builder.length() - 1);
+        components.add(new MDTextComponent(builder.toString()));
+        builder.setLength(0);
     }
 
     public @Nullable MDComponent parseComponent(String string) {

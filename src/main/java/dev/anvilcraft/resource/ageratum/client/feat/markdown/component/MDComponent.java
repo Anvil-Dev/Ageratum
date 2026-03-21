@@ -15,6 +15,18 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 public abstract class MDComponent {
+    private static final Pattern IMAGE_PATTERN = Pattern.compile("!\\[([^]]*)]\\(([^)]+)\\)");
+    private static final Pattern LINK_PATTERN = Pattern.compile("\\[([^]]+)]\\(([^)]+)\\)");
+    private static final Pattern STRIKE_PATTERN = Pattern.compile("~~([^~\\n]+)~~");
+    private static final Pattern BOLD_ASTERISK_PATTERN = Pattern.compile("\\*\\*([^*\\n]+)\\*\\*");
+    private static final Pattern BOLD_UNDERSCORE_PATTERN = Pattern.compile("__([^_\\n]+)__");
+    private static final Pattern ITALIC_ASTERISK_PATTERN = Pattern.compile("(?<!\\*)\\*([^*\\n]+)\\*(?!\\*)");
+    private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<!_)_([^_\\n]+)_(?!_)");
+    private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+    private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
+    private static final String ESCAPE_TOKEN_SUFFIX = "%%";
+    private static final int CODE_SPAN_COLOR = 0x7a4f2f;
+    private static final int LINK_COLOR = 0x66ccff;
     protected final FormattedText text;
     private static final List<InlineStyleParserHolder> INLINE_STYLE_PARSER_HOLDERS = new ArrayList<>();
     private static int nextInlineStyleParserOrder = 0;
@@ -47,7 +59,143 @@ public abstract class MDComponent {
     }
 
     public static FormattedText textFormat(String text) {
-        return parseStyledText(text, Style.EMPTY);
+        EscapeContext escapeContext = protectMarkdownEscapes(text);
+        return parseMixedTextWithCodeSpan(escapeContext.text(), escapeContext);
+    }
+
+    private static FormattedText parseMixedTextWithCodeSpan(String text, EscapeContext escapeContext) {
+        List<FormattedText> parts = new ArrayList<>();
+        int pos = 0;
+        while (pos < text.length()) {
+            int codeStart = text.indexOf('`', pos);
+            if (codeStart < 0) {
+                appendMarkdownPart(parts, text.substring(pos), Style.EMPTY, escapeContext);
+                break;
+            }
+
+            int codeEnd = text.indexOf('`', codeStart + 1);
+            if (codeEnd < 0) {
+                appendMarkdownPart(parts, text.substring(pos), Style.EMPTY, escapeContext);
+                break;
+            }
+
+            if (codeStart > pos) {
+                appendMarkdownPart(parts, text.substring(pos, codeStart), Style.EMPTY, escapeContext);
+            }
+            String codeSpan = restoreEscapedLiterals(text.substring(codeStart + 1, codeEnd), escapeContext);
+            parts.add(FormattedText.of(codeSpan, Style.EMPTY.withColor(CODE_SPAN_COLOR)));
+            pos = codeEnd + 1;
+        }
+
+        if (parts.isEmpty()) {
+            return FormattedText.EMPTY;
+        }
+        if (parts.size() == 1) {
+            return parts.getFirst();
+        }
+        return FormattedText.composite(parts);
+    }
+
+    private static void appendMarkdownPart(List<FormattedText> parts, String text, Style style, EscapeContext escapeContext) {
+        if (text.isEmpty()) {
+            return;
+        }
+        parts.add(parseMarkdownInlineText(text, style, escapeContext));
+    }
+
+    private static FormattedText parseMarkdownInlineText(String text, Style parentStyle, EscapeContext escapeContext) {
+        List<FormattedText> parts = new ArrayList<>();
+        int pos = 0;
+
+        while (pos < text.length()) {
+            MarkdownTokenMatch next = findNextMarkdownToken(text, pos);
+            if (next == null) {
+                parts.add(parseStyledText(restoreEscapedLiterals(text.substring(pos), escapeContext), parentStyle));
+                break;
+            }
+
+            if (next.start > pos) {
+                parts.add(parseStyledText(restoreEscapedLiterals(text.substring(pos, next.start), escapeContext), parentStyle));
+            }
+
+            switch (next.type) {
+                case IMAGE -> parts.add(FormattedText.of("[image: " + restoreEscapedLiterals(next.content, escapeContext) + "]", parentStyle));
+                case LINK -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withUnderlined(true).withColor(LINK_COLOR), escapeContext));
+                case STRIKE -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withStrikethrough(true), escapeContext));
+                case BOLD -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withBold(true), escapeContext));
+                case ITALIC -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withItalic(true), escapeContext));
+            }
+
+            pos = next.end;
+        }
+
+        if (parts.isEmpty()) {
+            return FormattedText.EMPTY;
+        }
+        if (parts.size() == 1) {
+            return parts.getFirst();
+        }
+        return FormattedText.composite(parts);
+    }
+
+    private static @Nullable MarkdownTokenMatch findNextMarkdownToken(String text, int pos) {
+        MarkdownTokenMatch earliest = null;
+        earliest = chooseEarlier(earliest, findToken(IMAGE_PATTERN, text, pos, MarkdownTokenType.IMAGE));
+        earliest = chooseEarlier(earliest, findToken(LINK_PATTERN, text, pos, MarkdownTokenType.LINK));
+        earliest = chooseEarlier(earliest, findToken(STRIKE_PATTERN, text, pos, MarkdownTokenType.STRIKE));
+        earliest = chooseEarlier(earliest, findToken(BOLD_ASTERISK_PATTERN, text, pos, MarkdownTokenType.BOLD));
+        earliest = chooseEarlier(earliest, findToken(BOLD_UNDERSCORE_PATTERN, text, pos, MarkdownTokenType.BOLD));
+        earliest = chooseEarlier(earliest, findToken(ITALIC_ASTERISK_PATTERN, text, pos, MarkdownTokenType.ITALIC));
+        earliest = chooseEarlier(earliest, findToken(ITALIC_UNDERSCORE_PATTERN, text, pos, MarkdownTokenType.ITALIC));
+        return earliest;
+    }
+
+    private static @Nullable MarkdownTokenMatch findToken(Pattern pattern, String text, int pos, MarkdownTokenType type) {
+        Matcher matcher = pattern.matcher(text);
+        if (!matcher.find(pos)) {
+            return null;
+        }
+        return new MarkdownTokenMatch(type, matcher.start(), matcher.end(), matcher.group(1));
+    }
+
+    private static @Nullable MarkdownTokenMatch chooseEarlier(@Nullable MarkdownTokenMatch current, @Nullable MarkdownTokenMatch candidate) {
+        if (candidate == null) {
+            return current;
+        }
+        if (current == null || candidate.start < current.start) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private static EscapeContext protectMarkdownEscapes(String text) {
+        StringBuilder builder = new StringBuilder();
+        List<EscapedLiteral> escapedLiterals = new ArrayList<>();
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (ch == '\\' && i + 1 < text.length() && isMarkdownEscapable(text.charAt(i + 1))) {
+                char escapedChar = text.charAt(i + 1);
+                String token = ESCAPE_TOKEN_PREFIX + escapedLiterals.size() + ESCAPE_TOKEN_SUFFIX;
+                escapedLiterals.add(new EscapedLiteral(token, String.valueOf(escapedChar)));
+                builder.append(token);
+                i++;
+                continue;
+            }
+            builder.append(ch);
+        }
+        return new EscapeContext(builder.toString(), escapedLiterals);
+    }
+
+    private static boolean isMarkdownEscapable(char ch) {
+        return ch < 128 && COMMONMARK_ESCAPABLE_PUNCTUATION.indexOf(ch) >= 0;
+    }
+
+    private static String restoreEscapedLiterals(String text, EscapeContext escapeContext) {
+        String restored = text;
+        for (EscapedLiteral escapedLiteral : escapeContext.escapedLiterals()) {
+            restored = restored.replace(escapedLiteral.token(), escapedLiteral.value());
+        }
+        return restored;
     }
 
     public static synchronized void registerStyleParser(int priority, InlineStyleParser parser) {
@@ -79,10 +227,6 @@ public abstract class MDComponent {
             "</color>",
             (parentStyle, matcher) -> parentStyle.withColor(Integer.parseInt(matcher.group(1), 16))
         );
-        registerStyleParser(0, Pattern.compile("<b>"), "</b>", (parentStyle, matcher) -> parentStyle.withBold(true));
-        registerStyleParser(0, Pattern.compile("<i>"), "</i>", (parentStyle, matcher) -> parentStyle.withItalic(true));
-        registerStyleParser(0, Pattern.compile("<u>"), "</u>", (parentStyle, matcher) -> parentStyle.withUnderlined(true));
-        registerStyleParser(0, Pattern.compile("<s>"), "</s>", (parentStyle, matcher) -> parentStyle.withStrikethrough(true));
         registerStyleParser(0, Pattern.compile("<o>"), "</o>", (parentStyle, matcher) -> parentStyle.withObfuscated(true));
     }
 
@@ -196,6 +340,34 @@ public abstract class MDComponent {
         private int end() {
             return this.match.end();
         }
+    }
+
+    private enum MarkdownTokenType {
+        IMAGE,
+        LINK,
+        STRIKE,
+        BOLD,
+        ITALIC
+    }
+
+    private static final class MarkdownTokenMatch {
+        private final MarkdownTokenType type;
+        private final int start;
+        private final int end;
+        private final String content;
+
+        private MarkdownTokenMatch(MarkdownTokenType type, int start, int end, String content) {
+            this.type = type;
+            this.start = start;
+            this.end = end;
+            this.content = content;
+        }
+    }
+
+    private record EscapedLiteral(String token, String value) {
+    }
+
+    private record EscapeContext(String text, List<EscapedLiteral> escapedLiterals) {
     }
 
     private record InlineStyleParserHolder(int priority, int order, InlineStyleParser parser)
