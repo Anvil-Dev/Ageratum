@@ -66,7 +66,7 @@ public class MarkdownParser {
         Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EXTENSION_TAG_OPEN_PATTERN = Pattern.compile(
-        "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*?))?\\s*(/?)>\\s*$",
+        "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*))?\\s*(/?)>\\s*$",
         Pattern.CASE_INSENSITIVE
     );
 
@@ -388,6 +388,10 @@ public class MarkdownParser {
     private static @Nullable BlockExtensionState tryOpenExtensionBlock(String line) {
         String trimmed = line.trim();
 
+        if (containsInlineClosingTag(trimmed)) {
+            return null;
+        }
+
         // 尝试冒号语法
         Matcher colonMatcher = EXTENSION_COLON_OPEN_PATTERN.matcher(trimmed);
         if (colonMatcher.matches()) {
@@ -402,6 +406,9 @@ public class MarkdownParser {
         // 尝试标签语法
         Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
         if (tagMatcher.matches()) {
+            if (isReservedInlineTag(tagMatcher.group(1))) {
+                return null;
+            }
             ResourceLocation id = parseExtensionId(tagMatcher.group(1));
             if (id == null) {
                 return null;
@@ -422,9 +429,15 @@ public class MarkdownParser {
      */
     private static @Nullable MDComponent trySelfClosingExtensionBlock(String line) {
         String trimmed = line.trim();
+        if (containsInlineClosingTag(trimmed)) {
+            return null;
+        }
         Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
 
         if (tagMatcher.matches()) {
+            if (isReservedInlineTag(tagMatcher.group(1))) {
+                return null;
+            }
             ResourceLocation id = parseExtensionId(tagMatcher.group(1));
             if (id == null || !"/".equals(tagMatcher.group(3))) {
                 return null;
@@ -451,6 +464,24 @@ public class MarkdownParser {
         } catch (RuntimeException exception) {
             return null;
         }
+    }
+
+    /**
+     * 判断该行是否已经包含了内联闭合标签；若包含，则不应按块级扩展处理。
+     */
+    private static boolean containsInlineClosingTag(String trimmed) {
+        return trimmed.contains("</");
+    }
+
+    /**
+     * 保留给内联样式系统的标签名，避免被块级扩展语法抢占。
+     */
+    private static boolean isReservedInlineTag(String idText) {
+        String simpleId = idText.contains(":") ? idText.substring(idText.indexOf(':') + 1) : idText;
+        return "hover".equalsIgnoreCase(simpleId)
+            || "click".equalsIgnoreCase(simpleId)
+            || "color".equalsIgnoreCase(simpleId)
+            || "o".equalsIgnoreCase(simpleId);
     }
 
     // ── 缓冲区刷新辅助方法 ──────────────────────────────────────────────

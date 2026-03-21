@@ -1,9 +1,16 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.serialization.JsonOps;
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 
@@ -20,21 +27,32 @@ import javax.annotation.Nullable;
  * <p>该类封装了通用文本渲染能力，以及内联 Markdown 语法（粗体、斜体、删除线、链接、
  * 自动链接、代码跨度）与自定义样式标签（如 {@code <color=#xxxxxx>}）的解析逻辑。</p>
  */
+@Getter
 public abstract class MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("!\\[([^]]*)]\\(([^)]+)\\)");
     private static final Pattern LINK_PATTERN = Pattern.compile("\\[([^]]+)]\\(([^)]+)\\)");
     private static final Pattern STRIKE_PATTERN = Pattern.compile("~~([^~\\n]+)~~");
     private static final Pattern BOLD_ASTERISK_PATTERN = Pattern.compile("\\*\\*([^*\\n]+)\\*\\*");
-    private static final Pattern BOLD_UNDERSCORE_PATTERN = Pattern.compile("__([^_\\n]+)__");
+    private static final Pattern BOLD_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])__([^_\\n]+)__(?![A-Za-z0-9_])");
     private static final Pattern ITALIC_ASTERISK_PATTERN = Pattern.compile("(?<!\\*)\\*([^*\\n]+)\\*(?!\\*)");
-    private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<!_)_([^_\\n]+)_(?!_)");
+    private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])_([^_\\n]+)_(?![A-Za-z0-9_])");
     private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
     private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
+    private static final Pattern HOVER_TAG_PATTERN = Pattern.compile("<hover\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CLICK_TAG_PATTERN = Pattern.compile("<click\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TAG_ATTRIBUTE_PATTERN = Pattern.compile("([a-zA-Z_:][-a-zA-Z0-9_:.]*)\\s*=\\s*\"([^\"]*)\"");
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
     private static final int LINK_COLOR = 0x66ccff;
+    /**
+     * -- GETTER --
+     * 获取组件的 FormattedText。
+     *
+     * @return 该组件的格式化文本
+     */
+    @SuppressWarnings("JavadocDeclaration")
     protected final FormattedText text;
     private static final List<InlineStyleParserHolder> INLINE_STYLE_PARSER_HOLDERS = new ArrayList<>();
     private static int nextInlineStyleParserOrder = 0;
@@ -55,15 +73,6 @@ public abstract class MDComponent {
      */
     public MDComponent(FormattedText text) {
         this.text = text;
-    }
-
-    /**
-     * 获取组件的 FormattedText。
-     * 
-     * @return 该组件的格式化文本
-     */
-    public FormattedText getText() {
-        return this.text;
     }
 
     /**
@@ -191,12 +200,18 @@ public abstract class MDComponent {
             }
 
             switch (next.type) {
-                case IMAGE -> parts.add(FormattedText.of("[image: " + restoreEscapedLiterals(next.content, escapeContext) + "]", parentStyle));
-                case LINK -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withUnderlined(true).withColor(LINK_COLOR), escapeContext));
+                case IMAGE ->
+                    parts.add(FormattedText.of("[image: " + restoreEscapedLiterals(next.content, escapeContext) + "]", parentStyle));
+                case LINK -> {
+                    String target = extractMarkdownLinkTarget(text.substring(next.start, next.end));
+                    Style linkStyle = createLinkStyle(parentStyle, target);
+                    parts.add(parseMarkdownInlineText(next.content, linkStyle, escapeContext));
+                }
                 case STRIKE -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withStrikethrough(true), escapeContext));
                 case BOLD -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withBold(true), escapeContext));
                 case ITALIC -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withItalic(true), escapeContext));
-                case AUTOLINK -> parts.add(FormattedText.of(next.content, parentStyle.withUnderlined(true).withColor(LINK_COLOR)));
+                case AUTOLINK ->
+                    parts.add(FormattedText.of(next.content, createLinkStyle(parentStyle, normalizeAutolinkTarget(next.content))));
             }
 
             pos = next.end;
@@ -233,7 +248,10 @@ public abstract class MDComponent {
         return new MarkdownTokenMatch(type, matcher.start(), matcher.end(), matcher.group(1));
     }
 
-    private static @Nullable MarkdownTokenMatch chooseEarlier(@Nullable MarkdownTokenMatch current, @Nullable MarkdownTokenMatch candidate) {
+    private static @Nullable MarkdownTokenMatch chooseEarlier(
+        @Nullable MarkdownTokenMatch current,
+        @Nullable MarkdownTokenMatch candidate
+    ) {
         if (candidate == null) {
             return current;
         }
@@ -241,6 +259,41 @@ public abstract class MDComponent {
             return candidate;
         }
         return current;
+    }
+
+    /**
+     * 为链接文本构造带点击事件的样式。
+     */
+    private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
+        Style style = parentStyle.withUnderlined(true).withColor(LINK_COLOR);
+        if (target == null || target.isBlank()) {
+            return style;
+        }
+        return style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, target));
+    }
+
+    /**
+     * 从标准 Markdown 链接文本中提取跳转目标。
+     */
+    private static @Nullable String extractMarkdownLinkTarget(String rawLinkText) {
+        Matcher matcher = LINK_PATTERN.matcher(rawLinkText);
+        if (!matcher.matches()) {
+            return null;
+        }
+        return matcher.group(2);
+    }
+
+    /**
+     * 标准化自动链接目标；邮箱自动链接会补成 mailto: 前缀。
+     */
+    private static String normalizeAutolinkTarget(String content) {
+        if (content.startsWith("http://") || content.startsWith("https://") || content.startsWith("mailto:")) {
+            return content;
+        }
+        if (content.contains("@")) {
+            return "mailto:" + content;
+        }
+        return content;
     }
 
     /**
@@ -318,20 +371,40 @@ public abstract class MDComponent {
             (parentStyle, matcher) -> parentStyle.withColor(Integer.parseInt(matcher.group(1), 16))
         );
         registerStyleParser(0, Pattern.compile("<o>"), "</o>", (parentStyle, matcher) -> parentStyle.withObfuscated(true));
-        
+
         // 注册 hover 事件支持
         registerStyleParser(
             0,
-            Pattern.compile("<hover\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\"\\s*>"),
+            HOVER_TAG_PATTERN,
             "</hover>",
             (parentStyle, matcher) -> {
-                String hoverType = matcher.group(1).toUpperCase();
-                String hoverData = matcher.group(2);
+                String rawAttributes = matcher.group(1);
+                String hoverType = getTagAttribute(rawAttributes, "type");
+                String hoverData = getTagAttribute(rawAttributes, "data");
+                if (hoverType == null || hoverData == null) {
+                    return parentStyle;
+                }
                 try {
-                    if ("SHOW_TEXT".equals(hoverType)) {
-                        return parentStyle.withHoverEvent(new net.minecraft.network.chat.HoverEvent(
-                            net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
-                            net.minecraft.network.chat.Component.literal(hoverData)
+                    if ("SHOW_TEXT".equalsIgnoreCase(hoverType)) {
+                        return parentStyle.withHoverEvent(new HoverEvent(
+                            HoverEvent.Action.SHOW_TEXT,
+                            Component.literal(hoverData)
+                        ));
+                    } else if ("SHOW_ITEM".equalsIgnoreCase(hoverType)) {
+                        return parentStyle.withHoverEvent(new HoverEvent(
+                            HoverEvent.Action.SHOW_ITEM,
+                            HoverEvent.ItemStackInfo.CODEC.decode(
+                                JsonOps.INSTANCE,
+                                new GsonBuilder().create().fromJson(hoverData, JsonElement.class)
+                            ).getOrThrow().getFirst()
+                        ));
+                    } else if ("SHOW_ENTITY".equalsIgnoreCase(hoverType)) {
+                        return parentStyle.withHoverEvent(new HoverEvent(
+                            HoverEvent.Action.SHOW_ENTITY,
+                            HoverEvent.EntityTooltipInfo.CODEC.decode(
+                                JsonOps.INSTANCE,
+                                new GsonBuilder().create().fromJson(hoverData, JsonElement.class)
+                            ).getOrThrow().getFirst()
                         ));
                     }
                 } catch (Exception e) {
@@ -340,29 +413,38 @@ public abstract class MDComponent {
                 return parentStyle;
             }
         );
-        
+
         // 注册 click 事件支持
         registerStyleParser(
             0,
-            Pattern.compile("<click\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\"\\s*>"),
+            CLICK_TAG_PATTERN,
             "</click>",
             (parentStyle, matcher) -> {
-                String clickType = matcher.group(1).toUpperCase();
-                String clickData = matcher.group(2);
+                String rawAttributes = matcher.group(1);
+                String clickType = getTagAttribute(rawAttributes, "type");
+                String clickData = getTagAttribute(rawAttributes, "data");
+                if (clickType == null || clickData == null) {
+                    return parentStyle;
+                }
                 try {
-                    if ("OPEN_URL".equals(clickType)) {
-                        return parentStyle.withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                            net.minecraft.network.chat.ClickEvent.Action.OPEN_URL,
+                    if ("OPEN_URL".equalsIgnoreCase(clickType)) {
+                        return parentStyle.withClickEvent(new ClickEvent(
+                            ClickEvent.Action.OPEN_URL,
                             clickData
                         ));
-                    } else if ("COPY_TO_CLIPBOARD".equals(clickType)) {
-                        return parentStyle.withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                            net.minecraft.network.chat.ClickEvent.Action.COPY_TO_CLIPBOARD,
+                    } else if ("COPY_TO_CLIPBOARD".equalsIgnoreCase(clickType)) {
+                        return parentStyle.withClickEvent(new ClickEvent(
+                            ClickEvent.Action.COPY_TO_CLIPBOARD,
                             clickData
                         ));
-                    } else if ("SUGGEST_COMMAND".equals(clickType)) {
-                        return parentStyle.withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                            net.minecraft.network.chat.ClickEvent.Action.SUGGEST_COMMAND,
+                    } else if ("RUN_COMMAND".equalsIgnoreCase(clickType)) {
+                        return parentStyle.withClickEvent(new ClickEvent(
+                            ClickEvent.Action.RUN_COMMAND,
+                            clickData
+                        ));
+                    } else if ("OPEN_FILE".equalsIgnoreCase(clickType)) {
+                        return parentStyle.withClickEvent(new ClickEvent(
+                            ClickEvent.Action.OPEN_FILE,
                             clickData
                         ));
                     }
@@ -372,6 +454,19 @@ public abstract class MDComponent {
                 return parentStyle;
             }
         );
+    }
+
+    /**
+     * 从标签属性文本中提取指定属性值。
+     */
+    private static @Nullable String getTagAttribute(String rawAttributes, String attributeName) {
+        Matcher matcher = TAG_ATTRIBUTE_PATTERN.matcher(rawAttributes);
+        while (matcher.find()) {
+            if (attributeName.equalsIgnoreCase(matcher.group(1))) {
+                return matcher.group(2);
+            }
+        }
+        return null;
     }
 
     /**
