@@ -23,6 +23,24 @@ Escaped punctuation (should all be literal symbols):
 
 ---
 
+::: info
+This is an info box.
+:::
+
+::: tip
+This is a tip.
+:::
+
+::: warning
+This is a warning.
+:::
+
+::: danger
+This is a dangerous warning.
+:::
+
+---
+
 ## Implemented: Setext headings
 
 Setext heading H1

@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -22,6 +23,7 @@ public class MDNoticeBoxComponent extends MDComponent {
     /**
      * 提示框类型与相关颜色配置。
      */
+    @Getter
     public enum NoticeType {
         INFO(0x3B82F6, 0xDEEDF7),      // 蓝色
         TIP(0x10B981, 0xD1F5E8),       // 绿色
@@ -34,14 +36,6 @@ public class MDNoticeBoxComponent extends MDComponent {
         NoticeType(int borderColor, int backgroundColor) {
             this.borderColor = borderColor;
             this.backgroundColor = backgroundColor;
-        }
-
-        public int getBorderColor() {
-            return this.borderColor;
-        }
-
-        public int getBackgroundColor() {
-            return this.backgroundColor;
         }
     }
 
@@ -56,7 +50,7 @@ public class MDNoticeBoxComponent extends MDComponent {
 
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
-        if (minecraft == null || this.contentComponents.isEmpty()) {
+        if (this.contentComponents.isEmpty()) {
             return;
         }
 
@@ -85,10 +79,6 @@ public class MDNoticeBoxComponent extends MDComponent {
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        if (minecraft == null) {
-            return 0;
-        }
-
         int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
         int totalHeight = 0;
 
