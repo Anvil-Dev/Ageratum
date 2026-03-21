@@ -93,6 +93,18 @@ public class GuideScreen extends Screen {
     }
 
     /**
+     * 使用预解析组件创建界面，避免重复解析 Markdown 文本。
+     *
+     * @param documentLocation 文档资源位置，用于构造界面标题
+     * @param parsedComponents 预解析后的组件列表
+     */
+    public GuideScreen(ResourceLocation documentLocation, List<MDComponent> parsedComponents) {
+        super(Component.literal("Guide - " + documentLocation));
+        this.parser = new MarkdownParser();
+        this.parsedComponents = List.copyOf(parsedComponents);
+    }
+
+    /**
      * 界面初始化（每次打开或窗口大小改变时调用）。
      *
      * <p>重新计算 {@link #leftPos} 与 {@link #topPos} 使界面居中，

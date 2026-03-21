@@ -18,7 +18,7 @@ import java.util.TreeSet;
 /**
  * 文档加载工具类，负责从资源包中读取 Markdown 文档。
  *
- * <p>文档路径约定：{@code assets/<namespace>/ageratum/<file>.md}</p>
+ * <p>文档路径约定：{@code assets/<namespace>/ageratum/<languageCode>/<file>.md}</p>
  *
  * <p>该类为纯工具类，不可实例化。</p>
  */
@@ -62,7 +62,7 @@ public final class GuideDocumentLoader {
     }
 
     /**
-     * 按“当前语言 -> en_us -> 旧路径”顺序解析第一个存在的文档位置。
+     * 按“当前语言 -> en_us”顺序解析第一个存在的文档位置。
      */
     public static Optional<ResourceLocation> resolveExistingLocation(
         ResourceManager resourceManager,
@@ -76,8 +76,6 @@ public final class GuideDocumentLoader {
         if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
             candidates.add(toDocumentLocation(namespace, DEFAULT_LANGUAGE_CODE, fileArgument));
         }
-        // 兼容旧目录结构：assets/<namespace>/ageratum/<file>.md
-        candidates.add(ResourceLocation.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizeFileArgument(fileArgument)));
         for (ResourceLocation location : candidates) {
             if (exists(resourceManager, location)) {
                 return Optional.of(location);
@@ -131,8 +129,6 @@ public final class GuideDocumentLoader {
         if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
             namespaces.addAll(listNamespacesForLanguage(resourceManager, DEFAULT_LANGUAGE_CODE));
         }
-        // 合并旧目录结构，确保迁移期间命令补全不中断
-        namespaces.addAll(listNamespacesForRoot(resourceManager, GUIDE_ROOT + "/"));
         return new ArrayList<>(namespaces);
     }
 
@@ -152,8 +148,6 @@ public final class GuideDocumentLoader {
         if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
             result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/" + DEFAULT_LANGUAGE_CODE + "/"));
         }
-        // 合并旧目录结构，确保迁移期间命令补全不中断
-        result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/"));
         return new ArrayList<>(result);
     }
 

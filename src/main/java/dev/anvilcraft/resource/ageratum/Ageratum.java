@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum;
 import com.mojang.logging.LogUtils;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
@@ -15,9 +16,11 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -44,6 +47,8 @@ public class Ageratum {
     public Ageratum(IEventBus modEventBus, ModContainer modContainer) {
         // 向 NeoForge 公共事件总线注册客户端命令监听器
         NeoForge.EVENT_BUS.addListener(Ageratum::onCommandRegister);
+        // 在资源包加载/重载时预构建 Markdown 组件缓存
+        NeoForge.EVENT_BUS.addListener(Ageratum::onReloadListenerRegister);
     }
 
     /**
@@ -116,6 +121,13 @@ public class Ageratum {
     }
 
     /**
+     * 注册客户端资源重载监听器。
+     */
+    public static void onReloadListenerRegister(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(GuideDocumentCache.reloadListener());
+    }
+
+    /**
      * 解析命令参数并打开对应的文档界面。
      *
      * <p>若目标文件不存在，向命令发起方发送错误反馈，不打开界面。</p>
@@ -156,7 +168,13 @@ public class Ageratum {
 
         ResourceManager resourceManager = minecraft.getResourceManager();
 
-        // 读取文件内容并打开文档界面
+        // 优先使用预解析缓存，缺失时回退为即时解析
+        Optional<List<MDComponent>> cachedComponents = GuideDocumentCache.getParsedComponents(documentLocation);
+        if (cachedComponents.isPresent()) {
+            minecraft.setScreen(new GuideScreen(documentLocation, cachedComponents.get()));
+            return 1;
+        }
+
         String content = GuideDocumentLoader.read(resourceManager, documentLocation);
         minecraft.setScreen(new GuideScreen(documentLocation, content));
         return 1;
