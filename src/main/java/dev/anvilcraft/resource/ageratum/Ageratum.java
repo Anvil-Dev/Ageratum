@@ -48,7 +48,7 @@ public class Ageratum {
         // 向 NeoForge 公共事件总线注册客户端命令监听器
         NeoForge.EVENT_BUS.addListener(Ageratum::onCommandRegister);
         // 在资源包加载/重载时预构建 Markdown 组件缓存
-        NeoForge.EVENT_BUS.addListener(Ageratum::onReloadListenerRegister);
+        modEventBus.addListener(Ageratum::onReloadListenerRegister);
     }
 
     /**
