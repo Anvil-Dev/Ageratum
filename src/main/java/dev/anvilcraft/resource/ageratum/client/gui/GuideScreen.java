@@ -79,8 +79,9 @@ public class GuideScreen extends Screen {
         String testText = """
             # Praesent scelerisque
             ## Vivamus euismod
-            Donec molestie, sem ac varius vulputate, diam risus pretium
-            enim, ut fermentum velit velit id tellus.
+            Donec <color=#66ccff>molestie, sem ac varius
+            <color=#39c5bb>vulputate, <i>diam</i> <b>risus</b> pretium
+            enim</color>, ut fermentum velit velit</color> id tellus.
             ### Aliquam convallis
             Sed elementum lacinia magna, ut pulvinar justo pharetra at.
             Vestibulum et imperdiet nulla.
@@ -97,7 +98,8 @@ public class GuideScreen extends Screen {
             Vestibulum ut erat semper, ultrices lacus id, maximus mi.
             Integer ut pretium orci.
             ### Duis vestibulum
-            Aliquam convallis ut erat vel iaculis. Praesent faucibus
+            Aliquam <color=#39c5bb><b><i>convallis</i></b></color> ut
+            erat vel iaculis. Praesent faucibus
             ultrices odio, a ornare tellus faucibus sit amet. Integer
             ut nunc nunc. Nunc in mauris in eros bibendum dapibus.
             Quisque pulvinar, arcu feugiat lacinia scelerisque, nisi

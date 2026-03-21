@@ -45,7 +45,7 @@ public class MDHeaderComponent extends MDComponent {
         super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY));
         pose.translate(0, 0, 0);
         if (this.level == 1) {
-            guiGraphics.hLine(5, this.unscale(maxX) - 5, 1, 0xFFFFFFFF);
+            guiGraphics.hLine(5, this.unscale(maxX) - 10, 1, 0x88000000);
         }
         pose.popPose();
     }
