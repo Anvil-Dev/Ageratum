@@ -9,8 +9,11 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDListCom
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDQuoteComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTableComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +52,18 @@ public class MarkdownParser {
     private static final Pattern LINK_REF_FULL_PATTERN = Pattern.compile("\\[([^\\]]+)]\\[([^\\]]*)]");
     // Shortcut ref [id] – not followed by ( or [
     private static final Pattern LINK_REF_SHORT_PATTERN = Pattern.compile("\\[([^\\]\\[]+)](?![\\[(])");
+    private static final Pattern EXTENSION_COLON_OPEN_PATTERN = Pattern.compile(
+        "^:::\\s+((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*))?$",
+        Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern EXTENSION_TAG_OPEN_PATTERN = Pattern.compile(
+        "^<<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*?))?\\s*(/?)>\\s*$",
+        Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern EXTENSION_PARAM_PAIR_PATTERN = Pattern.compile("([a-zA-Z0-9_.-]+)=(\"[^\"]*\"|'[^']*'|\\S+)");
 
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
+    private static final Map<ResourceLocation, MDExtensionComponentFactory> EXTENSION_COMPONENT_FACTORIES = new HashMap<>();
 
     /**
      * 创建解析器并注册内置组件解析器。
@@ -67,6 +80,13 @@ public class MarkdownParser {
      */
     public void registerComponentParser(int priority, MDComponentParser parser) {
         this.mdComponentParserHolders.add(new MDComponentParserHolder(priority, parser));
+    }
+
+    /**
+     * 注册扩展语法组件工厂。
+     */
+    public static synchronized void registerExtensionComponent(ResourceLocation id, MDExtensionComponentFactory factory) {
+        EXTENSION_COMPONENT_FACTORIES.put(id, factory);
     }
 
     private void registerBaseComponentParser() {
@@ -105,8 +125,28 @@ public class MarkdownParser {
         StringBuilder indentedCodeBuilder = new StringBuilder();
         String codeFence = null;          // null = not in fenced code block
         boolean inIndentedCode = false;
+        CustomExtensionBlockState extensionBlock = null;
 
         for (String s : split) {
+            // ── Inside custom extension block ──────────────────────
+            if (extensionBlock != null) {
+                if (extensionBlock.matchesCloseLine(s)) {
+                    flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
+                    String rawContent = extensionBlock.rawContent();
+                    List<MDComponent> renderedContent = this.parse(rawContent);
+                    MDComponent extensionComponent = createExtensionComponent(extensionBlock, renderedContent, rawContent);
+                    if (extensionComponent != null) {
+                        components.add(extensionComponent);
+                    } else {
+                        components.addAll(renderedContent);
+                    }
+                    extensionBlock = null;
+                } else {
+                    extensionBlock.appendLine(s);
+                }
+                continue;
+            }
+
             // ── Inside fenced code block ────────────────────────────
             if (codeFence != null) {
                 Matcher closeMatcher = CODE_FENCE_PATTERN.matcher(s.trim());
@@ -122,6 +162,22 @@ public class MarkdownParser {
                 } else {
                     codeBlockBuilder.append(s).append("\n");
                 }
+                continue;
+            }
+
+            // ── Custom extension blocks ────────────────────────────
+            CustomExtensionBlockState openExtension = tryOpenExtensionBlock(s);
+            if (openExtension != null) {
+                flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
+                extensionBlock = openExtension;
+                continue;
+            }
+
+            // ── Self-closing extension blocks ───────────────────────
+            MDComponent selfClosingExtension = trySelfClosingExtensionBlock(s);
+            if (selfClosingExtension != null) {
+                flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
+                components.add(selfClosingExtension);
                 continue;
             }
 
@@ -256,9 +312,137 @@ public class MarkdownParser {
             components.add(new MDCodeBlockComponent(codeBlockBuilder.toString()));
         }
 
+        // 未闭合扩展块按忽略处理，不生成组件。
+
         inIndentedCode = false;
         flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
         return components;
+    }
+
+    private static @Nullable MDComponent createExtensionComponent(
+        CustomExtensionBlockState block,
+        List<MDComponent> renderedContent,
+        String rawContent
+    ) {
+        MDExtensionComponentFactory factory = EXTENSION_COMPONENT_FACTORIES.get(block.id());
+        if (factory == null) {
+            return null;
+        }
+        return factory.create(new MDExtensionContext(
+            block.id(),
+            block.rawParams(),
+            block.params(),
+            List.copyOf(renderedContent),
+            rawContent
+        ));
+    }
+
+    /**
+     * 创建扩展组件的重载，用于自闭合标签。
+     */
+    private static @Nullable MDComponent createExtensionComponent(
+        SelfClosingExtensionBlockState block,
+        List<MDComponent> renderedContent,
+        String rawContent
+    ) {
+        MDExtensionComponentFactory factory = EXTENSION_COMPONENT_FACTORIES.get(block.id());
+        if (factory == null) {
+            return null;
+        }
+        return factory.create(new MDExtensionContext(
+            block.id(),
+            block.rawParams(),
+            block.params(),
+            List.copyOf(renderedContent),
+            rawContent
+        ));
+    }
+
+    private static @Nullable CustomExtensionBlockState tryOpenExtensionBlock(String line) {
+        String trimmed = line.trim();
+        Matcher colonMatcher = EXTENSION_COLON_OPEN_PATTERN.matcher(trimmed);
+        if (colonMatcher.matches()) {
+            ResourceLocation id = parseExtensionId(colonMatcher.group(1));
+            if (id == null) {
+                return null;
+            }
+            String rawParams = colonMatcher.group(2) == null ? "" : colonMatcher.group(2).trim();
+            return CustomExtensionBlockState.colon(id, rawParams);
+        }
+
+        Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
+        if (tagMatcher.matches()) {
+            String idText = tagMatcher.group(1);
+            ResourceLocation id = parseExtensionId(idText);
+            if (id == null) {
+                return null;
+            }
+            // 检查是否为自闭合 />
+            String selfClosingMarker = tagMatcher.group(3);
+            if ("/".equals(selfClosingMarker)) {
+                // 自闭合标签，不返回 state，由 trySelfClosingExtensionBlock 处理
+                return null;
+            }
+            String rawParams = tagMatcher.group(2) == null ? "" : tagMatcher.group(2).trim();
+            return CustomExtensionBlockState.tag(id, rawParams, parseParamMap(rawParams));
+        }
+
+        return null;
+    }
+
+    /**
+     * 尝试解析自闭合扩展块。
+     */
+    private static @Nullable MDComponent trySelfClosingExtensionBlock(String line) {
+        String trimmed = line.trim();
+        Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
+        if (tagMatcher.matches()) {
+            String idText = tagMatcher.group(1);
+            ResourceLocation id = parseExtensionId(idText);
+            if (id == null) {
+                return null;
+            }
+            // 检查是否为自闭合 />
+            String selfClosingMarker = tagMatcher.group(3);
+            if (!"/".equals(selfClosingMarker)) {
+                // 非自闭合，不处理
+                return null;
+            }
+            String rawParams = tagMatcher.group(2) == null ? "" : tagMatcher.group(2).trim();
+            Map<String, String> params = parseParamMap(rawParams);
+            return createExtensionComponent(
+                new SelfClosingExtensionBlockState(id, rawParams, params),
+                List.of(),
+                ""
+            );
+        }
+        return null;
+    }
+
+    private static @Nullable ResourceLocation parseExtensionId(String idText) {
+        String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
+        try {
+            return ResourceLocation.parse(normalized);
+        } catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
+    private static Map<String, String> parseParamMap(String rawParams) {
+        if (rawParams == null || rawParams.isBlank()) {
+            return Map.of();
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        Matcher matcher = EXTENSION_PARAM_PAIR_PATTERN.matcher(rawParams);
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String value = matcher.group(2);
+            if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.substring(1, value.length() - 1);
+            }
+            result.put(key, value);
+        }
+        return result;
     }
 
     // ── Flush helpers ─────────────────────────────────────────────────
@@ -414,6 +598,131 @@ public class MarkdownParser {
      */
     @FunctionalInterface
     public interface MDComponentParser extends Function<String, MDComponent> {
+    }
+
+    /**
+     * 扩展语法组件创建上下文。
+     */
+    public record MDExtensionContext(
+        ResourceLocation id,
+        String rawParams,
+        Map<String, String> params,
+        List<MDComponent> renderedContent,
+        String rawContent
+    ) {
+    }
+
+    /**
+     * 扩展语法组件工厂接口。
+     */
+    @FunctionalInterface
+    public interface MDExtensionComponentFactory {
+        MDComponent create(MDExtensionContext context);
+    }
+
+    private enum CustomExtensionBlockType {
+        COLON,
+        TAG
+    }
+
+    /**
+     * 自闭合扩展块的临时上下文，供 createExtensionComponent 使用。
+     */
+    private static final class SelfClosingExtensionBlockState {
+        private final ResourceLocation id;
+        private final String rawParams;
+        private final Map<String, String> params;
+
+        private SelfClosingExtensionBlockState(ResourceLocation id, String rawParams, Map<String, String> params) {
+            this.id = id;
+            this.rawParams = rawParams;
+            this.params = params;
+        }
+
+        private ResourceLocation id() {
+            return this.id;
+        }
+
+        private String rawParams() {
+            return this.rawParams;
+        }
+
+        private Map<String, String> params() {
+            return this.params;
+        }
+    }
+
+    private static final class CustomExtensionBlockState {
+        private final CustomExtensionBlockType type;
+        private final ResourceLocation id;
+        private final String rawParams;
+        private final Map<String, String> params;
+        private final String closeTagWithNamespace;
+        private final String closeTagWithoutNamespace;
+        private final StringBuilder content = new StringBuilder();
+
+        private CustomExtensionBlockState(
+            CustomExtensionBlockType type,
+            ResourceLocation id,
+            String rawParams,
+            Map<String, String> params,
+            String closeTagWithNamespace,
+            String closeTagWithoutNamespace
+        ) {
+            this.type = type;
+            this.id = id;
+            this.rawParams = rawParams;
+            this.params = params;
+            this.closeTagWithNamespace = closeTagWithNamespace;
+            this.closeTagWithoutNamespace = closeTagWithoutNamespace;
+        }
+
+        private static CustomExtensionBlockState colon(ResourceLocation id, String rawParams) {
+            return new CustomExtensionBlockState(CustomExtensionBlockType.COLON, id, rawParams, Map.of(), ":::", ":::");
+        }
+
+        private static CustomExtensionBlockState tag(ResourceLocation id, String rawParams, Map<String, String> params) {
+            return new CustomExtensionBlockState(
+                CustomExtensionBlockType.TAG,
+                id,
+                rawParams,
+                Collections.unmodifiableMap(new LinkedHashMap<>(params)),
+                "</" + id + ">>",
+                "</" + id.getPath() + ">>"
+            );
+        }
+
+        private ResourceLocation id() {
+            return this.id;
+        }
+
+        private String rawParams() {
+            return this.rawParams;
+        }
+
+        private Map<String, String> params() {
+            return this.params;
+        }
+
+        private boolean matchesCloseLine(String line) {
+            String trimmed = line.trim();
+            if (this.type == CustomExtensionBlockType.COLON) {
+                return ":::".equals(trimmed);
+            }
+            return this.closeTagWithNamespace.equals(trimmed) || this.closeTagWithoutNamespace.equals(trimmed);
+        }
+
+        private void appendLine(String line) {
+            this.content.append(line).append("\n");
+        }
+
+        private String rawContent() {
+            if (this.content.isEmpty()) {
+                return "";
+            }
+            String text = this.content.toString();
+            return text.endsWith("\n") ? text.substring(0, text.length() - 1) : text;
+        }
     }
 
     /**
