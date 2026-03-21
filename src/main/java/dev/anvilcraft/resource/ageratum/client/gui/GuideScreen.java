@@ -93,9 +93,9 @@ public class GuideScreen extends Screen {
             vulputate urna sed, viverra nulla.
             
             
-            Vivamus euismod, nulla molestie vestibulum faucibus, est purus
-            dapibus mauris, sit amet pellentesque nulla diam quis nulla.
-            Vestibulum ut erat semper, ultrices lacus id, maximus mi.
+            Vivamus euismod, nulla <u>molestie</u> vestibulum faucibus, est purus
+            dapibus mauris, sit amet <s>pellentesque</s> nulla diam quis nulla.
+            Vestibulum ut erat semper, ultrices <o>lacus</o> id, maximus mi.
             Integer ut pretium orci.
             ### Duis vestibulum
             Aliquam <color=#39c5bb><b><i>convallis</i></b></color> ut
