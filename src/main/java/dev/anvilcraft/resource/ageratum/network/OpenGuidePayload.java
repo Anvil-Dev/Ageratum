@@ -11,8 +11,11 @@ import net.minecraft.resources.ResourceLocation;
  */
 public record OpenGuidePayload(ResourceLocation location) implements CustomPacketPayload {
     public static final Type<OpenGuidePayload> TYPE = new Type<>(Ageratum.location("open_guide"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, OpenGuidePayload> STREAM_CODEC =
-        StreamCodec.composite(ResourceLocation.STREAM_CODEC, OpenGuidePayload::location, OpenGuidePayload::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, OpenGuidePayload> STREAM_CODEC = StreamCodec.composite(
+        ResourceLocation.STREAM_CODEC,
+        OpenGuidePayload::location,
+        OpenGuidePayload::new
+    );
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
