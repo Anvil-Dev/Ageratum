@@ -1,6 +1,6 @@
 <div align="center">
 
-# Ageratum
+# 藿香 | Ageratum
 
 <img src=".idea/icon.png" style="width: 128px; height: 128px" alt="Ageratum Logo">
 
