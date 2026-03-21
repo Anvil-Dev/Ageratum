@@ -171,11 +171,22 @@ Tab completion supported for namespaces and file names.
 
 #### Register Custom Extension
 
+Use registration methods described in NeoForge docs:
+
+1. `DeferredRegister` (recommended)
+2. `RegisterEvent` (advanced usage)
+
 ```java
-MarkdownParser.registerExtensionComponent(
-    Ageratum.location("custom"),
-    context -> new MyComponent(context.renderedContent(), context.params())
-);
+public static final DeferredRegister<MDExtensionComponentFactory> EXT_COMPONENT_FACTORIES =
+    AgeratumRegistries.createExtensionComponentFactoryRegister("your_modid");
+
+public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> CUSTOM =
+    EXT_COMPONENT_FACTORIES.register("custom", () ->
+        context -> new MyComponent(context.renderedContent(), context.params())
+    );
+
+// In your mod constructor
+EXT_COMPONENT_FACTORIES.register(modEventBus);
 ```
 
 #### Add Documentation

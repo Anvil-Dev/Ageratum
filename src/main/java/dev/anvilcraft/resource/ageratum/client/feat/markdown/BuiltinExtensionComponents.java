@@ -1,8 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDNoticeBoxComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * 内置扩展组件注册。
@@ -10,32 +10,49 @@ import net.minecraft.resources.ResourceLocation;
  * <p>提供 info、tip、warning、danger 四种提示框类型。</p>
  */
 public final class BuiltinExtensionComponents {
+    /**
+     * info 提示框组件工厂注册项。
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> INFO =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "info",
+            () -> context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.INFO, context.renderedContent())
+        );
+
+    /**
+     * tip 提示框组件工厂注册项。
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> TIP =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "tip",
+            () -> context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.TIP, context.renderedContent())
+        );
+
+    /**
+     * warning 提示框组件工厂注册项。
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> WARNING =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "warning",
+            () -> context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.WARNING, context.renderedContent())
+        );
+
+    /**
+     * danger 提示框组件工厂注册项。
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> DANGER =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "danger",
+            () -> context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.DANGER, context.renderedContent())
+        );
+
     private BuiltinExtensionComponents() {
     }
 
     /**
-     * 注册所有内置扩展组件。
+     * 触发类加载，确保静态注册项初始化。
      */
-    public static void registerAll() {
-        MarkdownParser.registerExtensionComponent(
-            Ageratum.location("info"),
-            context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.INFO, context.renderedContent())
-        );
-
-        MarkdownParser.registerExtensionComponent(
-            Ageratum.location("tip"),
-            context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.TIP, context.renderedContent())
-        );
-
-        MarkdownParser.registerExtensionComponent(
-            Ageratum.location("warning"),
-            context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.WARNING, context.renderedContent())
-        );
-
-        MarkdownParser.registerExtensionComponent(
-            Ageratum.location("danger"),
-            context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.DANGER, context.renderedContent())
-        );
+    public static void init() {
     }
 }
 

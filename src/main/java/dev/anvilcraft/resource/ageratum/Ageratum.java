@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum;
 
-import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinExtensionComponents;
+import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
@@ -29,8 +29,10 @@ public class Ageratum {
      * @param modContainer 模组容器
      */
     public Ageratum(IEventBus modEventBus, ModContainer modContainer) {
-        // 注册内置扩展组件
-        BuiltinExtensionComponents.registerAll();
+        // 注册自定义注册表
+        AgeratumRegistries.register(modEventBus);
+        // 触发内置扩展组件注册项的类加载
+        BuiltinExtensionComponents.init();
     }
 
     /**

@@ -148,7 +148,7 @@ src/main/java/dev/anvilcraft/resource/ageratum/
 - **分离关注点**：每个类仅负责单一职责
 - **无过长类**：最长的文件 ~400 行，内部类均提取为独立文件
 - **足量文档**：所有公共 API 均有中文 Javadoc，复杂逻辑有行内注释
-- **可扩展性**：通过 `registerExtensionComponent()` 注册自定义块类型
+- **可扩展性**：通过 NeoForge 注册机制（`DeferredRegister` / `RegisterEvent`）注册自定义块类型
 
 ## 使用指南
 
@@ -169,11 +169,22 @@ src/main/java/dev/anvilcraft/resource/ageratum/
 
 #### 注册自定义扩展组件
 
+推荐遵循 NeoForge 文档中的注册方式：
+
+1. `DeferredRegister`（推荐）
+2. `RegisterEvent`（高级场景）
+
 ```java
-MarkdownParser.registerExtensionComponent(
-    Ageratum.location("custom"),
-    context -> new MyComponent(context.renderedContent(), context.params())
-);
+public static final DeferredRegister<MDExtensionComponentFactory> EXT_COMPONENT_FACTORIES =
+    AgeratumRegistries.createExtensionComponentFactoryRegister("your_modid");
+
+public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> CUSTOM =
+    EXT_COMPONENT_FACTORIES.register("custom", () ->
+        context -> new MyComponent(context.renderedContent(), context.params())
+    );
+
+// 在你的模组构造函数中
+EXT_COMPONENT_FACTORIES.register(modEventBus);
 ```
 
 #### 添加文档

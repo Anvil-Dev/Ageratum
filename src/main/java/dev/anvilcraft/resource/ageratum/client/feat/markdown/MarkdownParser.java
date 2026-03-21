@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
+import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
@@ -9,10 +10,10 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDListCom
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDQuoteComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTableComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ import javax.annotation.Nullable;
  *   <li>{@code <namespace:location>...</namespace:location>} 和 {@code <namespace:location/>} 标签语法</li>
  * </ul>
  *
- * <p>扩展组件可通过 {@link #registerExtensionComponent(ResourceLocation, MDExtensionComponentFactory)} 注册。</p>
+ * <p>扩展组件通过 NeoForge Custom Registry {@code ageratum:extension_component_factory} 注册。</p>
  *
  * <p>解析器也支持通过 {@link #registerComponentParser(int, MDComponentParser)} 注入行级组件解析器。</p>
  */
@@ -70,7 +71,6 @@ public class MarkdownParser {
     );
 
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
-    private static final Map<ResourceLocation, MDExtensionComponentFactory> extensionComponentFactories = new HashMap<>();
 
     /**
      * 创建解析器并注册内置组件解析器。
@@ -89,18 +89,6 @@ public class MarkdownParser {
         this.mdComponentParserHolders.add(new MDComponentParserHolder(priority, parser));
     }
 
-    /**
-     * 注册扩展语法组件工厂。
-     *
-     * @param id      扩展组件 ID（如 {@code ageratum:info}）
-     * @param factory 组件工厂
-     */
-    public static synchronized void registerExtensionComponent(
-        ResourceLocation id,
-        MDExtensionComponentFactory factory
-    ) {
-        extensionComponentFactories.put(id, factory);
-    }
 
     private void registerBaseComponentParser() {
         this.registerComponentParser(-10, MDImageComponent::parse);
@@ -352,7 +340,11 @@ public class MarkdownParser {
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        MDExtensionComponentFactory factory = extensionComponentFactories.get(block.id());
+        Registry<MDExtensionComponentFactory> registry = AgeratumRegistries.EXTENSION_COMPONENT_FACTORY_REGISTRY_SUPPLIER.get();
+        if (registry == null) {
+            return null;
+        }
+        MDExtensionComponentFactory factory = registry.getOptional(block.id()).orElse(null);
         if (factory == null) {
             return null;
         }
@@ -373,7 +365,11 @@ public class MarkdownParser {
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        MDExtensionComponentFactory factory = extensionComponentFactories.get(block.id());
+        Registry<MDExtensionComponentFactory> registry = AgeratumRegistries.EXTENSION_COMPONENT_FACTORY_REGISTRY_SUPPLIER.get();
+        if (registry == null) {
+            return null;
+        }
+        MDExtensionComponentFactory factory = registry.getOptional(block.id()).orElse(null);
         if (factory == null) {
             return null;
         }
