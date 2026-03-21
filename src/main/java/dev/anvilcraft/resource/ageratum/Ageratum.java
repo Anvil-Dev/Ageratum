@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
+import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -49,6 +50,8 @@ public class Ageratum {
         NeoForge.EVENT_BUS.addListener(Ageratum::onCommandRegister);
         // 在资源包加载/重载时预构建 Markdown 组件缓存
         modEventBus.addListener(Ageratum::onReloadListenerRegister);
+        // 注册网络包
+        modEventBus.addListener(AgeratumNetwork::register);
     }
 
     /**
@@ -167,17 +170,53 @@ public class Ageratum {
         }
 
         ResourceManager resourceManager = minecraft.getResourceManager();
+        if (!openGuideOnClient(minecraft, resourceManager, documentLocation)) {
+            context.getSource().sendFailure(Component.literal("Guide file not found: assets/"
+                + documentLocation.getNamespace() + "/" + documentLocation.getPath()));
+            return 0;
+        }
+        return 1;
+    }
 
-        // 优先使用预解析缓存，缺失时回退为即时解析
-        Optional<List<MDComponent>> cachedComponents = GuideDocumentCache.getParsedComponents(documentLocation);
-        if (cachedComponents.isPresent()) {
-            minecraft.setScreen(new GuideScreen(documentLocation, cachedComponents.get()));
-            return 1;
+    /**
+     * 打开指定资源位置的文档。
+     *
+     * <p>客户端调用：直接尝试打开文档界面。</p>
+     * <p>服务端调用：通过网络包通知客户端打开文档。</p>
+     * <p>若文档不存在则忽略，不抛出异常。</p>
+     */
+    public static void openGuide(ResourceLocation location) {
+        if (location == null) {
+            return;
         }
 
-        String content = GuideDocumentLoader.read(resourceManager, documentLocation);
-        minecraft.setScreen(new GuideScreen(documentLocation, content));
-        return 1;
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null && minecraft.getResourceManager() != null) {
+            openGuideOnClient(minecraft, minecraft.getResourceManager(), location);
+            return;
+        }
+
+        AgeratumNetwork.sendOpenGuide(location);
+    }
+
+    /**
+     * 客户端本地打开文档；若不存在则返回 false。
+     */
+    private static boolean openGuideOnClient(Minecraft minecraft, ResourceManager resourceManager, ResourceLocation location) {
+        if (!GuideDocumentLoader.exists(resourceManager, location)) {
+            return false;
+        }
+
+        // 优先使用预解析缓存，缺失时回退为即时解析
+        Optional<List<MDComponent>> cachedComponents = GuideDocumentCache.getParsedComponents(location);
+        if (cachedComponents.isPresent()) {
+            minecraft.setScreen(new GuideScreen(location, cachedComponents.get()));
+            return true;
+        }
+
+        String content = GuideDocumentLoader.read(resourceManager, location);
+        minecraft.setScreen(new GuideScreen(location, content));
+        return true;
     }
 
     /**
