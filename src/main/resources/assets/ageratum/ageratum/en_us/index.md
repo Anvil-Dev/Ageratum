@@ -31,7 +31,7 @@ Hover events display additional text when you hover over text:
 Click events allow text to respond to clicks:
 <click type="OPEN_URL" data="https://example.com">click to open URL</click>
 <click type="COPY_TO_CLIPBOARD" data="Some text to copy">click to copy text</click>
-<click type="SUGGEST_COMMAND" data="/ageratum ageratum">click to suggest command</click>
+<click type="RUN_COMMAND" data="/ageratum ageratum">click to run command</click>
 
 You can combine multiple styles in the same text:
 <hover type="SHOW_TEXT" data="Combined events!"><click type="OPEN_URL" data="https://example.com">hover and click me!</click></hover>

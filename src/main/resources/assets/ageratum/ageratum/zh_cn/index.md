@@ -32,7 +32,7 @@
 点击事件允许文本响应点击操作：
 <click type="OPEN_URL" data="https://example.com">点击打开链接</click>
 <click type="COPY_TO_CLIPBOARD" data="一些要复制的文本">点击复制文本</click>
-<click type="SUGGEST_COMMAND" data="/ageratum ageratum">点击建议命令</click>
+<click type="RUN_COMMAND" data="/ageratum ageratum">点击运行命令</click>
 
 您可以在同一文本中组合多种样式：
 <hover type="SHOW_TEXT" data="组合事件！"><click type="OPEN_URL" data="https://example.com">在我上面悬停或点击我！</click></hover>
