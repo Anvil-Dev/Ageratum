@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,7 +17,6 @@ import javax.annotation.Nullable;
 
 public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
-    private static final int MAX_IMAGE_WIDTH = 240;
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
     private final ResourceLocation imageLocation;
 
@@ -46,21 +46,33 @@ public class MDImageComponent extends MDComponent {
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         Size size = this.resolveSize(minecraft);
-        int renderWidth = Math.max(1, Math.min(maxX, Math.min(MAX_IMAGE_WIDTH, size.width())));
-        float scale = (float) renderWidth / (float) size.width();
-        int renderHeight = Math.max(1, Math.round(size.height() * scale));
-        if (renderHeight > maxY) {
+        Size renderSize = this.computeRenderSize(size, maxX, maxY);
+        if (renderSize.width() <= 0 || renderSize.height() <= 0) {
             return;
         }
-        guiGraphics.blit(this.imageLocation, 0, 0, 0, 0, renderWidth, renderHeight, size.width(), size.height());
+        float scaleX = (float) renderSize.width() / size.width();
+        float scaleY = (float) renderSize.height() / size.height();
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.scale(scaleX, scaleY, 1.0f);
+        guiGraphics.blit(this.imageLocation, 0, 0, 0, 0, size.width(), size.height(), size.width(), size.height());
+        pose.popPose();
     }
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         Size size = this.resolveSize(minecraft);
-        int renderWidth = Math.max(1, Math.min(maxX, Math.min(MAX_IMAGE_WIDTH, size.width())));
-        float scale = (float) renderWidth / (float) size.width();
-        return Math.max(1, Math.round(size.height() * scale));
+        return this.computeRenderSize(size, maxX, maxY).height();
+    }
+
+    private Size computeRenderSize(Size source, int maxX, int maxY) {
+        int availableWidth = Math.max(1, maxX);
+        int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : Math.max(1, maxY);
+        float scale = Math.min((float) availableWidth / source.width(), (float) availableHeight / source.height());
+        scale = Math.min(1.0f, scale);
+        int width = Math.max(1, Math.round(source.width() * scale));
+        int height = Math.max(1, Math.round(source.height() * scale));
+        return new Size(width, height);
     }
 
     private Size resolveSize(Minecraft minecraft) {
