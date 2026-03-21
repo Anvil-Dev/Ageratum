@@ -4,14 +4,20 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * 内置文档阅读界面，用于渲染 Markdown 格式的指南文档。
@@ -141,6 +147,11 @@ public class GuideScreen extends Screen {
         this.renderBg(guiGraphics, partialTick, mouseX - i, mouseY - j);
         this.renderContent(guiGraphics, partialTick, mouseX - i, mouseY - j);
         pose.popPose();
+        
+        // 显示悬停提示信息
+        if (this.mouseInContentRange(mouseX, mouseY)) {
+            this.renderHoverTooltip(guiGraphics, mouseX, mouseY);
+        }
     }
 
     /**
@@ -160,6 +171,87 @@ public class GuideScreen extends Screen {
         // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
         this.scrollBy((float) -scrollY * SCROLL_STEP);
         return true;
+    }
+
+    /**
+     * 处理鼠标点击事件，响应 click 事件的 ClickEvent。
+     *
+     * @param mouseX 鼠标 X 坐标（屏幕像素）
+     * @param mouseY 鼠标 Y 坐标（屏幕像素）
+     * @param button 鼠标按钮（0=左键，1=右键，2=中键）
+     * @return 若已消费该事件返回 {@code true}，否则返回 {@code false}
+     */
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (!this.mouseInContentRange(mouseX, mouseY)) {
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
+        // 左键点击时尝试触发 ClickEvent
+        if (button == 0 && this.minecraft != null) {
+            Style style = this.getStyleAtContentPosition(mouseX, mouseY);
+            if (style != null && style.getClickEvent() != null && this.handleComponentClicked(style)) {
+                return true;
+            }
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /**
+     * 渲染鼠标悬停时的提示信息。
+     *
+     * @param guiGraphics GuiGraphics 对象
+     * @param mouseX      鼠标 X 坐标（屏幕像素）
+     * @param mouseY      鼠标 Y 坐标（屏幕像素）
+     */
+    private void renderHoverTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (this.minecraft == null) return;
+
+        Style style = this.getStyleAtContentPosition(mouseX, mouseY);
+        if (style == null) {
+            return;
+        }
+
+        HoverEvent hoverEvent = style.getHoverEvent();
+        if (hoverEvent != null && hoverEvent.getAction() == HoverEvent.Action.SHOW_TEXT) {
+            Component hoverComponent = hoverEvent.getValue(
+                HoverEvent.Action.SHOW_TEXT
+            );
+            if (hoverComponent != null) {
+                guiGraphics.renderTooltip(this.minecraft.font, hoverComponent, mouseX, mouseY);
+            }
+        }
+    }
+
+    /**
+     * 获取内容区域指定屏幕坐标对应的文本样式。
+     *
+     * @param mouseX 鼠标 X 坐标（屏幕像素）
+     * @param mouseY 鼠标 Y 坐标（屏幕像素）
+     * @return 命中的文本样式；若未命中则返回 {@code null}
+     */
+    @Nullable
+    private Style getStyleAtContentPosition(double mouseX, double mouseY) {
+        if (this.minecraft == null) {
+            return null;
+        }
+
+        double relX = mouseX - (this.leftPos + CONTENT_X);
+        double relY = mouseY - (this.topPos + CONTENT_Y);
+        double mdX = relX / CONTENT_SCALE;
+        double mdY = relY / CONTENT_SCALE + this.contentScroll;
+
+        double currentY = 0;
+        for (MDComponent component : this.parsedComponents) {
+            int componentHeight = component.getHeight(this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE);
+            if (mdY >= currentY && mdY <= currentY + componentHeight) {
+                return this.getStyleAtComponentPosition(component, this.minecraft, mdX, mdY - currentY);
+            }
+            currentY += componentHeight + CONTENT_SPACING;
+        }
+
+        return null;
     }
 
     /**
@@ -341,5 +433,33 @@ public class GuideScreen extends Screen {
         int contentRight = contentLeft + Math.round(CONTENT_WIDTH * CONTENT_SCALE);
         int contentBottom = contentTop + Math.round(CONTENT_HEIGHT * CONTENT_SCALE);
         return mouseX >= contentLeft && mouseX <= contentRight && mouseY >= contentTop && mouseY <= contentBottom;
+    }
+
+    /**
+     * 获取指定组件中某个 Markdown 坐标对应的文本样式。
+     *
+     * @param component  Markdown 组件
+     * @param minecraft  Minecraft 客户端实例
+     * @param mouseX     相对于组件的 X 坐标（Markdown 坐标系）
+     * @param mouseY     相对于组件的 Y 坐标（Markdown 坐标系）
+     * @return 命中的文本样式；若未命中则返回 {@code null}
+     */
+    @Nullable
+    private Style getStyleAtComponentPosition(
+        MDComponent component, Minecraft minecraft, double mouseX, double mouseY
+    ) {
+        if (mouseX < 0 || mouseY < 0) {
+            return null;
+        }
+
+        FormattedText text = component.getText();
+        List<FormattedCharSequence> lines = minecraft.font.split(text, CONTENT_WIDTH);
+        int lineIndex = Mth.floor(mouseY / minecraft.font.lineHeight);
+        if (lineIndex < 0 || lineIndex >= lines.size()) {
+            return null;
+        }
+
+        FormattedCharSequence line = lines.get(lineIndex);
+        return minecraft.font.getSplitter().componentStyleAtWidth(line, Mth.floor(mouseX));
     }
 }

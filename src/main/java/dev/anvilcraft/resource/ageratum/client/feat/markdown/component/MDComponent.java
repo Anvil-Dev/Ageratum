@@ -58,6 +58,15 @@ public abstract class MDComponent {
     }
 
     /**
+     * 获取组件的 FormattedText。
+     * 
+     * @return 该组件的格式化文本
+     */
+    public FormattedText getText() {
+        return this.text;
+    }
+
+    /**
      * 在给定区域内渲染组件内容。
      */
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
@@ -313,7 +322,7 @@ public abstract class MDComponent {
         // 注册 hover 事件支持
         registerStyleParser(
             0,
-            Pattern.compile("<hover\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\">"),
+            Pattern.compile("<hover\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\"\\s*>"),
             "</hover>",
             (parentStyle, matcher) -> {
                 String hoverType = matcher.group(1).toUpperCase();
@@ -335,7 +344,7 @@ public abstract class MDComponent {
         // 注册 click 事件支持
         registerStyleParser(
             0,
-            Pattern.compile("<click\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\">"),
+            Pattern.compile("<click\\s+type=\"([^\"]+)\"\\s+data=\"([^\"]*)\"\\s*>"),
             "</click>",
             (parentStyle, matcher) -> {
                 String clickType = matcher.group(1).toUpperCase();
