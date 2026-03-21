@@ -59,31 +59,35 @@ public abstract class MDComponent {
     }
 
     public static FormattedText textFormat(String text) {
-        EscapeContext escapeContext = protectMarkdownEscapes(text);
-        return parseMixedTextWithCodeSpan(escapeContext.text(), escapeContext);
+        return textFormat(text, Style.EMPTY);
     }
 
-    private static FormattedText parseMixedTextWithCodeSpan(String text, EscapeContext escapeContext) {
+    public static FormattedText textFormat(String text, Style baseStyle) {
+        EscapeContext escapeContext = protectMarkdownEscapes(text);
+        return parseMixedTextWithCodeSpan(escapeContext.text(), escapeContext, baseStyle);
+    }
+
+    private static FormattedText parseMixedTextWithCodeSpan(String text, EscapeContext escapeContext, Style baseStyle) {
         List<FormattedText> parts = new ArrayList<>();
         int pos = 0;
         while (pos < text.length()) {
             int codeStart = text.indexOf('`', pos);
             if (codeStart < 0) {
-                appendMarkdownPart(parts, text.substring(pos), Style.EMPTY, escapeContext);
+                appendMarkdownPart(parts, text.substring(pos), baseStyle, escapeContext);
                 break;
             }
 
             int codeEnd = text.indexOf('`', codeStart + 1);
             if (codeEnd < 0) {
-                appendMarkdownPart(parts, text.substring(pos), Style.EMPTY, escapeContext);
+                appendMarkdownPart(parts, text.substring(pos), baseStyle, escapeContext);
                 break;
             }
 
             if (codeStart > pos) {
-                appendMarkdownPart(parts, text.substring(pos, codeStart), Style.EMPTY, escapeContext);
+                appendMarkdownPart(parts, text.substring(pos, codeStart), baseStyle, escapeContext);
             }
             String codeSpan = restoreEscapedLiterals(text.substring(codeStart + 1, codeEnd), escapeContext);
-            parts.add(FormattedText.of(codeSpan, Style.EMPTY.withColor(CODE_SPAN_COLOR)));
+            parts.add(FormattedText.of(codeSpan, baseStyle.withColor(CODE_SPAN_COLOR)));
             pos = codeEnd + 1;
         }
 

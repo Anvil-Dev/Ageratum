@@ -76,9 +76,13 @@ public class GuideScreen extends Screen {
     protected float maxContentScroll;
 
     public GuideScreen() {
-        super(Component.literal("Guide"));
+        this(Ageratum.location("ageratum/index.md"), TEST_TEXT);
+    }
+
+    public GuideScreen(ResourceLocation documentLocation, String markdown) {
+        super(Component.literal("Guide - " + documentLocation));
         this.parser = new MarkdownParser();
-        this.parsedComponents = this.parser.parse(TEST_TEXT);
+        this.parsedComponents = this.parser.parse(markdown);
     }
 
     protected void init() {
