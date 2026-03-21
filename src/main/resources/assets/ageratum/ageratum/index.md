@@ -1,139 +1,153 @@
-# Ageratum Markdown Parser Test Suite
+# Ageratum Markdown Parser — Full Test Suite
 
-This document is for manual verification of current markdown behavior.
+## Implemented: ATX headings (H1-H3 shown here)
+
+### Heading H3
 
 ---
 
-## Implemented: block-level
+## Implemented: Paragraph + inline styles
 
-### Heading level 3
+Plain paragraph with **bold**, *italic*, ~~strikethrough~~, [link text](https://example.com), and <color=#39c5bb>custom color</color>
+and <o>obfuscated</o>.
 
-> Blockquote line 1
-> Blockquote line 2 with **bold** and `code`.
->> Nested quote level 2 with ~~strike~~ and [link](https://example.com/quote).
->>> Nested quote level 3 with escaped \*asterisk\* and `literal`.
+Inline code keeps all Markdown literal: `**not bold** _not italic_ ~~not strike~~ <color=#ff0000>no color</color>`.
 
-- Unordered item A
-  - Unordered level 2 item with *italic*
-    - Unordered level 3 item with ~~strike~~
-      - Unordered level 4 item with **bold**
+Multi-backtick code span: ``code with `backtick` inside``.
 
-1. Ordered item one
-  1. Ordered nested level 2
-    1. Ordered nested level 3
-2. Ordered item two
-3. Ordered item three
+Autolink URL: <https://example.com/path?q=1>
+Autolink email: <user@example.com>
+
+Escaped punctuation (should all be literal symbols):
+\* \_ \~ \` \[ \] \( \) \# \+ \- \. \! \| \{ \} \< \> \@ \\
+
+---
+
+## Implemented: Setext headings
+
+Setext heading H1
+=================
+
+Setext heading H2
+-----------------
+
+---
+
+## Implemented: Blockquote (multi-level)
+
+> Level 1 quote with **bold** and `code`.
+>> Level 2 quote with ~~strike~~ and [link](https://example.com/quote).
+>>> Level 3 quote with escaped \*asterisk\* and `literal`.
+> Back to level 1 after level 3.
+
+---
+
+## Implemented: Lists
+
+### Unordered (multi-level, geometric markers)
+
+- Level 0 bullet with *italic*
+    - Level 1 item with ~~strike~~
+        - Level 2 item with **bold**
+            - Level 3 item with `code`
+                - Level 4 wraps back to first symbol
+
+### Ordered (multi-level)
+
+1. Ordered level 0, item 1
+2. Ordered level 0, item 2
+1. Ordered level 1, item 1
+   1. Ordered level 2, item 1
 
 ### Task list
 
-- [ ] Task level 1 unchecked
-  - [x] Task level 2 checked
-    - [ ] Task level 3 unchecked with `code`
-- [x] Task level 1 checked with **bold**
-
-### Code block in implemented section
-
-```
-// fenced code block should stay literal
-**not bold** and [not-link](https://example.com)
-> not a quote in code
-- [x] not a task list in code
-```
+- [x] Task done with **bold** and `code`
+- [ ] Task pending with *italic*
+    - [x] Nested task done
+        - [ ] Double-nested task pending
 
 ---
 
-## Implemented: inline-level
+## Implemented: Fenced code block — backtick
 
-Plain paragraph with **bold**, *italic*, ~~strikethrough~~, [styled link text](https://example.com),
-and ![inline image placeholder](assets/test.png).
+```java
+// Everything inside is literal
+**not bold**
+_not italic_ ~~
+not strike~~
+    [not-link](https://example.com)
+    >
+not a
+quote
+-[x]
+not a
+task list
+\* \
+_ escaped
+but literal
+inside code
+block
+```
 
-Custom tags still supported: <color=#39c5bb>color text</color> and <o>obfuscated text</o>.
+## Implemented: Fenced code block — tilde
 
-Escapes that should render as literal symbols:
-\* \_ \~ \` \[ \] \( \) \# \+ \- \. \! \| \{ \} \< \> \@ \\ \\*literal star\\*
+~~~
+Tilde fenced code block is now supported.
+**still literal** _still literal_
+~~~
 
-Inline code should be literal (no markdown inside):
-`**not bold** _not italic_ ~~not strike~~ <color=#ff0000>not color</color> \* \_ \~ \``
+## Implemented: Indented code block (4 spaces)
+
+    int x = 42;
+    System.out.println("indented code block");
+    // Consecutive indented lines become one block
 
 ---
 
-## Implemented: image component (line-only)
+## Implemented: Tables
+
+| Left aligned | Center aligned | Right aligned |
+|:-------------|:--------------:|--------------:|
+| cell A1      |    cell B1     |       cell C1 |
+| **bold**     |     `code`     |      *italic* |
+| cell A3      |    cell B3     |       cell C3 |
+
+---
+
+## Implemented: Link reference definitions
+
+[ref-link][example-ref]
+
+[collapsed-ref][]
+
+[shortcut]
+
+[example-ref]: https://example.com
+
+[collapsed-ref]: https://example.com/collapsed
+
+[shortcut]: https://example.com/shortcut
+
+---
+
+## Implemented: Image (line-only, namespace:path)
 
 ![](ageratum:gui/guide/guide.png)
 
-The line above should render an image from:
-assets/ageratum/textures/gui/guide/guide.png
-
 ---
 
-## Not Implemented (expected to fail or stay literal)
+## Not yet implemented
 
-### Setext headings (not supported)
+### Hard line break
 
-Setext heading style
-====================
+Line one  
+Line two (trailing two-space hard break — currently treated as soft wrap)
 
-Subheading setext style
------------------------
+### Nested block elements inside blockquote
 
-### Indented code block (not supported)
+> - list inside quote (not supported as block)
+    > ```code inside quote``` (not supported as block)
 
-    int x = 1;
-    System.out.println(x);
+### Footnotes, definition lists, math, front matter
 
-### Tilde fenced code block (~~~ not supported)
-
-~~~
-this fence style is not implemented
-~~~
-
-### Link reference definitions (not supported)
-
-[ref-link][doc-ref]
-
-[doc-ref]: https://example.com "title"
-
-### Autolink angle brackets (not supported)
-
-<https://example.com>
-<user@example.com>
-
-### Tables (not supported)
-
-| name | value |
-|------|-------|
-| a    | 1     |
-| b    | 2     |
-
-### Task list / nested list (not supported)
-
-- [ ] todo item
-- [x] done item
-    - nested item
-
-### Multi-backtick code span (not supported)
-
-``code with `backtick` inside``
-
-### HTML markdown tags intentionally disabled for style parsing
-
-<b>should not become bold</b>
-<i>should not become italic</i>
-<u>should not become underline</u>
-<s>should not become strike</s>
-
----
-
-## Mixed stress test
-
-> Quote + list marker text: - this is still quote text
-> 1. also quote text, not a real ordered list in this parser mode
->> nested quote + task marker text: - [x] still quote text
-
-- level 1 unordered
-  - level 2 unordered
-    1. level 3 ordered mixed
-      - [x] level 4 task mixed
-
-Final mixed line: **bold + *italic* + ~~strike~~ + [link](https://example.com)** and escaped punctuation \? \: \; \" \' .
-
+Extended Markdown features not in CommonMark core — not planned.

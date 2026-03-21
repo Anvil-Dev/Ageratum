@@ -22,6 +22,8 @@ public abstract class MDComponent {
     private static final Pattern BOLD_UNDERSCORE_PATTERN = Pattern.compile("__([^_\\n]+)__");
     private static final Pattern ITALIC_ASTERISK_PATTERN = Pattern.compile("(?<!\\*)\\*([^*\\n]+)\\*(?!\\*)");
     private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<!_)_([^_\\n]+)_(?!_)");
+    private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
+    private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
@@ -71,33 +73,54 @@ public abstract class MDComponent {
         List<FormattedText> parts = new ArrayList<>();
         int pos = 0;
         while (pos < text.length()) {
-            int codeStart = text.indexOf('`', pos);
-            if (codeStart < 0) {
+            int tickStart = text.indexOf('`', pos);
+            if (tickStart < 0) {
                 appendMarkdownPart(parts, text.substring(pos), baseStyle, escapeContext);
                 break;
             }
 
-            int codeEnd = text.indexOf('`', codeStart + 1);
-            if (codeEnd < 0) {
-                appendMarkdownPart(parts, text.substring(pos), baseStyle, escapeContext);
-                break;
+            // Count the opening backtick run
+            int tickEnd = tickStart + 1;
+            while (tickEnd < text.length() && text.charAt(tickEnd) == '`') tickEnd++;
+            int tickCount = tickEnd - tickStart;
+
+            // Find matching closing run of the same length
+            int closeStart = findMatchingBackticks(text, tickEnd, tickCount);
+            if (closeStart < 0) {
+                // No match: emit the backticks literally and continue
+                if (tickStart > pos) appendMarkdownPart(parts, text.substring(pos, tickStart), baseStyle, escapeContext);
+                parts.add(FormattedText.of(text.substring(tickStart, tickEnd), baseStyle));
+                pos = tickEnd;
+                continue;
             }
 
-            if (codeStart > pos) {
-                appendMarkdownPart(parts, text.substring(pos, codeStart), baseStyle, escapeContext);
+            if (tickStart > pos) appendMarkdownPart(parts, text.substring(pos, tickStart), baseStyle, escapeContext);
+
+            // CommonMark: strip a single leading/trailing space when both present and content is not blank
+            String codeSpan = restoreEscapedLiterals(text.substring(tickEnd, closeStart), escapeContext);
+            if (codeSpan.length() >= 2 && codeSpan.startsWith(" ") && codeSpan.endsWith(" ") && !codeSpan.isBlank()) {
+                codeSpan = codeSpan.substring(1, codeSpan.length() - 1);
             }
-            String codeSpan = restoreEscapedLiterals(text.substring(codeStart + 1, codeEnd), escapeContext);
             parts.add(FormattedText.of(codeSpan, baseStyle.withColor(CODE_SPAN_COLOR)));
-            pos = codeEnd + 1;
+            pos = closeStart + tickCount;
         }
 
-        if (parts.isEmpty()) {
-            return FormattedText.EMPTY;
-        }
-        if (parts.size() == 1) {
-            return parts.getFirst();
-        }
+        if (parts.isEmpty()) return FormattedText.EMPTY;
+        if (parts.size() == 1) return parts.getFirst();
         return FormattedText.composite(parts);
+    }
+
+    private static int findMatchingBackticks(String text, int startPos, int tickCount) {
+        int pos = startPos;
+        while (pos < text.length()) {
+            int tick = text.indexOf('`', pos);
+            if (tick < 0) return -1;
+            int end = tick + 1;
+            while (end < text.length() && text.charAt(end) == '`') end++;
+            if (end - tick == tickCount) return tick;
+            pos = end;
+        }
+        return -1;
     }
 
     private static void appendMarkdownPart(List<FormattedText> parts, String text, Style style, EscapeContext escapeContext) {
@@ -128,6 +151,7 @@ public abstract class MDComponent {
                 case STRIKE -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withStrikethrough(true), escapeContext));
                 case BOLD -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withBold(true), escapeContext));
                 case ITALIC -> parts.add(parseMarkdownInlineText(next.content, parentStyle.withItalic(true), escapeContext));
+                case AUTOLINK -> parts.add(FormattedText.of(next.content, parentStyle.withUnderlined(true).withColor(LINK_COLOR)));
             }
 
             pos = next.end;
@@ -151,6 +175,8 @@ public abstract class MDComponent {
         earliest = chooseEarlier(earliest, findToken(BOLD_UNDERSCORE_PATTERN, text, pos, MarkdownTokenType.BOLD));
         earliest = chooseEarlier(earliest, findToken(ITALIC_ASTERISK_PATTERN, text, pos, MarkdownTokenType.ITALIC));
         earliest = chooseEarlier(earliest, findToken(ITALIC_UNDERSCORE_PATTERN, text, pos, MarkdownTokenType.ITALIC));
+        earliest = chooseEarlier(earliest, findToken(AUTOLINK_URL_PATTERN, text, pos, MarkdownTokenType.AUTOLINK));
+        earliest = chooseEarlier(earliest, findToken(AUTOLINK_EMAIL_PATTERN, text, pos, MarkdownTokenType.AUTOLINK));
         return earliest;
     }
 
@@ -351,7 +377,8 @@ public abstract class MDComponent {
         LINK,
         STRIKE,
         BOLD,
-        ITALIC
+        ITALIC,
+        AUTOLINK
     }
 
     private static final class MarkdownTokenMatch {
