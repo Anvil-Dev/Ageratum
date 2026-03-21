@@ -72,10 +72,10 @@ public class GuideScreen extends Screen {
     private void renderContent(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.translate(19, 18, 0);
+        pose.translate(19 + 3, 18 + 3, 0);
         pose.scale(0.6f, 0.6f, 1);
-        int maxX = 264;
-        int maxY = 328;
+        int maxX = 264 - 6;
+        int maxY = 328 - 6;
         String testText = """
             # Praesent scelerisque
             ## Vivamus euismod
@@ -90,16 +90,37 @@ public class GuideScreen extends Screen {
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
             vel nulla nec dui mollis vulputate. Nulla et nulla sodales,
             vulputate urna sed, viverra nulla.
+            
+            
+            Vivamus euismod, nulla molestie vestibulum faucibus, est purus
+            dapibus mauris, sit amet pellentesque nulla diam quis nulla.
+            Vestibulum ut erat semper, ultrices lacus id, maximus mi.
+            Integer ut pretium orci.
             ### Duis vestibulum
-            Nulla tincidunt varius ipsum, id condimentum sapien interdum
-            quis. Sed ut odio id velit porta porta eget lobortis sem.
+            Aliquam convallis ut erat vel iaculis. Praesent faucibus
+            ultrices odio, a ornare tellus faucibus sit amet. Integer
+            ut nunc nunc. Nunc in mauris in eros bibendum dapibus.
+            Quisque pulvinar, arcu feugiat lacinia scelerisque, nisi
+            nunc sollicitudin mi, ultricies vulputate ante tortor
+            eleifend purus.
+            
+            
+            Nam gravida libero lorem, vel fringilla velit cursus consequat.
+            Vivamus interdum vulputate lectus, vel malesuada odio blandit
+            ut. Etiam posuere faucibus nunc, vitae volutpat elit gravida ut.
+            Ut auctor sodales felis, ac ullamcorper ante placerat id. Orci
+            varius natoque penatibus et magnis dis parturient montes, nascetur
+            ridiculus mus. Nam consectetur ante ut tellus egestas condimentum.
+            Duis at lacus nec nisl efficitur hendrerit.
             """;
         if (this.minecraft == null) return;
         for (MDComponent component : this.parser.parse(testText)) {
             pose.pushPose();
-            component.render(guiGraphics, this.minecraft, maxX);
+            component.render(guiGraphics, this.minecraft, maxX, maxY);
             pose.popPose();
-            pose.translate(0, component.getHeight(this.minecraft, maxX) + 5, 0);
+            int offsetY = component.getHeight(this.minecraft, maxX, maxY) + 5;
+            maxY -= offsetY;
+            pose.translate(0, offsetY, 0);
         }
         pose.popPose();
     }

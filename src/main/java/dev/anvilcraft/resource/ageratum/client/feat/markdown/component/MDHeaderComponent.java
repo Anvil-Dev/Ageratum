@@ -38,11 +38,11 @@ public class MDHeaderComponent extends MDComponent {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(this.getScale(), this.getScale(), 1);
-        super.render(guiGraphics, minecraft, this.unscale(maxX));
+        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY));
         pose.translate(0, 0, 0);
         if (this.level == 1) {
             guiGraphics.hLine(5, this.unscale(maxX) - 5, 1, 0xFFFFFFFF);
@@ -51,8 +51,8 @@ public class MDHeaderComponent extends MDComponent {
     }
 
     @Override
-    public int getHeight(Minecraft minecraft, int maxX) {
-        int height = this.scale(super.getHeight(minecraft, this.unscale(maxX)));
+    public int getHeight(Minecraft minecraft, int maxX, int maxY) {
+        int height = this.scale(super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY)));
         if (this.level == 1) {
             height += 2;
         }

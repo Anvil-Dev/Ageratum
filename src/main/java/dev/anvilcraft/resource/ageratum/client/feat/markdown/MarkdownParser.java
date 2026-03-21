@@ -33,7 +33,7 @@ public class MarkdownParser {
         for (String s : split) {
             MDComponent component = this.parseComponent(s);
             if (component == null) {
-                waitStrBuilder.append(s).append(" ");
+                waitStrBuilder.append(s).append("\n");
             } else {
                 if (!waitStrBuilder.isEmpty()) {
                     waitStrBuilder.deleteCharAt(waitStrBuilder.length() - 1);
