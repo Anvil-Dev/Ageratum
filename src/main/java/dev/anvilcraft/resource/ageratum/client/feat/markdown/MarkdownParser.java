@@ -5,6 +5,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHorizontalRuleComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDListComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDQuoteComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 
@@ -18,8 +19,9 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 public class MarkdownParser {
-    private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^\\s*(\\d+)\\.\\s+(.+)$");
-    private static final Pattern UNORDERED_LIST_PATTERN = Pattern.compile("^\\s*[-+*]\\s+(.+)$");
+    private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.+)$");
+    private static final Pattern TASK_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+\\[([ xX])]\\s+(.+)$");
+    private static final Pattern UNORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+(.+)$");
     private static final Pattern BLOCKQUOTE_PATTERN = Pattern.compile("^\\s*((?:>\\s*)+)(.*)$");
     private static final Pattern HORIZONTAL_RULE_PATTERN = Pattern.compile("^\\s*([-*_])(?:\\s*\\1){2,}\\s*$");
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
@@ -42,7 +44,7 @@ public class MarkdownParser {
         List<MDComponent> components = new ArrayList<>();
         StringBuilder paragraphBuilder = new StringBuilder();
         List<MDQuoteComponent.QuoteLine> quoteLines = new ArrayList<>();
-        StringBuilder listBuilder = new StringBuilder();
+        List<MDListComponent.ListItem> listItems = new ArrayList<>();
         StringBuilder codeBlockBuilder = new StringBuilder();
         boolean inCodeBlock = false;
 
@@ -64,7 +66,7 @@ public class MarkdownParser {
             if (s.trim().startsWith("```")) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
-                flushListComponent(components, listBuilder);
+                flushListComponent(components, listItems);
                 inCodeBlock = true;
                 continue;
             }
@@ -72,9 +74,19 @@ public class MarkdownParser {
             Matcher quoteMatcher = BLOCKQUOTE_PATTERN.matcher(s);
             if (quoteMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
-                flushListComponent(components, listBuilder);
+                flushListComponent(components, listItems);
                 int quoteLevel = countQuoteLevel(quoteMatcher.group(1));
                 quoteLines.add(new MDQuoteComponent.QuoteLine(quoteLevel, quoteMatcher.group(2)));
+                continue;
+            }
+
+            Matcher taskListMatcher = TASK_LIST_PATTERN.matcher(s);
+            if (taskListMatcher.matches()) {
+                flushParagraphComponent(components, paragraphBuilder);
+                flushQuoteComponent(components, quoteLines);
+                int level = countIndentLevel(taskListMatcher.group(1));
+                boolean checked = taskListMatcher.group(2).equalsIgnoreCase("x");
+                listItems.add(MDListComponent.task(level, checked, taskListMatcher.group(3)));
                 continue;
             }
 
@@ -82,7 +94,8 @@ public class MarkdownParser {
             if (unorderedListMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
-                listBuilder.append("- ").append(unorderedListMatcher.group(1)).append("\n");
+                int level = countIndentLevel(unorderedListMatcher.group(1));
+                listItems.add(MDListComponent.unordered(level, unorderedListMatcher.group(2)));
                 continue;
             }
 
@@ -90,14 +103,16 @@ public class MarkdownParser {
             if (orderedListMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
-                listBuilder.append(orderedListMatcher.group(1)).append(". ").append(orderedListMatcher.group(2)).append("\n");
+                int level = countIndentLevel(orderedListMatcher.group(1));
+                int orderNumber = Integer.parseInt(orderedListMatcher.group(2));
+                listItems.add(MDListComponent.ordered(level, orderNumber, orderedListMatcher.group(3)));
                 continue;
             }
 
             if (HORIZONTAL_RULE_PATTERN.matcher(s).matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
-                flushListComponent(components, listBuilder);
+                flushListComponent(components, listItems);
                 components.add(new MDHorizontalRuleComponent());
                 continue;
             }
@@ -107,14 +122,14 @@ public class MarkdownParser {
                 if (s.isBlank()) {
                     flushParagraphComponent(components, paragraphBuilder);
                     flushQuoteComponent(components, quoteLines);
-                    flushListComponent(components, listBuilder);
+                    flushListComponent(components, listItems);
                 } else {
                     paragraphBuilder.append(s).append("\n");
                 }
             } else {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
-                flushListComponent(components, listBuilder);
+                flushListComponent(components, listItems);
                 components.add(component);
             }
         }
@@ -128,7 +143,7 @@ public class MarkdownParser {
 
         flushParagraphComponent(components, paragraphBuilder);
         flushQuoteComponent(components, quoteLines);
-        flushListComponent(components, listBuilder);
+        flushListComponent(components, listItems);
 
         return components;
     }
@@ -150,13 +165,12 @@ public class MarkdownParser {
         lines.clear();
     }
 
-    private static void flushListComponent(List<MDComponent> components, StringBuilder builder) {
-        if (builder.isEmpty()) {
+    private static void flushListComponent(List<MDComponent> components, List<MDListComponent.ListItem> items) {
+        if (items.isEmpty()) {
             return;
         }
-        builder.deleteCharAt(builder.length() - 1);
-        components.add(new MDTextComponent(builder.toString(), true));
-        builder.setLength(0);
+        components.add(new MDListComponent(items));
+        items.clear();
     }
 
     private static int countQuoteLevel(String markers) {
@@ -167,6 +181,19 @@ public class MarkdownParser {
             }
         }
         return Math.max(1, level);
+    }
+
+    private static int countIndentLevel(String indent) {
+        int width = 0;
+        for (int i = 0; i < indent.length(); i++) {
+            char ch = indent.charAt(i);
+            if (ch == '\t') {
+                width += 2;
+            } else if (ch == ' ') {
+                width += 1;
+            }
+        }
+        return Math.max(0, width / 2);
     }
 
     public @Nullable MDComponent parseComponent(String string) {
