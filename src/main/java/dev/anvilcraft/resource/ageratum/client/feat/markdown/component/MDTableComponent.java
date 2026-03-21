@@ -130,8 +130,8 @@ public class MDTableComponent extends MDComponent {
         int y = 0;
         for (int rowIdx = 0; rowIdx < rows.size(); rowIdx++) {
             String[] row = rows.get(rowIdx);
-            int rowH = rowHeight(minecraft, row, colWidth);
             boolean isHeader = hasHeader && rowIdx == 0;
+            int rowH = rowHeight(minecraft, row, colWidth, isHeader);
 
             if (isHeader) {
                 guiGraphics.fill(1, y, maxX - 1, y + rowH, HEADER_COLOR);
@@ -142,8 +142,7 @@ public class MDTableComponent extends MDComponent {
             for (int col = 0; col < columnCount; col++) {
                 String cell = col < row.length ? row[col] : "";
                 int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
-                Style style = isHeader ? Style.EMPTY.withBold(true) : Style.EMPTY;
-                List<FormattedCharSequence> lines = minecraft.font.split(MDComponent.textFormat(cell, style), colWidth);
+                List<FormattedCharSequence> lines = splitCellLines(minecraft, cell, colWidth, isHeader);
 
                 PoseStack pose = guiGraphics.pose();
                 pose.pushPose();
@@ -181,8 +180,9 @@ public class MDTableComponent extends MDComponent {
         if (rows.isEmpty()) return 0;
         int colWidth = computeColWidth(maxX);
         int total = 0;
-        for (String[] row : rows) {
-            total += rowHeight(minecraft, row, colWidth);
+        for (int rowIdx = 0; rowIdx < rows.size(); rowIdx++) {
+            boolean isHeader = hasHeader && rowIdx == 0;
+            total += rowHeight(minecraft, rows.get(rowIdx), colWidth, isHeader);
         }
         return total;
     }
@@ -197,13 +197,21 @@ public class MDTableComponent extends MDComponent {
     /**
      * 计算单行表格的渲染高度。
      */
-    private int rowHeight(Minecraft minecraft, String[] row, int colWidth) {
+    private int rowHeight(Minecraft minecraft, String[] row, int colWidth, boolean isHeader) {
         int maxLines = 1;
         for (int col = 0; col < columnCount; col++) {
             String cell = col < row.length ? row[col] : "";
-            maxLines = Math.max(maxLines, Math.max(1, minecraft.font.split(MDComponent.textFormat(cell), colWidth).size()));
+            maxLines = Math.max(maxLines, Math.max(1, splitCellLines(minecraft, cell, colWidth, isHeader).size()));
         }
         return maxLines * minecraft.font.lineHeight + PADDING_V * 2;
+    }
+
+    /**
+     * 使用与渲染一致的样式规则拆分单元格行，避免测量与绘制不一致。
+     */
+    private List<FormattedCharSequence> splitCellLines(Minecraft minecraft, String cell, int colWidth, boolean isHeader) {
+        Style style = isHeader ? Style.EMPTY.withBold(true) : Style.EMPTY;
+        return minecraft.font.split(MDComponent.textFormat(cell, style), colWidth);
     }
 }
 
