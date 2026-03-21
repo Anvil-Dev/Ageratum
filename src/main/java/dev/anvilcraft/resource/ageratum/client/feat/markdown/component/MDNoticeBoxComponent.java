@@ -25,10 +25,10 @@ public class MDNoticeBoxComponent extends MDComponent {
      */
     @Getter
     public enum NoticeType {
-        INFO(0x3B82F6, 0xDEEDF7),      // 蓝色
-        TIP(0x10B981, 0xD1F5E8),       // 绿色
-        WARNING(0xF59E0B, 0xFEF3C7),   // 橙色
-        DANGER(0xEF4444, 0xFEE2E2);    // 红色
+        INFO(0xFF3B82F6, 0xAADEEDF7),      // 蓝色
+        TIP(0xFF10B981, 0xAAD1F5E8),       // 绿色
+        WARNING(0xFFF59E0B, 0xAAFEF3C7),   // 橙色
+        DANGER(0xFFEF4444, 0xAAFEE2E2);    // 红色
 
         private final int borderColor;
         private final int backgroundColor;
