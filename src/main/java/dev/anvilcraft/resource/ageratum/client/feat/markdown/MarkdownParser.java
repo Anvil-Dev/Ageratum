@@ -12,7 +12,6 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextCom
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,11 +29,19 @@ import javax.annotation.Nullable;
  * <p>负责将原始 Markdown 文本按块级语义拆分为一组 {@link MDComponent}，
  * 并在解析阶段处理引用链接、代码块、列表、表格、引用块等结构。</p>
  *
- * <p>解析器支持通过 {@link #registerComponentParser(int, MDComponentParser)}
- * 注入额外的行级组件解析器，用于扩展自定义语法。</p>
+ * <p>同时支持两种扩展语法：</p>
+ * <ul>
+ *   <li>{@code ::: namespace:location ... :::} 冒号语法</li>
+ *   <li>{@code <namespace:location>...</namespace:location>} 和 {@code <namespace:location/>} 标签语法</li>
+ * </ul>
+ *
+ * <p>扩展组件可通过 {@link #registerExtensionComponent(ResourceLocation, MDExtensionComponentFactory)} 注册。</p>
+ *
+ * <p>解析器也支持通过 {@link #registerComponentParser(int, MDComponentParser)} 注入行级组件解析器。</p>
  */
 public class MarkdownParser {
-    // ── Block patterns ──────────────────────────────────────────────
+    // ── 块级模式定义 ──────────────────────────────────────────────────
+
     private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.+)$");
     private static final Pattern TASK_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+\\[([ xX])]\\s+(.+)$");
     private static final Pattern UNORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+(.+)$");
@@ -48,22 +55,22 @@ public class MarkdownParser {
     private static final Pattern LINK_REF_DEF_PATTERN = Pattern.compile(
         "^\\s{0,3}\\[([^\\]]+)]:\\s*(\\S+)(?:\\s+(?:\"[^\"]*\"|'[^']*'|\\([^)]*\\)))?\\s*$"
     );
-    // Reference link syntax: [text][id] or [text][] (collapsed)
     private static final Pattern LINK_REF_FULL_PATTERN = Pattern.compile("\\[([^\\]]+)]\\[([^\\]]*)]");
-    // Shortcut ref [id] – not followed by ( or [
     private static final Pattern LINK_REF_SHORT_PATTERN = Pattern.compile("\\[([^\\]\\[]+)](?![\\[(])");
+
+    // ── 扩展语法模式定义 ────────────────────────────────────────────────
+
     private static final Pattern EXTENSION_COLON_OPEN_PATTERN = Pattern.compile(
         "^:::\\s+((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*))?$",
         Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EXTENSION_TAG_OPEN_PATTERN = Pattern.compile(
-        "^<<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*?))?\\s*(/?)>\\s*$",
+        "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*?))?\\s*(/?)>\\s*$",
         Pattern.CASE_INSENSITIVE
     );
-    private static final Pattern EXTENSION_PARAM_PAIR_PATTERN = Pattern.compile("([a-zA-Z0-9_.-]+)=(\"[^\"]*\"|'[^']*'|\\S+)");
 
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
-    private static final Map<ResourceLocation, MDExtensionComponentFactory> EXTENSION_COMPONENT_FACTORIES = new HashMap<>();
+    private static final Map<ResourceLocation, MDExtensionComponentFactory> extensionComponentFactories = new HashMap<>();
 
     /**
      * 创建解析器并注册内置组件解析器。
@@ -84,9 +91,15 @@ public class MarkdownParser {
 
     /**
      * 注册扩展语法组件工厂。
+     *
+     * @param id      扩展组件 ID（如 {@code ageratum:info}）
+     * @param factory 组件工厂
      */
-    public static synchronized void registerExtensionComponent(ResourceLocation id, MDExtensionComponentFactory factory) {
-        EXTENSION_COMPONENT_FACTORIES.put(id, factory);
+    public static synchronized void registerExtensionComponent(
+        ResourceLocation id,
+        MDExtensionComponentFactory factory
+    ) {
+        extensionComponentFactories.put(id, factory);
     }
 
     private void registerBaseComponentParser() {
@@ -94,12 +107,17 @@ public class MarkdownParser {
         this.registerComponentParser(0, MDHeaderComponent::parse);
     }
 
-    // ── Public entry point ───────────────────────────────────────────
     /**
      * 将 Markdown 文本解析为组件列表。
      *
-     * <p>解析流程分为两阶段：先做引用链接预处理，再做逐行块级扫描；
-     * 最终会将段落、引用、列表、表格与代码块等临时缓冲区统一刷新为组件。</p>
+     * <p>解析流程：
+     * <ol>
+     *   <li>规范化换行符</li>
+     *   <li>收集和展开引用链接定义</li>
+     *   <li>按行扫描，识别块级元素</li>
+     *   <li>缓冲区刷新为对应组件</li>
+     * </ol>
+     * </p>
      *
      * @param markdown 原始 Markdown 文本
      * @return 按渲染顺序排列的组件列表
@@ -108,9 +126,10 @@ public class MarkdownParser {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         String[] split = normalized.split("\n", -1);
 
-        // Pre-pass 1: collect link reference definitions
+        // 第一遍：收集引用链接定义
         Map<String, String> linkRefs = collectLinkRefs(split);
-        // Pre-pass 2: expand reference links in the full text
+        
+        // 第二遍：展开引用链接
         if (!linkRefs.isEmpty()) {
             normalized = expandLinkRefs(normalized, linkRefs);
             split = normalized.split("\n", -1);
@@ -123,12 +142,12 @@ public class MarkdownParser {
         List<String> tableRows = new ArrayList<>();
         StringBuilder codeBlockBuilder = new StringBuilder();
         StringBuilder indentedCodeBuilder = new StringBuilder();
-        String codeFence = null;          // null = not in fenced code block
+        String codeFence = null;
         boolean inIndentedCode = false;
-        CustomExtensionBlockState extensionBlock = null;
+        BlockExtensionState extensionBlock = null;
 
         for (String s : split) {
-            // ── Inside custom extension block ──────────────────────
+            // ── 扩展块内部 ──────────────────────────────────────────
             if (extensionBlock != null) {
                 if (extensionBlock.matchesCloseLine(s)) {
                     flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
@@ -147,7 +166,7 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Inside fenced code block ────────────────────────────
+            // ── 围栏代码块内部 ──────────────────────────────────────
             if (codeFence != null) {
                 Matcher closeMatcher = CODE_FENCE_PATTERN.matcher(s.trim());
                 if (closeMatcher.matches()
@@ -165,15 +184,15 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Custom extension blocks ────────────────────────────
-            CustomExtensionBlockState openExtension = tryOpenExtensionBlock(s);
+            // ── 块级扩展语法 ────────────────────────────────────────
+            BlockExtensionState openExtension = tryOpenExtensionBlock(s);
             if (openExtension != null) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 extensionBlock = openExtension;
                 continue;
             }
 
-            // ── Self-closing extension blocks ───────────────────────
+            // ── 自闭合扩展语法 ──────────────────────────────────────
             MDComponent selfClosingExtension = trySelfClosingExtensionBlock(s);
             if (selfClosingExtension != null) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
@@ -181,7 +200,7 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Code fence opening (``` or ~~~) ─────────────────────
+            // ── 围栏代码块开启 ──────────────────────────────────────
             Matcher fenceMatcher = CODE_FENCE_PATTERN.matcher(s.trim());
             if (fenceMatcher.matches()) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
@@ -190,7 +209,7 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Indented code block (4 spaces or tab) ───────────────
+            // ── 缩进代码块 ──────────────────────────────────────────
             Matcher indentMatcher = INDENTED_CODE_PATTERN.matcher(s);
             if (indentMatcher.matches() && paragraphBuilder.isEmpty() && listItems.isEmpty() && quoteLines.isEmpty()) {
                 flushTableComponent(components, tableRows);
@@ -207,12 +226,12 @@ public class MarkdownParser {
                 flushIndentedCodeComponent(components, indentedCodeBuilder);
             }
 
-            // ── Skip link reference definition lines ────────────────
+            // ── 跳过引用链接定义行 ──────────────────────────────────
             if (LINK_REF_DEF_PATTERN.matcher(s).matches()) {
                 continue;
             }
 
-            // ── Blockquote ──────────────────────────────────────────
+            // ── 块引用 ──────────────────────────────────────────────
             Matcher quoteMatcher = BLOCKQUOTE_PATTERN.matcher(s);
             if (quoteMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
@@ -222,7 +241,7 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Table row ───────────────────────────────────────────
+            // ── 表格行 ──────────────────────────────────────────────
             if (TABLE_ROW_PATTERN.matcher(s).matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
@@ -231,18 +250,21 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Task list ───────────────────────────────────────────
+            // ── 任务列表 ────────────────────────────────────────────
             Matcher taskMatcher = TASK_LIST_PATTERN.matcher(s);
             if (taskMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
                 flushTableComponent(components, tableRows);
-                listItems.add(MDListComponent.task(countIndentLevel(taskMatcher.group(1)),
-                    taskMatcher.group(2).equalsIgnoreCase("x"), taskMatcher.group(3)));
+                listItems.add(MDListComponent.task(
+                    countIndentLevel(taskMatcher.group(1)),
+                    taskMatcher.group(2).equalsIgnoreCase("x"),
+                    taskMatcher.group(3)
+                ));
                 continue;
             }
 
-            // ── Unordered list ──────────────────────────────────────
+            // ── 无序列表 ────────────────────────────────────────────
             Matcher unorderedMatcher = UNORDERED_LIST_PATTERN.matcher(s);
             if (unorderedMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
@@ -252,18 +274,21 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Ordered list ────────────────────────────────────────
+            // ── 有序列表 ────────────────────────────────────────────
             Matcher orderedMatcher = ORDERED_LIST_PATTERN.matcher(s);
             if (orderedMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
                 flushTableComponent(components, tableRows);
-                listItems.add(MDListComponent.ordered(countIndentLevel(orderedMatcher.group(1)),
-                    Integer.parseInt(orderedMatcher.group(2)), orderedMatcher.group(3)));
+                listItems.add(MDListComponent.ordered(
+                    countIndentLevel(orderedMatcher.group(1)),
+                    Integer.parseInt(orderedMatcher.group(2)),
+                    orderedMatcher.group(3)
+                ));
                 continue;
             }
 
-            // ── Setext headings (must be before HR check) ───────────
+            // ── Setext 标题（在水平线检查前） ──────────────────────
             boolean isSetextH1 = SETEXT_H1_PATTERN.matcher(s).matches();
             boolean isSetextH2 = !isSetextH1 && SETEXT_H2_PATTERN.matcher(s).matches();
             if ((isSetextH1 || isSetextH2) && !paragraphBuilder.isEmpty()) {
@@ -284,14 +309,14 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── Horizontal rule ─────────────────────────────────────
+            // ── 水平线 ──────────────────────────────────────────────
             if (HORIZONTAL_RULE_PATTERN.matcher(s).matches()) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 components.add(new MDHorizontalRuleComponent());
                 continue;
             }
 
-            // ── ATX heading / image / registered parsers ─────────────
+            // ── ATX 标题 / 图片 / 注册的行级解析器 ─────────────────
             MDComponent component = this.parseComponent(s);
             if (component == null) {
                 if (s.isBlank()) {
@@ -306,25 +331,28 @@ public class MarkdownParser {
             }
         }
 
-        // Flush unclosed fenced code block
+        // 刷新未闭合的围栏代码块
         if (codeFence != null) {
             if (!codeBlockBuilder.isEmpty()) codeBlockBuilder.deleteCharAt(codeBlockBuilder.length() - 1);
             components.add(new MDCodeBlockComponent(codeBlockBuilder.toString()));
         }
 
-        // 未闭合扩展块按忽略处理，不生成组件。
+        // 未闭合扩展块按忽略处理
 
         inIndentedCode = false;
         flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
         return components;
     }
 
+    /**
+     * 创建扩展组件。
+     */
     private static @Nullable MDComponent createExtensionComponent(
-        CustomExtensionBlockState block,
+        BlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        MDExtensionComponentFactory factory = EXTENSION_COMPONENT_FACTORIES.get(block.id());
+        MDExtensionComponentFactory factory = extensionComponentFactories.get(block.id());
         if (factory == null) {
             return null;
         }
@@ -338,14 +366,14 @@ public class MarkdownParser {
     }
 
     /**
-     * 创建扩展组件的重载，用于自闭合标签。
+     * 创建自闭合扩展组件。
      */
     private static @Nullable MDComponent createExtensionComponent(
-        SelfClosingExtensionBlockState block,
+        SelfClosingBlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        MDExtensionComponentFactory factory = EXTENSION_COMPONENT_FACTORIES.get(block.id());
+        MDExtensionComponentFactory factory = extensionComponentFactories.get(block.id());
         if (factory == null) {
             return null;
         }
@@ -358,8 +386,13 @@ public class MarkdownParser {
         ));
     }
 
-    private static @Nullable CustomExtensionBlockState tryOpenExtensionBlock(String line) {
+    /**
+     * 尝试打开块级扩展。
+     */
+    private static @Nullable BlockExtensionState tryOpenExtensionBlock(String line) {
         String trimmed = line.trim();
+
+        // 尝试冒号语法
         Matcher colonMatcher = EXTENSION_COLON_OPEN_PATTERN.matcher(trimmed);
         if (colonMatcher.matches()) {
             ResourceLocation id = parseExtensionId(colonMatcher.group(1));
@@ -367,58 +400,54 @@ public class MarkdownParser {
                 return null;
             }
             String rawParams = colonMatcher.group(2) == null ? "" : colonMatcher.group(2).trim();
-            return CustomExtensionBlockState.colon(id, rawParams);
+            return BlockExtensionState.colon(id, rawParams);
         }
 
+        // 尝试标签语法
         Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
         if (tagMatcher.matches()) {
-            String idText = tagMatcher.group(1);
-            ResourceLocation id = parseExtensionId(idText);
+            ResourceLocation id = parseExtensionId(tagMatcher.group(1));
             if (id == null) {
                 return null;
             }
-            // 检查是否为自闭合 />
-            String selfClosingMarker = tagMatcher.group(3);
-            if ("/".equals(selfClosingMarker)) {
-                // 自闭合标签，不返回 state，由 trySelfClosingExtensionBlock 处理
+            // 自闭合标签由 trySelfClosingExtensionBlock 处理
+            if ("/".equals(tagMatcher.group(3))) {
                 return null;
             }
             String rawParams = tagMatcher.group(2) == null ? "" : tagMatcher.group(2).trim();
-            return CustomExtensionBlockState.tag(id, rawParams, parseParamMap(rawParams));
+            return BlockExtensionState.tag(id, rawParams, ExtensionParamParser.parse(rawParams));
         }
 
         return null;
     }
 
     /**
-     * 尝试解析自闭合扩展块。
+     * 尝试解析自闭合扩展。
      */
     private static @Nullable MDComponent trySelfClosingExtensionBlock(String line) {
         String trimmed = line.trim();
         Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
+
         if (tagMatcher.matches()) {
-            String idText = tagMatcher.group(1);
-            ResourceLocation id = parseExtensionId(idText);
-            if (id == null) {
-                return null;
-            }
-            // 检查是否为自闭合 />
-            String selfClosingMarker = tagMatcher.group(3);
-            if (!"/".equals(selfClosingMarker)) {
-                // 非自闭合，不处理
+            ResourceLocation id = parseExtensionId(tagMatcher.group(1));
+            if (id == null || !"/".equals(tagMatcher.group(3))) {
                 return null;
             }
             String rawParams = tagMatcher.group(2) == null ? "" : tagMatcher.group(2).trim();
-            Map<String, String> params = parseParamMap(rawParams);
+            Map<String, String> params = ExtensionParamParser.parse(rawParams);
             return createExtensionComponent(
-                new SelfClosingExtensionBlockState(id, rawParams, params),
+                new SelfClosingBlockExtensionState(id, rawParams, params),
                 List.of(),
                 ""
             );
         }
+
         return null;
     }
 
+    /**
+     * 解析扩展组件 ID，支持省略 {@code ageratum:} 前缀。
+     */
     private static @Nullable ResourceLocation parseExtensionId(String idText) {
         String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
         try {
@@ -428,26 +457,10 @@ public class MarkdownParser {
         }
     }
 
-    private static Map<String, String> parseParamMap(String rawParams) {
-        if (rawParams == null || rawParams.isBlank()) {
-            return Map.of();
-        }
-        Map<String, String> result = new LinkedHashMap<>();
-        Matcher matcher = EXTENSION_PARAM_PAIR_PATTERN.matcher(rawParams);
-        while (matcher.find()) {
-            String key = matcher.group(1);
-            String value = matcher.group(2);
-            if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
-                value = value.substring(1, value.length() - 1);
-            }
-            result.put(key, value);
-        }
-        return result;
-    }
+    // ── 缓冲区刷新辅助方法 ──────────────────────────────────────────────
 
-    // ── Flush helpers ─────────────────────────────────────────────────
     /**
-     * 将所有临时缓冲区刷新为对应组件。
+     * 刷新所有临时缓冲区为对应组件。
      */
     private static void flushAll(
         List<MDComponent> components,
@@ -464,9 +477,6 @@ public class MarkdownParser {
         flushIndentedCodeComponent(components, indentedCode);
     }
 
-    /**
-     * 刷新段落文本缓冲区。
-     */
     private static void flushParagraphComponent(List<MDComponent> components, StringBuilder builder) {
         if (builder.isEmpty()) return;
         builder.deleteCharAt(builder.length() - 1);
@@ -474,36 +484,24 @@ public class MarkdownParser {
         builder.setLength(0);
     }
 
-    /**
-     * 刷新引用块缓冲区。
-     */
     private static void flushQuoteComponent(List<MDComponent> components, List<MDQuoteComponent.QuoteLine> lines) {
         if (lines.isEmpty()) return;
         components.add(new MDQuoteComponent(lines));
         lines.clear();
     }
 
-    /**
-     * 刷新列表缓冲区。
-     */
     private static void flushListComponent(List<MDComponent> components, List<MDListComponent.ListItem> items) {
         if (items.isEmpty()) return;
         components.add(new MDListComponent(items));
         items.clear();
     }
 
-    /**
-     * 刷新表格缓冲区。
-     */
     private static void flushTableComponent(List<MDComponent> components, List<String> tableRows) {
         if (tableRows.isEmpty()) return;
         components.add(MDTableComponent.parse(tableRows));
         tableRows.clear();
     }
 
-    /**
-     * 刷新缩进代码块缓冲区，并处理尾部空行。
-     */
     private static void flushIndentedCodeComponent(List<MDComponent> components, StringBuilder builder) {
         if (builder.isEmpty()) return;
         String content = builder.toString();
@@ -513,9 +511,10 @@ public class MarkdownParser {
         builder.setLength(0);
     }
 
-    // ── Link reference helpers ────────────────────────────────────────
+    // ── 引用链接辅助方法 ────────────────────────────────────────────────
+
     /**
-     * 收集文档中的引用链接定义（如 {@code [id]: url}）。
+     * 收集文档中的引用链接定义。
      */
     private static Map<String, String> collectLinkRefs(String[] lines) {
         Map<String, String> refs = new LinkedHashMap<>();
@@ -530,7 +529,7 @@ public class MarkdownParser {
      * 展开引用链接语法为普通内联链接。
      */
     private static String expandLinkRefs(String markdown, Map<String, String> refs) {
-        // Replace [text][id] → [text](url)
+        // 替换 [text][id] → [text](url)
         Matcher full = LINK_REF_FULL_PATTERN.matcher(markdown);
         StringBuilder sb = new StringBuilder();
         while (full.find()) {
@@ -542,7 +541,7 @@ public class MarkdownParser {
         full.appendTail(sb);
         markdown = sb.toString();
 
-        // Replace [id] shortcut → [id](url) when not followed by ( or [
+        // 替换 [id] 快捷引用 → [id](url)
         Matcher shortcut = LINK_REF_SHORT_PATTERN.matcher(markdown);
         sb = new StringBuilder();
         while (shortcut.find()) {
@@ -554,9 +553,10 @@ public class MarkdownParser {
         return sb.toString();
     }
 
-    // ── Misc helpers ──────────────────────────────────────────────────
+    // ── 其他辅助方法 ────────────────────────────────────────────────────
+
     /**
-     * 统计引用块前缀中的 {@code >} 层级。
+     * 统计块引用前缀中的 {@code >} 层级。
      */
     private static int countQuoteLevel(String markers) {
         int level = 0;
@@ -567,7 +567,7 @@ public class MarkdownParser {
     }
 
     /**
-     * 统计列表缩进层级（2 个空格视为 1 级，Tab 按 2 空格处理）。
+     * 统计列表缩进层级。
      */
     private static int countIndentLevel(String indent) {
         int width = 0;
@@ -581,9 +581,6 @@ public class MarkdownParser {
 
     /**
      * 使用已注册解析器尝试将一行文本解析为组件。
-     *
-     * @param string 单行文本
-     * @return 命中时返回组件，否则返回 {@code null}
      */
     public @Nullable MDComponent parseComponent(String string) {
         for (MDComponentParserHolder parserHolder : this.mdComponentParserHolders) {
@@ -601,131 +598,6 @@ public class MarkdownParser {
     }
 
     /**
-     * 扩展语法组件创建上下文。
-     */
-    public record MDExtensionContext(
-        ResourceLocation id,
-        String rawParams,
-        Map<String, String> params,
-        List<MDComponent> renderedContent,
-        String rawContent
-    ) {
-    }
-
-    /**
-     * 扩展语法组件工厂接口。
-     */
-    @FunctionalInterface
-    public interface MDExtensionComponentFactory {
-        MDComponent create(MDExtensionContext context);
-    }
-
-    private enum CustomExtensionBlockType {
-        COLON,
-        TAG
-    }
-
-    /**
-     * 自闭合扩展块的临时上下文，供 createExtensionComponent 使用。
-     */
-    private static final class SelfClosingExtensionBlockState {
-        private final ResourceLocation id;
-        private final String rawParams;
-        private final Map<String, String> params;
-
-        private SelfClosingExtensionBlockState(ResourceLocation id, String rawParams, Map<String, String> params) {
-            this.id = id;
-            this.rawParams = rawParams;
-            this.params = params;
-        }
-
-        private ResourceLocation id() {
-            return this.id;
-        }
-
-        private String rawParams() {
-            return this.rawParams;
-        }
-
-        private Map<String, String> params() {
-            return this.params;
-        }
-    }
-
-    private static final class CustomExtensionBlockState {
-        private final CustomExtensionBlockType type;
-        private final ResourceLocation id;
-        private final String rawParams;
-        private final Map<String, String> params;
-        private final String closeTagWithNamespace;
-        private final String closeTagWithoutNamespace;
-        private final StringBuilder content = new StringBuilder();
-
-        private CustomExtensionBlockState(
-            CustomExtensionBlockType type,
-            ResourceLocation id,
-            String rawParams,
-            Map<String, String> params,
-            String closeTagWithNamespace,
-            String closeTagWithoutNamespace
-        ) {
-            this.type = type;
-            this.id = id;
-            this.rawParams = rawParams;
-            this.params = params;
-            this.closeTagWithNamespace = closeTagWithNamespace;
-            this.closeTagWithoutNamespace = closeTagWithoutNamespace;
-        }
-
-        private static CustomExtensionBlockState colon(ResourceLocation id, String rawParams) {
-            return new CustomExtensionBlockState(CustomExtensionBlockType.COLON, id, rawParams, Map.of(), ":::", ":::");
-        }
-
-        private static CustomExtensionBlockState tag(ResourceLocation id, String rawParams, Map<String, String> params) {
-            return new CustomExtensionBlockState(
-                CustomExtensionBlockType.TAG,
-                id,
-                rawParams,
-                Collections.unmodifiableMap(new LinkedHashMap<>(params)),
-                "</" + id + ">>",
-                "</" + id.getPath() + ">>"
-            );
-        }
-
-        private ResourceLocation id() {
-            return this.id;
-        }
-
-        private String rawParams() {
-            return this.rawParams;
-        }
-
-        private Map<String, String> params() {
-            return this.params;
-        }
-
-        private boolean matchesCloseLine(String line) {
-            String trimmed = line.trim();
-            if (this.type == CustomExtensionBlockType.COLON) {
-                return ":::".equals(trimmed);
-            }
-            return this.closeTagWithNamespace.equals(trimmed) || this.closeTagWithoutNamespace.equals(trimmed);
-        }
-
-        private void appendLine(String line) {
-            this.content.append(line).append("\n");
-        }
-
-        private String rawContent() {
-            if (this.content.isEmpty()) {
-                return "";
-            }
-            String text = this.content.toString();
-            return text.endsWith("\n") ? text.substring(0, text.length() - 1) : text;
-        }
-    }
-
-    /**
      * 解析器持有器，按优先级排序。
      */
     private record MDComponentParserHolder(int priority, MDComponentParser parser)
@@ -737,3 +609,4 @@ public class MarkdownParser {
         }
     }
 }
+

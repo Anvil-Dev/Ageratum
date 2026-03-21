@@ -11,8 +11,8 @@ import net.neoforged.fml.common.Mod;
 /**
  * Ageratum 模组主类。
  *
- * <p>负责模组的初始化以及客户端命令 {@code /ageratum} 的注册。
- * 该命令允许玩家从资源包中打开指定命名空间下的 Markdown 文档。</p>
+ * <p>该模组定位为“游戏内手册框架”，用于为其它模组提供统一的文档展示能力。
+ * 当前负责模组初始化与文档打开入口。</p>
  */
 @Mod(Ageratum.MOD_ID)
 public class Ageratum {
