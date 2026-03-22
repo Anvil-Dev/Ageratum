@@ -1,4 +1,4 @@
-# 配方组件
+# Recipe Components
 
 ```
 <recipe id="minecraft:acacia_boat" />

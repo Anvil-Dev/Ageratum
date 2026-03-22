@@ -68,7 +68,7 @@ public class MarkdownParser {
         Pattern.CASE_INSENSITIVE
     );
     private static final Pattern EXTENSION_TAG_OPEN_PATTERN = Pattern.compile(
-        "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*))?\\s*(/?)>\\s*$",
+        "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*(/?)>\\s*$",
         Pattern.CASE_INSENSITIVE
     );
 
@@ -195,19 +195,19 @@ public class MarkdownParser {
                 continue;
             }
 
-            // ── 块级扩展语法 ────────────────────────────────────────
-            BlockExtensionState openExtension = tryOpenExtensionBlock(s);
-            if (openExtension != null) {
-                flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
-                extensionBlock = openExtension;
-                continue;
-            }
-
             // ── 自闭合扩展语法 ──────────────────────────────────────
             MDComponent selfClosingExtension = trySelfClosingExtensionBlock(s);
             if (selfClosingExtension != null) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 components.add(selfClosingExtension);
+                continue;
+            }
+
+            // ── 块级扩展语法 ────────────────────────────────────────
+            BlockExtensionState openExtension = tryOpenExtensionBlock(s);
+            if (openExtension != null) {
+                flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
+                extensionBlock = openExtension;
                 continue;
             }
 

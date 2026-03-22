@@ -4,14 +4,15 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinExtensionComponents;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinInlineStyleParsers;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineStyleParsers;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinRecipeComponentFactories;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -53,6 +54,8 @@ public class AgeratumClient {
         BuiltinExtensionComponents.init();
         // 触发内置行内样式解析器注册项的类加载
         BuiltinInlineStyleParsers.init();
+        // 触发内置配方组件解析器注册项的类加载
+        BuiltinRecipeComponentFactories.init();
     }
 
     /**

@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
  * <p>支持独占一行的 Markdown 图片语法，图片资源会被映射到
  * {@code textures/} 目录下并按可用区域等比缩放。</p>
  */
+@Getter
 public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
@@ -39,7 +41,7 @@ public class MDImageComponent extends MDComponent {
      */
     public MDImageComponent(ResourceLocation imageLocation) {
         super(FormattedText.EMPTY);
-        this.imageLocation = imageLocation;
+        this.imageLocation = imageLocation.withPrefix("textures/");
     }
 
     /**
@@ -56,7 +58,7 @@ public class MDImageComponent extends MDComponent {
             file = file.substring(1);
         }
         try {
-            ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, "textures/" + file);
+            ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, file);
             return new MDImageComponent(imageLocation);
         } catch (RuntimeException exception) {
             return null;
@@ -78,13 +80,13 @@ public class MDImageComponent extends MDComponent {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(scaleX, scaleY, 1.0f);
-        this.innerBlit(guiGraphics, this.imageLocation, size.width(), size.height(), size.width(), size.height());
+        this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
         this.renderContent(guiGraphics, size);
         pose.popPose();
     }
 
     protected void renderContent(GuiGraphics guiGraphics, Size size) {
-        this.innerBlit(guiGraphics, this.imageLocation, size.width(), size.height(), size.width(), size.height());
+        this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 
     protected void innerBlit(
@@ -138,13 +140,13 @@ public class MDImageComponent extends MDComponent {
      * 获取图片原始尺寸，缺失时使用缓存或回退默认值。
      */
     protected Size resolveSize(Minecraft minecraft) {
-        Size cachedSize = IMAGE_SIZE_CACHE.get(this.imageLocation);
+        Size cachedSize = IMAGE_SIZE_CACHE.get(this.getImageLocation());
         if (cachedSize != null) {
             return cachedSize;
         }
         Size size = new Size(16, 16);
         try {
-            Resource resource = minecraft.getResourceManager().getResource(this.imageLocation).orElse(null);
+            Resource resource = minecraft.getResourceManager().getResource(this.getImageLocation()).orElse(null);
             if (resource != null) {
                 try (NativeImage image = NativeImage.read(resource.open())) {
                     size = new Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()));
@@ -153,14 +155,14 @@ public class MDImageComponent extends MDComponent {
         } catch (IOException ignored) {
             // Missing or invalid textures fall back to a tiny placeholder size.
         }
-        IMAGE_SIZE_CACHE.put(this.imageLocation, size);
+        IMAGE_SIZE_CACHE.put(this.getImageLocation(), size);
         return size;
     }
 
     /**
      * 简单尺寸值对象。
      */
-    protected record Size(int width, int height) {
+    public record Size(int width, int height) {
     }
 }
 

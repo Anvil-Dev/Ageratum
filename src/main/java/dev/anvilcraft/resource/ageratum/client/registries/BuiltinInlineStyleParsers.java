@@ -1,17 +1,16 @@
-package dev.anvilcraft.resource.ageratum.client.feat.markdown;
+package dev.anvilcraft.resource.ageratum.client.registries;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
-import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 
 /**
  * 内置行内样式解析器注册。
@@ -133,7 +132,7 @@ public final class BuiltinInlineStyleParsers {
     public static void init() {
     }
 
-    private static String getTagAttribute(String rawAttributes, String attributeName) {
+    private static @Nullable String getTagAttribute(String rawAttributes, String attributeName) {
         var matcher = TAG_ATTRIBUTE_PATTERN.matcher(rawAttributes);
         while (matcher.find()) {
             if (attributeName.equalsIgnoreCase(matcher.group(1))) {
