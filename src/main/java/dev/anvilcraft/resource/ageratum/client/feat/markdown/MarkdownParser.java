@@ -248,7 +248,9 @@ public class MarkdownParser {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushListComponent(components, listItems);
                 flushTableComponent(components, tableRows);
-                quoteLines.add(new MDQuoteComponent.QuoteLine(countQuoteLevel(quoteMatcher.group(1)), quoteMatcher.group(2)));
+                int rawLevel = countQuoteLevel(quoteMatcher.group(1));
+                int normalizedLevel = normalizeRelativeLevel(rawLevel, quoteLines, MDQuoteComponent.QuoteLine::level);
+                quoteLines.add(new MDQuoteComponent.QuoteLine(normalizedLevel, quoteMatcher.group(2)));
                 continue;
             }
 
@@ -267,8 +269,10 @@ public class MarkdownParser {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
                 flushTableComponent(components, tableRows);
+                int rawLevel = countIndentLevel(taskMatcher.group(1));
+                int normalizedLevel = normalizeRelativeLevel(rawLevel, listItems, MDListComponent.ListItem::level);
                 listItems.add(MDListComponent.task(
-                    countIndentLevel(taskMatcher.group(1)),
+                    normalizedLevel,
                     taskMatcher.group(2).equalsIgnoreCase("x"),
                     taskMatcher.group(3)
                 ));
@@ -281,7 +285,9 @@ public class MarkdownParser {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
                 flushTableComponent(components, tableRows);
-                listItems.add(MDListComponent.unordered(countIndentLevel(unorderedMatcher.group(1)), unorderedMatcher.group(2)));
+                int rawLevel = countIndentLevel(unorderedMatcher.group(1));
+                int normalizedLevel = normalizeRelativeLevel(rawLevel, listItems, MDListComponent.ListItem::level);
+                listItems.add(MDListComponent.unordered(normalizedLevel, unorderedMatcher.group(2)));
                 continue;
             }
 
@@ -291,8 +297,10 @@ public class MarkdownParser {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
                 flushTableComponent(components, tableRows);
+                int rawLevel = countIndentLevel(orderedMatcher.group(1));
+                int normalizedLevel = normalizeRelativeLevel(rawLevel, listItems, MDListComponent.ListItem::level);
                 listItems.add(MDListComponent.ordered(
-                    countIndentLevel(orderedMatcher.group(1)),
+                    normalizedLevel,
                     Integer.parseInt(orderedMatcher.group(2)),
                     orderedMatcher.group(3)
                 ));
@@ -773,6 +781,19 @@ public class MarkdownParser {
             } else if (ch == ' ') width++;
         }
         return Math.max(0, width / 2);
+    }
+
+    /**
+     * 规范化层级：允许同级/回退，向下最多增加 1 层。
+     */
+    private static <T> int normalizeRelativeLevel(int rawLevel, List<T> items, Function<T, Integer> levelExtractor) {
+        int normalized = Math.max(0, rawLevel);
+        if (items.isEmpty()) {
+            return normalized;
+        }
+        int lastIndex = items.size() - 1;
+        int previousLevel = Math.max(0, levelExtractor.apply(items.get(lastIndex)));
+        return Math.min(normalized, previousLevel + 1);
     }
 
     /**
