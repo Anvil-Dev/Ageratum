@@ -342,6 +342,9 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
+            return true;
+        }
         if (button == 0 && this.mouseInLabelRange(mouseX, mouseY)) {
             if (this.tryOpenLabelAt(mouseX, mouseY)) {
                 return true;
@@ -518,17 +521,65 @@ public class GuideScreen extends Screen {
             pose.popPose();
         }
         // Close Button
-        int originX = 160;
-        int originY = LABEL_START_Y;
+        int originX = this.getCloseButtonX();
+        int originY = this.getCloseButtonY();
         boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
         guiGraphics.blit(GUIDE_LOCATION, originX + (isHover ? 5 : 0), originY, this.imageWidth, 48, this.labelWidth, this.labelHeight);
         // Return Button
-        if (!this.breadCrumbs.isEmpty()) {
-            originY = originY + LABEL_ROW_SPACING * 10;
+        if (this.hasReturnButton()) {
+            originY = this.getReturnButtonY();
             isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
             guiGraphics.blit(GUIDE_LOCATION, originX + (isHover ? 5 : 0), originY, this.imageWidth, 64, this.labelWidth, this.labelHeight);
         }
         this.renderLabelScrollHint(guiGraphics);
+    }
+
+    private int getCloseButtonX() {
+        return 160;
+    }
+
+    private int getCloseButtonY() {
+        return LABEL_START_Y;
+    }
+
+    private int getReturnButtonY() {
+        return LABEL_START_Y + LABEL_ROW_SPACING * 10;
+    }
+
+    private boolean hasReturnButton() {
+        return !this.breadCrumbs.isEmpty();
+    }
+
+    private boolean tryHandleSidebarButtonClick(double mouseX, double mouseY) {
+        if (this.minecraft == null) {
+            return false;
+        }
+        int relMouseX = (int) Math.floor(mouseX - this.leftPos);
+        int relMouseY = (int) Math.floor(mouseY - this.topPos);
+        int closeButtonX = this.getCloseButtonX();
+        int closeButtonY = this.getCloseButtonY();
+        if (this.mouseInRange(closeButtonX, closeButtonY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
+            this.onClose();
+            return true;
+        }
+        if (!this.hasReturnButton()) {
+            return false;
+        }
+        int returnButtonY = this.getReturnButtonY();
+        return this.mouseInRange(closeButtonX, returnButtonY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)
+               && this.tryReturnToPreviousGuide();
+    }
+
+    private boolean tryReturnToPreviousGuide() {
+        ArrayList<ResourceLocation> remainingBreadCrumbs = new ArrayList<>(this.breadCrumbs);
+        while (!remainingBreadCrumbs.isEmpty()) {
+            ResourceLocation previousLocation = remainingBreadCrumbs.removeLast();
+            if (previousLocation.equals(this.documentLocation)) {
+                continue;
+            }
+            return AgeratumClient.openGuideOnClient(previousLocation, List.copyOf(remainingBreadCrumbs));
+        }
+        return false;
     }
 
     private void renderLabelScrollHint(GuiGraphics guiGraphics) {
