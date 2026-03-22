@@ -14,10 +14,7 @@ import javax.annotation.Nullable;
 /**
  * Markdown 文档模型，包含 front matter 与渲染组件。
  */
-public record MDDocument(Map<String, Object> frontMatter, List<MDComponent> components, @Nullable ResourceLocation sourceLocation) {
-    public MDDocument(Map<String, Object> frontMatter, List<MDComponent> components) {
-        this(frontMatter, components, null);
-    }
+public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, Object> frontMatter, List<MDComponent> components) {
 
     public MDDocument {
         frontMatter = freezeMap(frontMatter);

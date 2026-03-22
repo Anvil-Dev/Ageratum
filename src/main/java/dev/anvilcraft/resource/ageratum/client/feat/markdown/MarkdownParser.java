@@ -1,8 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlockComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHorizontalRuleComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
@@ -119,17 +119,17 @@ public class MarkdownParser {
      * 将 Markdown 文本解析为文档模型（front matter + 组件列表）。
      */
     public MDDocument parseDocument(String markdown) {
-        return this.parseDocument(markdown, null);
+        return this.parseDocument(null, markdown);
     }
 
     /**
      * 将 Markdown 文本解析为文档模型，并携带文档来源位置。
      */
-    public MDDocument parseDocument(String markdown, @Nullable ResourceLocation sourceLocation) {
+    public MDDocument parseDocument(@Nullable ResourceLocation sourceLocation, String markdown) {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         FrontMatterParseResult frontMatterParseResult = extractFrontMatter(normalized);
         List<MDComponent> components = this.parseComponents(frontMatterParseResult.body());
-        return new MDDocument(frontMatterParseResult.frontMatter(), components, sourceLocation);
+        return new MDDocument(sourceLocation, frontMatterParseResult.frontMatter(), components);
     }
 
     private List<MDComponent> parseComponents(String markdownBody) {
@@ -619,9 +619,9 @@ public class MarkdownParser {
     private static boolean isReservedInlineTag(String idText) {
         String simpleId = idText.contains(":") ? idText.substring(idText.indexOf(':') + 1) : idText;
         return "hover".equalsIgnoreCase(simpleId)
-            || "click".equalsIgnoreCase(simpleId)
-            || "color".equalsIgnoreCase(simpleId)
-            || "o".equalsIgnoreCase(simpleId);
+               || "click".equalsIgnoreCase(simpleId)
+               || "color".equalsIgnoreCase(simpleId)
+               || "o".equalsIgnoreCase(simpleId);
     }
 
     // ── 缓冲区刷新辅助方法 ──────────────────────────────────────────────
@@ -774,8 +774,9 @@ public class MarkdownParser {
         int width = 0;
         for (int i = 0; i < indent.length(); i++) {
             char ch = indent.charAt(i);
-            if (ch == '\t') width += 2;
-            else if (ch == ' ') width++;
+            if (ch == '\t') {
+                width += 2;
+            } else if (ch == ' ') width++;
         }
         return Math.max(0, width / 2);
     }
