@@ -57,13 +57,13 @@ public final class AgeratumRegistries {
     });
 
     /**
-     * 配方组件解析器注册表键。
+     * 配方组件工厂注册表键。
      */
     public static final ResourceKey<Registry<MDRecipeComponent.RecipeComponentFactory<?>>> RECIPE_COMPONENT_FACTORY_REGISTRY_KEY = ResourceKey
         .createRegistryKey(Ageratum.location("recipe_component_factory"));
 
     /**
-     * 配方组件解析器的延迟注册器。
+     * 配方组件工厂的延迟注册器。
      */
     public static final DeferredRegister<MDRecipeComponent.RecipeComponentFactory<?>> RECIPE_COMPONENT_FACTORIES = DeferredRegister.create(
         RECIPE_COMPONENT_FACTORY_REGISTRY_KEY,
@@ -71,7 +71,7 @@ public final class AgeratumRegistries {
     );
 
     /**
-     * 行内样式解析器注册表实例提供器。
+     * 配方组件工厂注册表实例提供器。
      */
     public static final Registry<MDRecipeComponent.RecipeComponentFactory<?>> RECIPE_COMPONENT_FACTORY_REGISTRY = RECIPE_COMPONENT_FACTORIES.makeRegistry(
         builder -> {

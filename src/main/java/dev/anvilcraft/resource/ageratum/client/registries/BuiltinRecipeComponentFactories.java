@@ -5,7 +5,15 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MD
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
+/**
+ * 内置配方组件工厂注册。
+ *
+ * <p>将原版常见配方类型映射到对应的 {@link MDRecipeComponent} 实现。</p>
+ */
 public class BuiltinRecipeComponentFactories {
+    /**
+     * 工作台配方渲染工厂（{@code RecipeType.CRAFTING}）。
+     */
     public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, MDRecipeComponent.RecipeComponentFactory<?>> INFO =
         AgeratumRegistries.RECIPE_COMPONENT_FACTORIES.register(
             "crafting",

@@ -292,6 +292,29 @@ assets/<namespace>/ageratum/en_us/index.md
 assets/<namespace>/ageratum/zh_cn/index.md
 ```
 
+### 配方组件（`<recipe/>`）
+
+使用 `recipe` 扩展可以在文档中直接渲染配方：
+
+```markdown
+<recipe id="minecraft:acacia_boat"/>
+```
+
+- `id`：必填，目标配方的 `ResourceLocation`
+- 当前内置支持：`RecipeType.CRAFTING`（工作台配方）
+- 渲染行为：输入网格使用每个 `Ingredient` 的第一个候选物品进行静态展示
+- 回退行为：若客户端世界未就绪、配方不存在或无匹配工厂，则该组件不占可见高度
+
+开发者可通过 `AgeratumRegistries.RECIPE_COMPONENT_FACTORIES` 注册更多配方类型：
+
+```java
+public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, MDRecipeComponent.RecipeComponentFactory<?>> SMELTING =
+    AgeratumRegistries.RECIPE_COMPONENT_FACTORIES.register(
+        "smelting",
+        () -> MDRecipeComponent.RecipeComponentFactory.create(RecipeType.SMELTING, MDSmeltingRecipeComponent::new)
+    );
+```
+
 ## 许可证
 
 * 除非另有说明，否则所有代码均遵循我们的 [LICENSE 文件（LGPL-3.0）](./LICENSE) 中的规定。

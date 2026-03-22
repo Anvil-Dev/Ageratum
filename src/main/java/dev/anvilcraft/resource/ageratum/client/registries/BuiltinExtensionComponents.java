@@ -48,6 +48,11 @@ public final class BuiltinExtensionComponents {
         );
 
 
+    /**
+     * 配方扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <recipe id="namespace:path"/>}。</p>
+     */
     public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> RECIPE =
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "recipe",

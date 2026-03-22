@@ -127,6 +127,29 @@ You can combine multiple styles in the same text:
 <hover type="SHOW_TEXT" data="This is a tooltip"><click type="OPEN_URL" data="https://example.com">Click and hover on me!</click></hover>
 ```
 
+### Recipe Component (`<recipe/>`)
+
+Use the `recipe` extension to render recipes directly inside Markdown documents:
+
+```markdown
+<recipe id="minecraft:acacia_boat"/>
+```
+
+- `id`: required, target recipe `ResourceLocation`
+- Built-in support: `RecipeType.CRAFTING` (crafting table recipes)
+- Rendering behavior: each input slot displays the first candidate item from its `Ingredient`
+- Fallback behavior: if client level is unavailable, recipe is missing, or no factory matches, the component renders with no visible height
+
+You can register additional recipe component factories through `AgeratumRegistries.RECIPE_COMPONENT_FACTORIES`:
+
+```java
+public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, MDRecipeComponent.RecipeComponentFactory<?>> SMELTING =
+    AgeratumRegistries.RECIPE_COMPONENT_FACTORIES.register(
+        "smelting",
+        () -> MDRecipeComponent.RecipeComponentFactory.create(RecipeType.SMELTING, MDSmeltingRecipeComponent::new)
+    );
+```
+
 ### Preloading & Caching
 
 - Automatically scans and pre-parses Markdown documents to `MDComponent` lists on resource load

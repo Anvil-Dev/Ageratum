@@ -20,9 +20,21 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
+/**
+ * Markdown 配方渲染组件基类。
+ *
+ * <p>该组件由扩展标签 {@code <recipe id="namespace:path"/>} 创建，
+ * 负责在文档中渲染某个配方对应的 GUI 贴图与配方内容。</p>
+ *
+ * <p>配方类型到具体组件的映射通过
+ * {@link dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries#RECIPE_COMPONENT_FACTORY_REGISTRY}
+ * 动态查找。</p>
+ */
 @Getter
 public abstract class MDRecipeComponent extends MDImageComponent {
+    /** 原始材质尺寸宽度（像素）。 */
     private final int width;
+    /** 原始材质尺寸高度（像素）。 */
     private final int height;
 
     /**
@@ -37,12 +49,21 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     @Override
     protected void renderContent(GuiGraphics guiGraphics, Size size) {
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        // 子类只关心配方元素绘制，底图缩放由基类统一处理。
         this.renderRecipe(guiGraphics);
     }
 
+    /**
+     * 在组件底图上绘制配方具体内容（输入、输出等）。
+     */
     protected void renderRecipe(GuiGraphics guiGraphics) {
     }
 
+    /**
+     * 解析 {@code recipe} 扩展标签。
+     *
+     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link ResourceLocation}。</p>
+     */
     public static MDComponent parse(MDExtensionContext context) {
         String id = context.params().get("id");
         ResourceLocation location = ResourceLocation.parse(id);
@@ -58,11 +79,23 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         return this.computeRenderSize(size, maxX, maxY).height();
     }
 
+    /**
+     * 不同 {@link RecipeType} 到具体渲染组件的工厂接口。
+     */
     public interface RecipeComponentFactory<T extends Recipe<?>> {
+        /**
+         * 当前工厂支持的配方类型。
+         */
         RecipeType<T> type();
 
+        /**
+         * 由具体配方实例创建可渲染组件。
+         */
         MDRecipeComponent create(T recipe);
 
+        /**
+         * 使用 lambda 快速构造工厂。
+         */
         static <R extends Recipe<?>> RecipeComponentFactory<R> create(
             RecipeType<R> type,
             Function<R, MDRecipeComponent> function
@@ -81,9 +114,18 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
     }
 
+    /**
+     * 配方占位代理。
+     *
+     * <p>文档解析阶段仅保存配方 ID；渲染阶段按需查询配方管理器，
+     * 找到配方后再委托给实际组件渲染并缓存结果。</p>
+     */
     static class MDRecipeComponentProxy extends MDRecipeComponent {
+        /** 无法解析配方时的回退组件（空文本，占位高度为 0）。 */
         private final MDComponent emptyComponent = new MDTextComponent("");
+        /** 已解析出的真实渲染组件；命中后会复用。 */
         private @Nullable MDRecipeComponent component = null;
+        /** 文档中声明的配方资源 ID。 */
         private final ResourceLocation location;
 
         public MDRecipeComponentProxy(ResourceLocation location) {
@@ -112,6 +154,9 @@ public abstract class MDRecipeComponent extends MDImageComponent {
             emptyComponent.render(guiGraphics, minecraft, maxX, maxY);
         }
 
+        /**
+         * 按配方类型查找注册工厂并实例化真实组件。
+         */
         @SuppressWarnings("unchecked")
         public <T extends Recipe<?>> boolean setComponent(RecipeHolder<?> holder) {
             T value = ((RecipeHolder<T>) holder).value();
