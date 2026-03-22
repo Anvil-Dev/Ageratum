@@ -1,7 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDNoticeBoxComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
@@ -44,6 +45,13 @@ public final class BuiltinExtensionComponents {
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "danger",
             () -> context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.DANGER, context.renderedContent())
+        );
+
+
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> RECIPE =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "recipe",
+            () -> MDRecipeComponent::parse
         );
 
     private BuiltinExtensionComponents() {
