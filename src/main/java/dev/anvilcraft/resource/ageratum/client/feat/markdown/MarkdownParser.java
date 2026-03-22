@@ -119,10 +119,17 @@ public class MarkdownParser {
      * 将 Markdown 文本解析为文档模型（front matter + 组件列表）。
      */
     public MDDocument parseDocument(String markdown) {
+        return this.parseDocument(markdown, null);
+    }
+
+    /**
+     * 将 Markdown 文本解析为文档模型，并携带文档来源位置。
+     */
+    public MDDocument parseDocument(String markdown, @Nullable ResourceLocation sourceLocation) {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         FrontMatterParseResult frontMatterParseResult = extractFrontMatter(normalized);
         List<MDComponent> components = this.parseComponents(frontMatterParseResult.body());
-        return new MDDocument(frontMatterParseResult.frontMatter(), components);
+        return new MDDocument(frontMatterParseResult.frontMatter(), components, sourceLocation);
     }
 
     private List<MDComponent> parseComponents(String markdownBody) {

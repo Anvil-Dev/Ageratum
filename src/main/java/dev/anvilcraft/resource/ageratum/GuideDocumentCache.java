@@ -47,7 +47,7 @@ public final class GuideDocumentCache {
                     ResourceLocation location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        prepared.put(location, parser.parseDocument(markdown));
+                        prepared.put(location, parser.parseDocument(markdown, location));
                     } catch (IOException exception) {
                         throw new UncheckedIOException("Failed to preload guide: " + location, exception);
                     } catch (RuntimeException exception) {

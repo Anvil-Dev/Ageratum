@@ -41,6 +41,13 @@ public class MDHeaderComponent extends MDComponent {
     }
 
     /**
+     * 获取标题级别（1-6）。
+     */
+    public int getLevel() {
+        return this.level;
+    }
+
+    /**
      * 按标题级别计算渲染缩放比例。
      */
     private float getScale() {

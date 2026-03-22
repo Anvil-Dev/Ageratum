@@ -200,7 +200,7 @@ public class AgeratumClient {
         }
 
         String content = GuideDocumentLoader.read(resourceManager, location);
-        MDDocument parsedDocument = new MarkdownParser().parseDocument(content);
+        MDDocument parsedDocument = new MarkdownParser().parseDocument(content, location);
         minecraft.setScreen(new GuideScreen(location, parsedDocument.components()));
         return true;
     }
