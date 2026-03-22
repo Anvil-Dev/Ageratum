@@ -9,6 +9,7 @@ import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * 引用块组件。
@@ -87,6 +88,33 @@ public class MDQuoteComponent extends MDComponent {
             totalHeight += minecraft.font.wordWrapHeight(line.text(), lineMaxX);
         }
         return totalHeight;
+    }
+
+    @Override
+    @Nullable
+    public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        if (mouseX < 0 || mouseY < 0) {
+            return null;
+        }
+
+        double currentY = 0;
+        for (CachedQuoteLine line : this.lines) {
+            int textX = line.level() * LEVEL_INDENT + TEXT_PADDING;
+            int lineMaxX = Math.max(1, maxX - textX);
+            int lineHeight = minecraft.font.wordWrapHeight(line.text(), lineMaxX);
+            if (mouseY >= currentY && mouseY < currentY + lineHeight) {
+                return this.getStyleAtFormattedTextPosition(
+                    minecraft,
+                    line.text(),
+                    mouseX - textX,
+                    mouseY - currentY,
+                    lineMaxX
+                );
+            }
+            currentY += lineHeight;
+        }
+
+        return null;
     }
 
     private static PreparedData prepare(List<QuoteLine> sourceLines) {

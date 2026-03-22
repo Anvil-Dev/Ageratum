@@ -8,11 +8,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
@@ -448,18 +446,6 @@ public class GuideScreen extends Screen {
     private Style getStyleAtComponentPosition(
         MDComponent component, Minecraft minecraft, double mouseX, double mouseY
     ) {
-        if (mouseX < 0 || mouseY < 0) {
-            return null;
-        }
-
-        FormattedText text = component.getText();
-        List<FormattedCharSequence> lines = minecraft.font.split(text, CONTENT_WIDTH);
-        int lineIndex = Mth.floor(mouseY / minecraft.font.lineHeight);
-        if (lineIndex < 0 || lineIndex >= lines.size()) {
-            return null;
-        }
-
-        FormattedCharSequence line = lines.get(lineIndex);
-        return minecraft.font.getSplitter().componentStyleAtWidth(line, Mth.floor(mouseX));
+        return component.getStyleAtPosition(minecraft, mouseX, mouseY, CONTENT_WIDTH);
     }
 }

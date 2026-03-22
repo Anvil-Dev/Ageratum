@@ -10,6 +10,7 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Markdown 表格组件。
@@ -188,6 +189,57 @@ public class MDTableComponent extends MDComponent {
             total += rowHeight(minecraft, this.rows.get(rowIdx), colWidth, isHeader);
         }
         return total;
+    }
+
+    @Override
+    @Nullable
+    public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        if (mouseX < 0 || mouseY < 0 || this.rows.isEmpty()) {
+            return null;
+        }
+
+        int colWidth = computeColWidth(maxX);
+        double currentY = 0;
+        for (int rowIdx = 0; rowIdx < this.rows.size(); rowIdx++) {
+            List<CachedCell> row = this.rows.get(rowIdx);
+            boolean isHeader = this.hasHeader && rowIdx == 0;
+            int rowHeight = rowHeight(minecraft, row, colWidth, isHeader);
+            if (mouseY >= currentY && mouseY < currentY + rowHeight) {
+                double rowMouseY = mouseY - currentY - PADDING_V;
+                if (rowMouseY < 0) {
+                    return null;
+                }
+
+                int lineIndex = (int) Math.floor(rowMouseY / minecraft.font.lineHeight);
+                for (int col = 0; col < this.columnCount; col++) {
+                    int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
+                    if (mouseX < cellX || mouseX >= cellX + colWidth) {
+                        continue;
+                    }
+
+                    CachedCell cell = col < row.size() ? row.get(col) : EMPTY_CELL;
+                    List<FormattedCharSequence> lines = splitCellLines(minecraft, cell, colWidth, isHeader);
+                    if (lineIndex < 0 || lineIndex >= lines.size()) {
+                        return null;
+                    }
+
+                    FormattedCharSequence line = lines.get(lineIndex);
+                    int drawX = switch (this.alignments[col]) {
+                        case CENTER -> Math.max(0, (colWidth - minecraft.font.width(line)) / 2);
+                        case RIGHT -> Math.max(0, colWidth - minecraft.font.width(line));
+                        default -> 0;
+                    };
+                    return minecraft.font.getSplitter().componentStyleAtWidth(
+                        line,
+                        (int) Math.floor(mouseX - cellX - drawX)
+                    );
+                }
+                return null;
+            }
+            currentY += rowHeight;
+        }
+
+        return null;
     }
 
     /**

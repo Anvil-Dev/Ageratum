@@ -5,9 +5,11 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * 提示框组件（info、tip、warning、danger）。
@@ -88,6 +90,38 @@ public class MDNoticeBoxComponent extends MDComponent {
         }
 
         return totalHeight + PADDING * 2;
+    }
+
+    @Override
+    @Nullable
+    public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        if (mouseX < 0 || mouseY < 0 || this.contentComponents.isEmpty()) {
+            return null;
+        }
+
+        int contentOriginX = PADDING + BORDER_WIDTH;
+        int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
+        double contentMouseX = mouseX - contentOriginX;
+        double contentMouseY = mouseY - PADDING;
+        if (contentMouseX < 0 || contentMouseY < 0) {
+            return null;
+        }
+
+        double currentY = 0;
+        for (MDComponent component : this.contentComponents) {
+            int componentHeight = component.getHeight(minecraft, contentWidth, Integer.MAX_VALUE);
+            if (contentMouseY >= currentY && contentMouseY < currentY + componentHeight) {
+                return component.getStyleAtPosition(
+                    minecraft,
+                    contentMouseX,
+                    contentMouseY - currentY,
+                    contentWidth
+                );
+            }
+            currentY += componentHeight;
+        }
+
+        return null;
     }
 
     private static FormattedText buildComponentText(List<MDComponent> contentComponents) {

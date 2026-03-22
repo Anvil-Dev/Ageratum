@@ -4,10 +4,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Markdown 列表组件。
@@ -71,8 +73,8 @@ public class MDListComponent extends MDComponent {
         int y = 0;
         for (CachedListItem cachedItem : this.cachedItems) {
             ListItem item = cachedItem.item();
-            int textX = item.level() * INDENT_WIDTH + MARKER_WIDTH;
-            int lineMaxX = Math.max(1, maxX - textX);
+            int textX = getTextX(item);
+            int lineMaxX = getLineMaxX(maxX, textX);
             List<FormattedCharSequence> split = minecraft.font.split(cachedItem.text(), lineMaxX);
             int lineHeight = split.size() * minecraft.font.lineHeight;
             if (lineHeight <= 0 || maxY < lineHeight) {
@@ -121,12 +123,39 @@ public class MDListComponent extends MDComponent {
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int totalHeight = 0;
         for (CachedListItem cachedItem : this.cachedItems) {
-            ListItem item = cachedItem.item();
-            int textX = item.level() * INDENT_WIDTH + MARKER_WIDTH;
-            int lineMaxX = Math.max(1, maxX - textX);
-            totalHeight += minecraft.font.wordWrapHeight(cachedItem.text(), lineMaxX);
+            totalHeight += getItemHeight(minecraft, cachedItem, maxX);
         }
         return totalHeight;
+    }
+
+    @Override
+    @Nullable
+    public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        if (mouseX < 0 || mouseY < 0) {
+            return null;
+        }
+
+        double currentY = 0;
+        for (CachedListItem cachedItem : this.cachedItems) {
+            ListItem item = cachedItem.item();
+            int itemHeight = getItemHeight(minecraft, cachedItem, maxX);
+            if (mouseY >= currentY && mouseY < currentY + itemHeight) {
+                int textX = getTextX(item);
+                if (mouseX < textX) {
+                    return null;
+                }
+                return this.getStyleAtFormattedTextPosition(
+                    minecraft,
+                    cachedItem.text(),
+                    mouseX - textX,
+                    mouseY - currentY,
+                    getLineMaxX(maxX, textX)
+                );
+            }
+            currentY += itemHeight;
+        }
+
+        return null;
     }
 
     private static PreparedData prepare(List<ListItem> sourceItems) {
@@ -154,6 +183,19 @@ public class MDListComponent extends MDComponent {
             case ORDERED -> item.index() + ".";
             case TASK -> item.checked() ? TASK_CHECKED : TASK_UNCHECKED;
         };
+    }
+
+    private static int getTextX(ListItem item) {
+        return item.level() * INDENT_WIDTH + MARKER_WIDTH;
+    }
+
+    private static int getLineMaxX(int maxX, int textX) {
+        return Math.max(1, maxX - textX);
+    }
+
+    private static int getItemHeight(Minecraft minecraft, CachedListItem cachedItem, int maxX) {
+        int textX = getTextX(cachedItem.item());
+        return minecraft.font.wordWrapHeight(cachedItem.text(), getLineMaxX(maxX, textX));
     }
 
     private static int markerColor(ListItem item) {

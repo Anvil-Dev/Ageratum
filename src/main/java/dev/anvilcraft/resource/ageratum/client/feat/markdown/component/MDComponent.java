@@ -97,6 +97,37 @@ public abstract class MDComponent {
     }
 
     /**
+     * 获取组件内部指定坐标对应的文本样式。
+     *
+     * <p>默认实现按普通文本块处理；复杂布局组件可覆盖以匹配其真实渲染坐标。</p>
+     */
+    @Nullable
+    public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        return this.getStyleAtFormattedTextPosition(minecraft, this.text, mouseX, mouseY, maxX);
+    }
+
+    /**
+     * 根据格式化文本在指定宽度下的换行结果获取命中的文本样式。
+     */
+    @Nullable
+    protected final Style getStyleAtFormattedTextPosition(
+        Minecraft minecraft, FormattedText text, double mouseX, double mouseY, int maxX
+    ) {
+        if (mouseX < 0 || mouseY < 0 || maxX <= 0) {
+            return null;
+        }
+
+        List<FormattedCharSequence> lines = minecraft.font.split(text, maxX);
+        int lineIndex = (int) Math.floor(mouseY / minecraft.font.lineHeight);
+        if (lineIndex < 0 || lineIndex >= lines.size()) {
+            return null;
+        }
+
+        FormattedCharSequence line = lines.get(lineIndex);
+        return minecraft.font.getSplitter().componentStyleAtWidth(line, (int) Math.floor(mouseX));
+    }
+
+    /**
      * 使用默认样式解析一段 Markdown 内联文本。
      */
     public static FormattedText textFormat(String text) {
