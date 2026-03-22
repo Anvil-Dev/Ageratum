@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,7 +44,7 @@ public class MDNoticeBoxComponent extends MDComponent {
      * 创建提示框组件。
      */
     public MDNoticeBoxComponent(NoticeType type, List<MDComponent> contentComponents) {
-        super(FormattedText.EMPTY);
+        super(buildComponentText(contentComponents));
         this.type = type;
         this.contentComponents = List.copyOf(contentComponents);
     }
@@ -88,5 +89,18 @@ public class MDNoticeBoxComponent extends MDComponent {
 
         return totalHeight + PADDING * 2;
     }
-}
 
+    private static FormattedText buildComponentText(List<MDComponent> contentComponents) {
+        if (contentComponents.isEmpty()) {
+            return FormattedText.EMPTY;
+        }
+        List<FormattedText> parts = new ArrayList<>(contentComponents.size() * 2);
+        for (int i = 0; i < contentComponents.size(); i++) {
+            parts.add(contentComponents.get(i).getText());
+            if (i < contentComponents.size() - 1) {
+                parts.add(FormattedText.of("\n"));
+            }
+        }
+        return FormattedText.composite(parts);
+    }
+}

@@ -7,6 +7,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,7 +25,8 @@ public class MDCodeBlockComponent extends MDComponent {
     private static final int CODE_TEXT_COLOR = 0x00444444;
     private static final int BORDER_COLOR = 0x88333333;
     private static final int BACKGROUND_COLOR = 0x22AAAAAA;
-    private final String codeText;
+    private static final Style CODE_TEXT_STYLE = Style.EMPTY.withColor(CODE_TEXT_COLOR);
+    private final List<FormattedText> codeLines;
 
     /**
      * 创建代码块组件。
@@ -32,8 +34,13 @@ public class MDCodeBlockComponent extends MDComponent {
      * @param text 代码文本（允许包含换行）
      */
     public MDCodeBlockComponent(String text) {
-        super(FormattedText.of(text, Style.EMPTY.withColor(CODE_TEXT_COLOR)));
-        this.codeText = text;
+        super(FormattedText.of(text, CODE_TEXT_STYLE));
+        String[] lines = text.split("\\n", -1);
+        List<FormattedText> cachedLines = new ArrayList<>(lines.length);
+        for (String line : lines) {
+            cachedLines.add(FormattedText.of(line, CODE_TEXT_STYLE));
+        }
+        this.codeLines = List.copyOf(cachedLines);
     }
 
     /**
@@ -45,8 +52,7 @@ public class MDCodeBlockComponent extends MDComponent {
         guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
         guiGraphics.renderOutline(0, 0, maxX, blockHeight, BORDER_COLOR);
 
-        String[] lines = this.codeText.split("\\n", -1);
-        int gutterWidth = this.getGutterWidth(minecraft, lines.length);
+        int gutterWidth = this.getGutterWidth(minecraft, this.codeLines.size());
         int contentWidth = Math.max(1, maxX - PADDING * 2 - gutterWidth - GUTTER_PADDING);
 
         guiGraphics.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), GUTTER_COLOR);
@@ -57,8 +63,7 @@ public class MDCodeBlockComponent extends MDComponent {
 
         int y = 0;
         int lineNumber = 1;
-        for (String line : lines) {
-            FormattedText lineText = FormattedText.of(line, Style.EMPTY.withColor(CODE_TEXT_COLOR));
+        for (FormattedText lineText : this.codeLines) {
             List<FormattedCharSequence> split = minecraft.font.split(lineText, contentWidth);
 
             String lineStr = String.valueOf(lineNumber);
@@ -85,12 +90,11 @@ public class MDCodeBlockComponent extends MDComponent {
      */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        String[] lines = this.codeText.split("\\n", -1);
-        int gutterWidth = this.getGutterWidth(minecraft, lines.length);
+        int gutterWidth = this.getGutterWidth(minecraft, this.codeLines.size());
         int contentWidth = Math.max(1, maxX - PADDING * 2 - gutterWidth - GUTTER_PADDING);
         int lineCount = 0;
-        for (String line : lines) {
-            int wrapped = minecraft.font.split(FormattedText.of(line, Style.EMPTY.withColor(CODE_TEXT_COLOR)), contentWidth).size();
+        for (FormattedText line : this.codeLines) {
+            int wrapped = minecraft.font.split(line, contentWidth).size();
             lineCount += Math.max(1, wrapped);
         }
         return lineCount * minecraft.font.lineHeight + PADDING * 2;
@@ -101,7 +105,7 @@ public class MDCodeBlockComponent extends MDComponent {
      */
     private int getGutterWidth(Minecraft minecraft, int lineCount) {
         int digits = String.valueOf(Math.max(1, lineCount)).length();
-        return minecraft.font.width("0".repeat(Math.max(1, digits))) + 3;
+        return minecraft.font.width("0".repeat(digits)) + 3;
     }
 }
 
