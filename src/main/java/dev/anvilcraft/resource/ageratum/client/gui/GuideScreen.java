@@ -2,9 +2,9 @@ package dev.anvilcraft.resource.ageratum.client.gui;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
-import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
@@ -188,8 +188,7 @@ public class GuideScreen extends Screen {
     /**
      * 当前标签列表滚动的起始行索引。
      * -- GETTER --
-     *  返回当前侧栏滚动的起始行索引。
-
+     * 返回当前侧栏滚动的起始行索引。
      */
     @Getter
     protected int labelScrollRows;
@@ -200,8 +199,7 @@ public class GuideScreen extends Screen {
     /**
      * 触控板等高精度滚轮的小数累积，按系统增量折算后取整到行滚动。
      * -- GETTER --
-     *  返回当前侧栏滚动的小数累积量。
-
+     * 返回当前侧栏滚动的小数累积量。
      */
     @Getter
     protected double labelScrollRemainder;
@@ -217,6 +215,7 @@ public class GuideScreen extends Screen {
      * 待定位的锚点（从其他页面链接过来时设置）。
      */
     protected @Nullable String pendingAnchor;
+    protected List<ResourceLocation> breadCrumbs;
 
     /**
      * 标准构造函数，从外部传入文档位置和 Markdown 文本。
@@ -224,12 +223,13 @@ public class GuideScreen extends Screen {
      * @param documentLocation 文档资源位置，用于构造界面标题
      * @param markdown         要渲染的 Markdown 原始文本
      */
-    public GuideScreen(ResourceLocation documentLocation, String markdown) {
+    public GuideScreen(ResourceLocation documentLocation, String markdown, List<ResourceLocation> breadCrumbs) {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
         // 将 Markdown 文本解析为组件列表，后续逐帧渲染
         this.parsedComponents = this.parser.parse(markdown);
+        this.breadCrumbs = breadCrumbs;
     }
 
     /**
@@ -238,11 +238,12 @@ public class GuideScreen extends Screen {
      * @param documentLocation 文档资源位置，用于构造界面标题
      * @param parsedComponents 预解析后的组件列表
      */
-    public GuideScreen(ResourceLocation documentLocation, List<MDComponent> parsedComponents) {
+    public GuideScreen(ResourceLocation documentLocation, List<MDComponent> parsedComponents, List<ResourceLocation> breadCrumbs) {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
         this.parsedComponents = List.copyOf(parsedComponents);
+        this.breadCrumbs = breadCrumbs;
     }
 
     /**
@@ -516,7 +517,17 @@ public class GuideScreen extends Screen {
             pose.popPose();
             pose.popPose();
         }
-
+        // Close Button
+        int originX = 160;
+        int originY = LABEL_START_Y;
+        boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
+        guiGraphics.blit(GUIDE_LOCATION, originX + (isHover ? 5 : 0), originY, this.imageWidth, 48, this.labelWidth, this.labelHeight);
+        // Return Button
+        if (!this.breadCrumbs.isEmpty()) {
+            originY = originY + LABEL_ROW_SPACING * 10;
+            isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
+            guiGraphics.blit(GUIDE_LOCATION, originX + (isHover ? 5 : 0), originY, this.imageWidth, 64, this.labelWidth, this.labelHeight);
+        }
         this.renderLabelScrollHint(guiGraphics);
     }
 
@@ -676,7 +687,13 @@ public class GuideScreen extends Screen {
             int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
             int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
-                return AgeratumClient.openGuideOnClient(entry.location);
+                List<ResourceLocation> breadCrumbs = this.breadCrumbs;
+                if (!entry.location.equals(this.documentLocation)) {
+                    breadCrumbs = new ArrayList<>(this.breadCrumbs);
+                    breadCrumbs.add(this.documentLocation);
+                    breadCrumbs = List.copyOf(breadCrumbs);
+                }
+                return AgeratumClient.openGuideOnClient(entry.location, breadCrumbs);
             }
         }
         return false;
@@ -728,7 +745,13 @@ public class GuideScreen extends Screen {
         if (parsed != null && target.contains(":")) {
             // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
             if (parsed.getPath().startsWith("ageratum/") && parsed.getPath().endsWith(".md")) {
-                return AgeratumClient.openGuideOnClient(parsed, anchor);
+                List<ResourceLocation> breadCrumbs = this.breadCrumbs;
+                if (!parsed.equals(this.documentLocation)) {
+                    breadCrumbs = new ArrayList<>(this.breadCrumbs);
+                    breadCrumbs.add(this.documentLocation);
+                    breadCrumbs = List.copyOf(breadCrumbs);
+                }
+                return AgeratumClient.openGuideOnClient(parsed, anchor, breadCrumbs);
             }
             resolved = GuideDocumentLoader.resolveExistingLocation(
                 resourceManager,
@@ -740,7 +763,13 @@ public class GuideScreen extends Screen {
             resolved = this.resolveLocationWithoutNamespace(resourceManager, target);
         }
 
-        return resolved.isPresent() && AgeratumClient.openGuideOnClient(resolved.get(), anchor);
+        ArrayList<ResourceLocation> breadCrumbs = new ArrayList<>(this.breadCrumbs);
+        breadCrumbs.add(this.documentLocation);
+        return resolved.isPresent() && AgeratumClient.openGuideOnClient(
+            resolved.get(),
+            anchor,
+            resolved.get().equals(this.documentLocation) ? this.breadCrumbs : List.copyOf(breadCrumbs)
+        );
     }
 
     /**

@@ -4,14 +4,14 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
-import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineStyleParsers;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineStyleParsers;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinRecipeComponentFactories;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
@@ -30,6 +30,7 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -169,7 +170,7 @@ public class AgeratumClient {
             context.getSource().sendFailure(Component.literal("Invalid guide path."));
             return 0;
         }
-        if (!openGuideOnClient(documentLocation)) {
+        if (!openGuideOnClient(documentLocation, List.of())) {
             context.getSource().sendFailure(
                 Component.literal(
                     "Guide file not found: assets/" + documentLocation.getNamespace() + "/" + documentLocation.getPath()
@@ -183,8 +184,8 @@ public class AgeratumClient {
     /**
      * 客户端本地打开文档；若不存在则返回 false。
      */
-    public static boolean openGuideOnClient(ResourceLocation location) {
-        return openGuideOnClient(location, null);
+    public static boolean openGuideOnClient(ResourceLocation location, List<ResourceLocation> breadCrumbs) {
+        return openGuideOnClient(location, null, breadCrumbs);
     }
 
     /**
@@ -193,7 +194,7 @@ public class AgeratumClient {
      * @param location 文档资源位置
      * @param anchor   目标锚点（可为 null）
      */
-    public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor) {
+    public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
         Minecraft minecraft = Minecraft.getInstance();
         ResourceManager resourceManager = minecraft.getResourceManager();
         if (!GuideDocumentLoader.exists(resourceManager, location)) {
@@ -210,7 +211,7 @@ public class AgeratumClient {
         // 优先使用预解析缓存，缺失时回退为即时解析
         Optional<MDDocument> cachedDocument = GuideDocumentCache.getParsedDocument(location);
         if (cachedDocument.isPresent()) {
-            GuideScreen screen = new GuideScreen(location, cachedDocument.get().components());
+            GuideScreen screen = new GuideScreen(location, cachedDocument.get().components(), breadCrumbs);
             screen.setAnchor(anchor);
             screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
             minecraft.setScreen(screen);
@@ -219,7 +220,7 @@ public class AgeratumClient {
 
         String content = GuideDocumentLoader.read(resourceManager, location);
         MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
-        GuideScreen screen = new GuideScreen(location, parsedDocument.components());
+        GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs);
         screen.setAnchor(anchor);
         screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
         minecraft.setScreen(screen);
