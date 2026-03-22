@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,14 +28,18 @@ public class MDListComponent extends MDComponent {
     };
     private static final int TASK_UNCHECKED_COLOR = 0x666666;
     private static final int TASK_CHECKED_COLOR = 0x2E7D32;
-    private final List<ListItem> items;
+    private final List<CachedListItem> cachedItems;
 
     /**
      * 使用解析后的列表项创建组件。
      */
     public MDListComponent(List<ListItem> items) {
-        super(FormattedText.EMPTY);
-        this.items = List.copyOf(items);
+        this(prepare(items));
+    }
+
+    private MDListComponent(PreparedData preparedData) {
+        super(preparedData.componentText());
+        this.cachedItems = preparedData.cachedItems();
     }
 
     /**
@@ -64,11 +69,11 @@ public class MDListComponent extends MDComponent {
     @Override
     public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         int y = 0;
-        for (ListItem item : this.items) {
+        for (CachedListItem cachedItem : this.cachedItems) {
+            ListItem item = cachedItem.item();
             int textX = item.level() * INDENT_WIDTH + MARKER_WIDTH;
             int lineMaxX = Math.max(1, maxX - textX);
-            FormattedText text = MDComponent.textFormat(item.text());
-            List<FormattedCharSequence> split = minecraft.font.split(text, lineMaxX);
+            List<FormattedCharSequence> split = minecraft.font.split(cachedItem.text(), lineMaxX);
             int lineHeight = split.size() * minecraft.font.lineHeight;
             if (lineHeight <= 0 || maxY < lineHeight) {
                 return;
@@ -115,12 +120,32 @@ public class MDListComponent extends MDComponent {
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int totalHeight = 0;
-        for (ListItem item : this.items) {
+        for (CachedListItem cachedItem : this.cachedItems) {
+            ListItem item = cachedItem.item();
             int textX = item.level() * INDENT_WIDTH + MARKER_WIDTH;
             int lineMaxX = Math.max(1, maxX - textX);
-            totalHeight += minecraft.font.wordWrapHeight(MDComponent.textFormat(item.text()), lineMaxX);
+            totalHeight += minecraft.font.wordWrapHeight(cachedItem.text(), lineMaxX);
         }
         return totalHeight;
+    }
+
+    private static PreparedData prepare(List<ListItem> sourceItems) {
+        List<ListItem> items = List.copyOf(sourceItems);
+        List<CachedListItem> cachedItems = new ArrayList<>(items.size());
+        List<FormattedText> componentParts = new ArrayList<>(Math.max(1, items.size() * 2));
+
+        for (int i = 0; i < items.size(); i++) {
+            ListItem item = items.get(i);
+            FormattedText formattedText = MDComponent.textFormat(item.text());
+            cachedItems.add(new CachedListItem(item, formattedText));
+            componentParts.add(formattedText);
+            if (i < items.size() - 1) {
+                componentParts.add(FormattedText.of("\n"));
+            }
+        }
+
+        FormattedText componentText = componentParts.isEmpty() ? FormattedText.EMPTY : FormattedText.composite(componentParts);
+        return new PreparedData(List.copyOf(cachedItems), componentText);
     }
 
     private static String marker(ListItem item) {
@@ -136,6 +161,12 @@ public class MDListComponent extends MDComponent {
             return item.checked() ? TASK_CHECKED_COLOR : TASK_UNCHECKED_COLOR;
         }
         return 0x000000;
+    }
+
+    private record CachedListItem(ListItem item, FormattedText text) {
+    }
+
+    private record PreparedData(List<CachedListItem> cachedItems, FormattedText componentText) {
     }
 
     /**
