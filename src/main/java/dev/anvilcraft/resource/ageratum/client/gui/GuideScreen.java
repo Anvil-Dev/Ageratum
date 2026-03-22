@@ -5,7 +5,6 @@ import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.client.Minecraft;
@@ -21,11 +20,8 @@ import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -37,6 +33,7 @@ import javax.annotation.Nullable;
  *
  * <p>可通过客户端命令 {@code /ageratum <namespace> [file]} 打开。</p>
  */
+@SuppressWarnings("unused")
 public class GuideScreen extends Screen {
 
     /**
@@ -211,10 +208,6 @@ public class GuideScreen extends Screen {
      * 待定位的锚点（从其他页面链接过来时设置）。
      */
     protected @Nullable String pendingAnchor;
-    /**
-     * H2 标题映射到其在内容区的起始 Y 坐标（用于锚点导航）。
-     */
-    protected java.util.Map<String, Integer> h2Anchors = new java.util.HashMap<>();
 
     /**
      * 标准构造函数，从外部传入文档位置和 Markdown 文本。
@@ -558,7 +551,7 @@ public class GuideScreen extends Screen {
     }
 
     private int consumeLabelScrollRows(double scrollY) {
-        this.labelScrollRemainder += -scrollY;
+        this.labelScrollRemainder -= scrollY;
         int rowDelta = (int) Math.copySign(Math.floor(Math.abs(this.labelScrollRemainder) + 0.5d), this.labelScrollRemainder);
         if (rowDelta != 0) {
             this.labelScrollRemainder -= rowDelta;
@@ -571,75 +564,38 @@ public class GuideScreen extends Screen {
     }
 
     private void rebuildLabelEntries(ResourceManager resourceManager) {
-        List<String> files = GuideDocumentLoader.listFiles(resourceManager, this.documentLocation.getNamespace(), this.currentLanguageCode);
-        List<LabelEntry> rootEntries = new ArrayList<>();
-        Map<String, List<String>> childEntriesByParent = new LinkedHashMap<>();
-        List<String> guideChildren = new ArrayList<>();
-
-        for (String file : files) {
-            String normalized = file.trim().replace('\\', '/');
-            if (normalized.isEmpty()) {
-                continue;
-            }
-
-            // 侧栏最多显示到二级。
-            String[] segments = normalized.split("/");
-            if (segments.length > 3) {
-                continue;
-            }
-
-            if (segments.length == 1) {
-                rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
-                continue;
-            }
-
-            if (normalized.startsWith("examples/")) {
-                if ("examples/index".equals(normalized)) {
-                    rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
-                } else {
-                    childEntriesByParent.computeIfAbsent("examples/index", key -> new ArrayList<>()).add(normalized);
-                }
-                continue;
-            }
-
-            if (normalized.startsWith("tutorial/")) {
-                if ("tutorial/index".equals(normalized)) {
-                    rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
-                } else {
-                    childEntriesByParent.computeIfAbsent("tutorial/index", key -> new ArrayList<>()).add(normalized);
-                }
-                continue;
-            }
-
-            if (normalized.startsWith("guide/")) {
-                guideChildren.add(normalized);
-                continue;
-            }
+        Optional<GuideDocumentCache.NavigationTree> cachedTree = GuideDocumentCache.getNavigationTree(
+            this.documentLocation.getNamespace(),
+            this.currentLanguageCode
+        );
+        if (cachedTree.isEmpty() && !GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(this.currentLanguageCode)) {
+            cachedTree = GuideDocumentCache.getNavigationTree(
+                this.documentLocation.getNamespace(),
+                GuideDocumentLoader.DEFAULT_LANGUAGE_CODE
+            );
+        }
+        if (cachedTree.isEmpty()) {
+            this.labelEntries = List.of();
+            this.maxLabelScrollRows = 0;
+            this.labelScrollRows = 0;
+            return;
         }
 
-        rootEntries.sort(Comparator
-            .comparing((LabelEntry entry) -> !"index".equalsIgnoreCase(entry.fileArgument))
-            .thenComparing(entry -> entry.fileArgument));
-
+        GuideDocumentCache.NavigationTree tree = cachedTree.get();
         List<LabelEntry> finalEntries = new ArrayList<>();
-        for (LabelEntry rootEntry : rootEntries) {
-            finalEntries.add(rootEntry);
-            List<String> children = childEntriesByParent.get(rootEntry.fileArgument);
-            if (children == null || children.isEmpty()) {
-                continue;
-            }
-            children.sort(String::compareTo);
-            for (String childPath : children) {
-                finalEntries.add(new LabelEntry(childPath, 2, this.loadDocumentTitle(resourceManager, childPath), true));
-            }
+
+        for (GuideDocumentCache.NavigationDocument rootDocument : tree.rootDocuments()) {
+            finalEntries.add(new LabelEntry(
+                rootDocument.fileArgument(),
+                rootDocument.location(),
+                1,
+                Component.literal(rootDocument.title()),
+                true
+            ));
         }
 
-        if (!guideChildren.isEmpty()) {
-            guideChildren.sort(String::compareTo);
-            finalEntries.add(new LabelEntry(null, 1, "GUIDE", false));
-            for (String guidePath : guideChildren) {
-                finalEntries.add(new LabelEntry(guidePath, 2, this.loadDocumentTitle(resourceManager, guidePath), true));
-            }
+        for (GuideDocumentCache.NavigationDirectory directory : tree.rootDirectories()) {
+            this.appendDirectoryLabels(finalEntries, directory);
         }
 
         this.labelEntries = List.copyOf(finalEntries);
@@ -647,21 +603,43 @@ public class GuideScreen extends Screen {
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
     }
 
-    private String loadDocumentTitle(ResourceManager resourceManager, String fileArgument) {
-        Optional<ResourceLocation> location = GuideDocumentLoader.resolveExistingLocation(
-            resourceManager,
-            this.documentLocation.getNamespace(),
-            this.currentLanguageCode,
-            fileArgument
-        );
-        if (location.isEmpty()) {
-            return fileArgument;
+    private void appendDirectoryLabels(List<LabelEntry> target, GuideDocumentCache.NavigationDirectory directory) {
+        GuideDocumentCache.NavigationDocument indexDocument = directory.indexDocument();
+        if (indexDocument != null) {
+            target.add(new LabelEntry(
+                indexDocument.fileArgument(),
+                indexDocument.location(),
+                1,
+                Component.literal(indexDocument.title()),
+                true
+            ));
+        } else {
+            target.add(new LabelEntry(null, null, 1, Component.literal(directory.name().toUpperCase(Locale.ROOT)), false));
         }
-        Optional<MDDocument> doc = GuideDocumentCache.getParsedDocument(location.get());
-        if (doc.isPresent()) {
-            return doc.get().getTitle();
+
+        for (GuideDocumentCache.NavigationDocument document : directory.documents()) {
+            target.add(new LabelEntry(
+                document.fileArgument(),
+                document.location(),
+                2,
+                Component.literal(document.title()),
+                true
+            ));
         }
-        return fileArgument;
+
+        // 仅展开到二级：子目录只在其含 index.md 时显示为二级可点击项。
+        for (GuideDocumentCache.NavigationDirectory childDirectory : directory.children()) {
+            GuideDocumentCache.NavigationDocument childIndex = childDirectory.indexDocument();
+            if (childIndex != null) {
+                target.add(new LabelEntry(
+                    childIndex.fileArgument(),
+                    childIndex.location(),
+                    2,
+                    Component.literal(childIndex.title()),
+                    true
+                ));
+            }
+        }
     }
 
     private boolean tryOpenLabelAt(double mouseX, double mouseY) {
@@ -675,19 +653,13 @@ public class GuideScreen extends Screen {
         for (int index = start; index < end; index++) {
             int row = index - start;
             LabelEntry entry = this.labelEntries.get(index);
-            if (!entry.clickable || entry.fileArgument == null) {
+            if (!entry.clickable || entry.location == null) {
                 continue;
             }
             int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
             int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
-                Optional<ResourceLocation> target = GuideDocumentLoader.resolveExistingLocation(
-                    this.minecraft.getResourceManager(),
-                    this.documentLocation.getNamespace(),
-                    this.currentLanguageCode,
-                    entry.fileArgument
-                );
-                return target.isPresent() && AgeratumClient.openGuideOnClient(target.get());
+                return AgeratumClient.openGuideOnClient(entry.location);
             }
         }
         return false;
@@ -724,6 +696,7 @@ public class GuideScreen extends Screen {
             return false;
         }
         String lowerTarget = target.toLowerCase(Locale.ROOT);
+        //noinspection HttpUrlsUsage
         if (lowerTarget.startsWith("http://") || lowerTarget.startsWith("https://") || lowerTarget.startsWith("mailto:")) {
             return false;
         }
@@ -814,12 +787,7 @@ public class GuideScreen extends Screen {
             source = source.substring(1);
         }
         String combined;
-        if (baseDir.isEmpty() || source.startsWith("./") || source.startsWith("../")) {
-            combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
-        } else {
-            // 非显式相对路径默认按当前目录解析。
-            combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
-        }
+        combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
 
         List<String> parts = new ArrayList<>();
         for (String segment : combined.split("/")) {
@@ -828,7 +796,7 @@ public class GuideScreen extends Screen {
             }
             if ("..".equals(segment)) {
                 if (!parts.isEmpty()) {
-                    parts.remove(parts.size() - 1);
+                    parts.removeLast();
                 }
                 continue;
             }
@@ -974,7 +942,13 @@ public class GuideScreen extends Screen {
         return component.getStyleAtPosition(minecraft, mouseX, mouseY, CONTENT_WIDTH);
     }
 
-    private record LabelEntry(@Nullable String fileArgument, int level, String title, boolean clickable) {
+    protected record LabelEntry(
+        @Nullable String fileArgument,
+        @Nullable ResourceLocation location,
+        int level,
+        Component title,
+        boolean clickable
+    ) {
     }
 
     /**
