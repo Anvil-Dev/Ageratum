@@ -507,10 +507,7 @@ public class MarkdownParser {
         String rawContent,
         SelfClosingBlockExtensionState block
     ) {
-        Registry<MDExtensionComponentFactory> registry = AgeratumRegistries.EXTENSION_COMPONENT_FACTORY_REGISTRY_SUPPLIER.get();
-        if (registry == null) {
-            return null;
-        }
+        Registry<MDExtensionComponentFactory> registry = AgeratumRegistries.EXTENSION_COMPONENT_FACTORY_REGISTRY;
         MDExtensionComponentFactory factory = registry.getOptional(block.id()).orElse(null);
         if (factory == null) {
             return null;
