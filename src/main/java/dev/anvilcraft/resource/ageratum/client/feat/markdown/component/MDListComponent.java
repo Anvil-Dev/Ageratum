@@ -18,10 +18,14 @@ import javax.annotation.Nullable;
  */
 public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> {
     private static final String[] BULLETS = {
-        "•",
-        "▪",
+        "●",
+        "○",
+        "■",
+        "□",
         "◆",
-        "▸"
+        "◇",
+        "▸",
+        "▹"
     };
     private static final String TASK_UNCHECKED = "☐";
     private static final String TASK_CHECKED = "☑";
