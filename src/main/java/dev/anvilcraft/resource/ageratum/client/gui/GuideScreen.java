@@ -20,6 +20,9 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -268,6 +271,8 @@ public class GuideScreen extends Screen {
         if (this.minecraft != null) {
             this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
             this.rebuildLabelEntries(this.minecraft.getResourceManager());
+            this.updateScrollBounds();
+            this.tryScrollToPendingAnchor();
         }
         // 防止窗口缩小后滚动量超出边界
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
@@ -776,9 +781,9 @@ public class GuideScreen extends Screen {
             target = target.substring(0, anchorIndex).trim();
         }
 
-        // 仅锚点（如 #section）按原有组件点击流程处理。
+        // 仅锚点（如 #section）直接在当前页面内定位。
         if (target.isEmpty()) {
-            return false;
+            return anchor != null && this.tryScrollToAnchor(anchor);
         }
         String lowerTarget = target.toLowerCase(Locale.ROOT);
         //noinspection HttpUrlsUsage
@@ -816,11 +821,99 @@ public class GuideScreen extends Screen {
 
         ArrayList<ResourceLocation> breadCrumbs = new ArrayList<>(this.breadCrumbs);
         breadCrumbs.add(this.documentLocation);
+        if (resolved.isPresent() && resolved.get().equals(this.documentLocation)) {
+            return anchor == null || this.tryScrollToAnchor(anchor);
+        }
         return resolved.isPresent() && AgeratumClient.openGuideOnClient(
             resolved.get(),
             anchor,
             resolved.get().equals(this.documentLocation) ? this.breadCrumbs : List.copyOf(breadCrumbs)
         );
+    }
+
+    /**
+     * 若当前页面带有待处理锚点，则在初始化阶段滚动到目标标题。
+     */
+    private void tryScrollToPendingAnchor() {
+        if (this.pendingAnchor == null || this.pendingAnchor.isBlank()) {
+            return;
+        }
+        String anchor = this.pendingAnchor;
+        this.pendingAnchor = null;
+        this.tryScrollToAnchor(anchor);
+    }
+
+    /**
+     * 将内容滚动到给定锚点对应的标题位置。
+     *
+     * @return 找到锚点并完成滚动时返回 {@code true}
+     */
+    private boolean tryScrollToAnchor(String anchor) {
+        if (this.minecraft == null) {
+            return false;
+        }
+        String normalizedAnchor = this.normalizeAnchor(anchor);
+        if (normalizedAnchor.isEmpty()) {
+            return false;
+        }
+
+        float offsetY = 0.0f;
+        for (MDComponent component : this.parsedComponents) {
+            if (component instanceof dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent header) {
+                String headingText = header.getText().getString();
+                if (this.matchesAnchor(normalizedAnchor, headingText)) {
+                    this.updateScrollBounds();
+                    this.contentScroll = Mth.clamp(offsetY, 0.0f, this.maxContentScroll);
+                    return true;
+                }
+            }
+            offsetY += component.getHeight(this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE) + CONTENT_SPACING;
+        }
+        return false;
+    }
+
+    private boolean matchesAnchor(String normalizedAnchor, String headingText) {
+        if (headingText.isBlank()) {
+            return false;
+        }
+        String normalizedHeading = this.normalizeAnchor(headingText);
+        if (normalizedAnchor.equals(normalizedHeading)) {
+            return true;
+        }
+        return normalizedAnchor.equals(headingText.trim().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * 将标题或原始锚点规范化为可比较的 slug。
+     */
+    private String normalizeAnchor(String rawAnchor) {
+        String decoded = URLDecoder.decode(rawAnchor, StandardCharsets.UTF_8).trim();
+        if (decoded.isEmpty()) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(decoded, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
+        StringBuilder builder = new StringBuilder(normalized.length());
+        boolean previousWasSeparator = false;
+        for (int index = 0; index < normalized.length(); index++) {
+            char current = normalized.charAt(index);
+            if (Character.isLetterOrDigit(current)) {
+                builder.append(current);
+                previousWasSeparator = false;
+                continue;
+            }
+            if (Character.isWhitespace(current) || current == '-' || current == '_') {
+                if (!previousWasSeparator && !builder.isEmpty()) {
+                    builder.append('-');
+                    previousWasSeparator = true;
+                }
+            }
+        }
+        int length = builder.length();
+        while (length > 0 && builder.charAt(length - 1) == '-') {
+            builder.deleteCharAt(length - 1);
+            length--;
+        }
+        return builder.toString();
     }
 
     /**
