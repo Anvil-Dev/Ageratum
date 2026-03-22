@@ -83,7 +83,13 @@ Setext heading H2
     - Level 1 item with ~~strike~~
         - Level 2 item with **bold**
             - Level 3 item with `code`
-                - Level 4 wraps back to first symbol
+                - Level 4
+
+- Level 0 bullet with *italic*
+  - Level 1 item with ~~strike~~
+    - Level 2 item with **bold**
+      - Level 3 item with `code`
+        - Level 4
 
 ### Ordered (multi-level)
 
