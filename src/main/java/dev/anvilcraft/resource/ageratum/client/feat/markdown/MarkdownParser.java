@@ -116,10 +116,10 @@ public class MarkdownParser {
 
         // 第一遍：收集引用链接定义
         Map<String, String> linkRefs = collectLinkRefs(split);
-        
-        // 第二遍：展开引用链接
+
+        // 第二遍：展开引用链接，但保留定义行原样交给后续块级解析跳过
         if (!linkRefs.isEmpty()) {
-            normalized = expandLinkRefs(normalized, linkRefs);
+            normalized = expandLinkRefs(split, linkRefs);
             split = normalized.split("\n", -1);
         }
 
@@ -547,7 +547,9 @@ public class MarkdownParser {
         Map<String, String> refs = new LinkedHashMap<>();
         for (String line : lines) {
             Matcher m = LINK_REF_DEF_PATTERN.matcher(line);
-            if (m.matches()) refs.put(m.group(1).toLowerCase(), m.group(2));
+            if (m.matches()) {
+                refs.put(m.group(1).toLowerCase(), m.group(2));
+            }
         }
         return refs;
     }
@@ -555,7 +557,38 @@ public class MarkdownParser {
     /**
      * 展开引用链接语法为普通内联链接。
      */
-    private static String expandLinkRefs(String markdown, Map<String, String> refs) {
+    private static String expandLinkRefs(String[] lines, Map<String, String> refs) {
+        List<String> expandedLines = new ArrayList<>(lines.length);
+        String codeFence = null;
+        for (String line : lines) {
+            if (LINK_REF_DEF_PATTERN.matcher(line).matches()) {
+                expandedLines.add(line);
+                continue;
+            }
+
+            Matcher fenceMatcher = CODE_FENCE_PATTERN.matcher(line.trim());
+            if (codeFence != null) {
+                expandedLines.add(line);
+                if (fenceMatcher.matches()
+                    && fenceMatcher.group(1).charAt(0) == codeFence.charAt(0)
+                    && fenceMatcher.group(1).length() >= codeFence.length()) {
+                    codeFence = null;
+                }
+                continue;
+            }
+
+            if (fenceMatcher.matches()) {
+                codeFence = fenceMatcher.group(1);
+                expandedLines.add(line);
+                continue;
+            }
+
+            expandedLines.add(expandLinkRefsInLine(line, refs));
+        }
+        return String.join("\n", expandedLines);
+    }
+
+    private static String expandLinkRefsInLine(String markdown, Map<String, String> refs) {
         // 替换 [text][id] → [text](url)
         Matcher full = LINK_REF_FULL_PATTERN.matcher(markdown);
         StringBuilder sb = new StringBuilder();
@@ -579,6 +612,7 @@ public class MarkdownParser {
         shortcut.appendTail(sb);
         return sb.toString();
     }
+
 
     // ── 其他辅助方法 ────────────────────────────────────────────────────
 
