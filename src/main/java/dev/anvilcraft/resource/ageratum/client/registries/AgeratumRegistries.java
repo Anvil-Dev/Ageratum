@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.neoforged.bus.api.IEventBus;
@@ -34,6 +35,26 @@ public final class AgeratumRegistries {
         .makeRegistry(builder -> {
         });
 
+    /**
+     * 行内样式解析器注册表键。
+     */
+    public static final ResourceKey<Registry<MDInlineStyleParser>> INLINE_STYLE_PARSER_REGISTRY_KEY = ResourceKey
+        .createRegistryKey(Ageratum.location("inline_style_parser"));
+
+    /**
+     * 行内样式解析器的延迟注册器。
+     */
+    public static final DeferredRegister<MDInlineStyleParser> INLINE_STYLE_PARSERS = DeferredRegister.create(
+        INLINE_STYLE_PARSER_REGISTRY_KEY,
+        Ageratum.MOD_ID
+    );
+
+    /**
+     * 行内样式解析器注册表实例提供器。
+     */
+    public static final Registry<MDInlineStyleParser> INLINE_STYLE_PARSER_REGISTRY = INLINE_STYLE_PARSERS.makeRegistry(builder -> {
+    });
+
     private AgeratumRegistries() {
     }
 
@@ -42,6 +63,7 @@ public final class AgeratumRegistries {
      */
     public static void register(IEventBus modEventBus) {
         EXTENSION_COMPONENT_FACTORIES.register(modEventBus);
+        INLINE_STYLE_PARSERS.register(modEventBus);
     }
 }
 

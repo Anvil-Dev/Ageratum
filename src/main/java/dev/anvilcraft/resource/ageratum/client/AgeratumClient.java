@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinExtensionComponents;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinInlineStyleParsers;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
@@ -50,6 +51,8 @@ public class AgeratumClient {
         AgeratumRegistries.register(modEventBus);
         // 触发内置扩展组件注册项的类加载
         BuiltinExtensionComponents.init();
+        // 触发内置行内样式解析器注册项的类加载
+        BuiltinInlineStyleParsers.init();
     }
 
     /**
