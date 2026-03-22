@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -111,7 +112,21 @@ public class MarkdownParser {
      * @return 按渲染顺序排列的组件列表
      */
     public List<MDComponent> parse(String markdown) {
+        return this.parseDocument(markdown).components();
+    }
+
+    /**
+     * 将 Markdown 文本解析为文档模型（front matter + 组件列表）。
+     */
+    public MDDocument parseDocument(String markdown) {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
+        FrontMatterParseResult frontMatterParseResult = extractFrontMatter(normalized);
+        List<MDComponent> components = this.parseComponents(frontMatterParseResult.body());
+        return new MDDocument(frontMatterParseResult.frontMatter(), components);
+    }
+
+    private List<MDComponent> parseComponents(String markdownBody) {
+        String normalized = markdownBody;
         String[] split = normalized.split("\n", -1);
 
         // 第一遍：收集引用链接定义
@@ -330,6 +345,124 @@ public class MarkdownParser {
         inIndentedCode = false;
         flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
         return components;
+    }
+
+    private static FrontMatterParseResult extractFrontMatter(String markdown) {
+        String[] lines = markdown.split("\n", -1);
+        if (lines.length == 0 || !"---".equals(lines[0].trim())) {
+            return new FrontMatterParseResult(Map.of(), markdown);
+        }
+
+        int closeIndex = -1;
+        for (int i = 1; i < lines.length; i++) {
+            if ("---".equals(lines[i].trim())) {
+                closeIndex = i;
+                break;
+            }
+        }
+        if (closeIndex < 0) {
+            return new FrontMatterParseResult(Map.of(), markdown);
+        }
+
+        List<String> yamlLines = new ArrayList<>(Math.max(0, closeIndex - 1));
+        for (int i = 1; i < closeIndex; i++) {
+            yamlLines.add(lines[i]);
+        }
+
+        StringBuilder bodyBuilder = new StringBuilder();
+        for (int i = closeIndex + 1; i < lines.length; i++) {
+            if (bodyBuilder.length() > 0) {
+                bodyBuilder.append('\n');
+            }
+            bodyBuilder.append(lines[i]);
+        }
+
+        Map<String, Object> frontMatter = parseFrontMatterYaml(yamlLines);
+        return new FrontMatterParseResult(frontMatter, bodyBuilder.toString());
+    }
+
+    private static Map<String, Object> parseFrontMatterYaml(List<String> yamlLines) {
+        LinkedHashMap<String, Object> root = new LinkedHashMap<>();
+        List<MapLevel> levels = new ArrayList<>();
+        levels.add(new MapLevel(0, root));
+
+        for (String line : yamlLines) {
+            if (line == null || line.isBlank()) {
+                continue;
+            }
+            String trimmed = line.trim();
+            if (trimmed.startsWith("#")) {
+                continue;
+            }
+
+            int colon = trimmed.indexOf(':');
+            if (colon <= 0) {
+                continue;
+            }
+
+            int indent = countYamlIndent(line);
+            while (levels.size() > 1 && indent < levels.get(levels.size() - 1).indent()) {
+                levels.remove(levels.size() - 1);
+            }
+
+            Map<String, Object> current = levels.get(levels.size() - 1).map();
+            String key = trimmed.substring(0, colon).trim();
+            String valuePart = trimmed.substring(colon + 1).trim();
+            if (key.isEmpty()) {
+                continue;
+            }
+
+            if (valuePart.isEmpty()) {
+                LinkedHashMap<String, Object> nested = new LinkedHashMap<>();
+                current.put(key, nested);
+                levels.add(new MapLevel(indent + 1, nested));
+            } else {
+                current.put(key, parseYamlScalar(valuePart));
+            }
+        }
+
+        return Map.copyOf(root);
+    }
+
+    private static int countYamlIndent(String line) {
+        int width = 0;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch == ' ') {
+                width++;
+                continue;
+            }
+            if (ch == '\t') {
+                width += 2;
+                continue;
+            }
+            break;
+        }
+        return width;
+    }
+
+    private static Object parseYamlScalar(String valuePart) {
+        String value = valuePart.trim();
+        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+            return value.substring(1, value.length() - 1);
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return Boolean.TRUE;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return Boolean.FALSE;
+        }
+        if ("null".equalsIgnoreCase(value) || "~".equals(value)) {
+            return null;
+        }
+        try {
+            if (value.contains(".") || value.contains("e") || value.contains("E")) {
+                return Double.parseDouble(value);
+            }
+            return Long.parseLong(value);
+        } catch (NumberFormatException ignored) {
+            return value;
+        }
     }
 
     /**
@@ -668,6 +801,15 @@ public class MarkdownParser {
             if (this.equals(holder)) return 0;
             return this.priority() >= holder.priority() ? 1 : -1;
         }
+    }
+
+    private record MapLevel(int indent, Map<String, Object> map) {
+        private MapLevel {
+            Objects.requireNonNull(map, "map");
+        }
+    }
+
+    private record FrontMatterParseResult(Map<String, Object> frontMatter, String body) {
     }
 }
 

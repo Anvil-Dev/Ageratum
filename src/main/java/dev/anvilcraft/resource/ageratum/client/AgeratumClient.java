@@ -8,7 +8,8 @@ import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.BuiltinExtensionComponents;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
@@ -27,7 +28,6 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
-import java.util.List;
 import java.util.Optional;
 
 @Mod(value = Ageratum.MOD_ID, dist = Dist.CLIENT)
@@ -193,14 +193,15 @@ public class AgeratumClient {
         }
 
         // 优先使用预解析缓存，缺失时回退为即时解析
-        Optional<List<MDComponent>> cachedComponents = GuideDocumentCache.getParsedComponents(location);
-        if (cachedComponents.isPresent()) {
-            minecraft.setScreen(new GuideScreen(location, cachedComponents.get()));
+        Optional<MDDocument> cachedDocument = GuideDocumentCache.getParsedDocument(location);
+        if (cachedDocument.isPresent()) {
+            minecraft.setScreen(new GuideScreen(location, cachedDocument.get().components()));
             return true;
         }
 
         String content = GuideDocumentLoader.read(resourceManager, location);
-        minecraft.setScreen(new GuideScreen(location, content));
+        MDDocument parsedDocument = new MarkdownParser().parseDocument(content);
+        minecraft.setScreen(new GuideScreen(location, parsedDocument.components()));
         return true;
     }
 }
