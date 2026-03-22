@@ -194,11 +194,19 @@ public class AgeratumClient {
             return false;
         }
 
+        int inheritedLabelScrollRows = 0;
+        double inheritedLabelScrollRemainder = 0.0d;
+        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+            inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
+            inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
+        }
+
         // 优先使用预解析缓存，缺失时回退为即时解析
         Optional<MDDocument> cachedDocument = GuideDocumentCache.getParsedDocument(location);
         if (cachedDocument.isPresent()) {
             GuideScreen screen = new GuideScreen(location, cachedDocument.get().components());
             screen.setAnchor(anchor);
+            screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
             minecraft.setScreen(screen);
             return true;
         }
@@ -207,6 +215,7 @@ public class AgeratumClient {
         MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
         GuideScreen screen = new GuideScreen(location, parsedDocument.components());
         screen.setAnchor(anchor);
+        screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
         minecraft.setScreen(screen);
         return true;
     }

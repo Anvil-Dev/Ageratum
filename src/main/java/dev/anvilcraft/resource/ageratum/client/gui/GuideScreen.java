@@ -237,6 +237,28 @@ public class GuideScreen extends Screen {
     }
 
     /**
+     * 设置新打开页面的侧栏滚动状态，用于跨页面保留浏览位置。
+     */
+    public void setLabelScrollState(int labelScrollRows, double labelScrollRemainder) {
+        this.labelScrollRows = Math.max(0, labelScrollRows);
+        this.labelScrollRemainder = labelScrollRemainder;
+    }
+
+    /**
+     * 返回当前侧栏滚动的起始行索引。
+     */
+    public int getLabelScrollRows() {
+        return this.labelScrollRows;
+    }
+
+    /**
+     * 返回当前侧栏滚动的小数累积量。
+     */
+    public double getLabelScrollRemainder() {
+        return this.labelScrollRemainder;
+    }
+
+    /**
      * 界面初始化（每次打开或窗口大小改变时调用）。
      *
      * <p>重新计算 {@link #leftPos} 与 {@link #topPos} 使界面居中，
