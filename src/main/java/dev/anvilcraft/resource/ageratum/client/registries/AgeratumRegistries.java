@@ -30,10 +30,9 @@ public final class AgeratumRegistries {
     /**
      * 扩展组件工厂注册表实例提供器。
      */
-    public static final Registry<MDExtensionComponentFactory> EXTENSION_COMPONENT_FACTORY_REGISTRY = EXTENSION_COMPONENT_FACTORIES.makeRegistry(
-        builder -> {
-        }
-    );
+    public static final Registry<MDExtensionComponentFactory> EXTENSION_COMPONENT_FACTORY_REGISTRY = EXTENSION_COMPONENT_FACTORIES
+        .makeRegistry(builder -> {
+        });
 
     private AgeratumRegistries() {
     }
