@@ -226,6 +226,63 @@ public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionCompo
 EXT_COMPONENT_FACTORIES.register(modEventBus);
 ```
 
+#### 注册自定义行内样式解析器
+
+行内样式解析器通过 `INLINE_STYLE_PARSER_REGISTRY_KEY` 注册，解析器会在 `MDComponent` 里按优先级参与标签匹配。
+
+```java
+package com.example.mymod.client.markdown;
+
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
+import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
+import net.minecraft.network.chat.Style;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.regex.Pattern;
+
+public final class MyInlineStyleParsers {
+    // 使用你自己的 modid，而不是 ageratum
+    public static final DeferredRegister<MDInlineStyleParser> INLINE_STYLE_PARSERS = DeferredRegister.create(
+        AgeratumRegistries.INLINE_STYLE_PARSER_REGISTRY_KEY,
+        "mymod"
+    );
+
+    // 示例标签：<rainbow>文本</rainbow>
+    public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> RAINBOW =
+        INLINE_STYLE_PARSERS.register(
+            "rainbow",
+            () -> MDInlineStyleParser.create(
+                100, // priority：数值越小越先参与同位置竞争
+                Pattern.compile("<rainbow>"),
+                "</rainbow>",
+                (Style parentStyle, java.util.regex.Matcher matcher) -> parentStyle.withColor(0xFF55FF)
+            )
+        );
+
+    private MyInlineStyleParsers() {
+    }
+}
+```
+
+在你的客户端初始化中注册：
+
+```java
+public class MyModClient {
+    public MyModClient(IEventBus modEventBus) {
+        MyInlineStyleParsers.INLINE_STYLE_PARSERS.register(modEventBus);
+    }
+}
+```
+
+Markdown 使用示例：
+
+```markdown
+普通文本 <rainbow>彩色文本</rainbow> 普通文本
+```
+
+完整示例文档见：`docs/inline-style-parser-example.zh.md`。
+
 #### 添加文档
 
 在资源包中创建：

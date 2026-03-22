@@ -228,6 +228,63 @@ public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionCompo
 EXT_COMPONENT_FACTORIES.register(modEventBus);
 ```
 
+#### Register Custom Inline Style Parser
+
+Inline style parsers are registered through `INLINE_STYLE_PARSER_REGISTRY_KEY`. `MDComponent` queries this registry and resolves matches by position + parser priority.
+
+```java
+package com.example.mymod.client.markdown;
+
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
+import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
+import net.minecraft.network.chat.Style;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.regex.Pattern;
+
+public final class MyInlineStyleParsers {
+    // Use your own modid here, not ageratum
+    public static final DeferredRegister<MDInlineStyleParser> INLINE_STYLE_PARSERS = DeferredRegister.create(
+        AgeratumRegistries.INLINE_STYLE_PARSER_REGISTRY_KEY,
+        "mymod"
+    );
+
+    // Example tag: <rainbow>text</rainbow>
+    public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> RAINBOW =
+        INLINE_STYLE_PARSERS.register(
+            "rainbow",
+            () -> MDInlineStyleParser.create(
+                100, // smaller value = higher precedence at same position
+                Pattern.compile("<rainbow>"),
+                "</rainbow>",
+                (Style parentStyle, java.util.regex.Matcher matcher) -> parentStyle.withColor(0xFF55FF)
+            )
+        );
+
+    private MyInlineStyleParsers() {
+    }
+}
+```
+
+Register it in your client init:
+
+```java
+public class MyModClient {
+    public MyModClient(IEventBus modEventBus) {
+        MyInlineStyleParsers.INLINE_STYLE_PARSERS.register(modEventBus);
+    }
+}
+```
+
+Markdown usage:
+
+```markdown
+normal text <rainbow>colored text</rainbow> normal text
+```
+
+See full guide: `docs/inline-style-parser-example.en.md`.
+
 #### Add Documentation
 
 Create in resource pack:
