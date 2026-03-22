@@ -39,99 +39,181 @@ import javax.annotation.Nullable;
  */
 public class GuideScreen extends Screen {
 
-    /** 背景纹理资源位置。 */
+    /**
+     * 背景纹理资源位置。
+     */
     protected static final ResourceLocation GUIDE_LOCATION = Ageratum.location("textures/gui/guide/guide.png");
 
     // ── 纹理与界面尺寸常量（原始像素，使用时除以 2 获得实际屏幕尺寸）──────────
 
-    /** 背景纹理完整宽度（原始像素）。 */
+    /**
+     * 背景纹理完整宽度（原始像素）。
+     */
     protected static final int IMAGE_WIDTH = 392;
-    /** 背景纹理完整高度（原始像素）。 */
+    /**
+     * 背景纹理完整高度（原始像素）。
+     */
     protected static final int IMAGE_HEIGHT = 466;
-    /** 侧边标签宽度（原始像素）。 */
+    /**
+     * 侧边标签宽度（原始像素）。
+     */
     protected static final int LABEL_WIDTH = 102;
-    /** 侧边标签高度（原始像素）。 */
+    /**
+     * 侧边标签高度（原始像素）。
+     */
     protected static final int LABEL_HEIGHT = 32;
-    /** 侧边标签区域显示的最大行数。 */
+    /**
+     * 侧边标签区域显示的最大行数。
+     */
     protected static final int LABEL_VISIBLE_ROWS = 11;
-    /** 侧边标签行距（屏幕像素）。 */
+    /**
+     * 侧边标签行距（屏幕像素）。
+     */
     protected static final int LABEL_ROW_SPACING = 17;
-    /** 标签首行 Y 偏移（相对界面左上角，屏幕像素）。 */
+    /**
+     * 标签首行 Y 偏移（相对界面左上角，屏幕像素）。
+     */
     protected static final int LABEL_START_Y = 24;
-    /** 一级标签基础 X 偏移（相对界面左上角，屏幕像素）。 */
+    /**
+     * 一级标签基础 X 偏移（相对界面左上角，屏幕像素）。
+     */
     protected static final int LABEL_BASE_X = -30;
-    /** 二级标签额外缩进（屏幕像素）。 */
+    /**
+     * 二级标签额外缩进（屏幕像素）。
+     */
     protected static final int LABEL_LEVEL2_INDENT = 10;
-    /** 标签悬停时向左滑出的距离（屏幕像素）。 */
+    /**
+     * 标签悬停时向左滑出的距离（屏幕像素）。
+     */
     protected static final int LABEL_HOVER_SHIFT = 5;
 
-    /** 侧栏箭头贴图 U（按当前 UI 缩放后的坐标）。 */
+    /**
+     * 侧栏箭头贴图 U（按当前 UI 缩放后的坐标）。
+     */
     protected static final int LABEL_ARROW_U = 392 / 2;
-    /** 上箭头贴图 V（按当前 UI 缩放后的坐标）。 */
+    /**
+     * 上箭头贴图 V（按当前 UI 缩放后的坐标）。
+     */
     protected static final int LABEL_ARROW_V_UP = 32 / 2;
-    /** 下箭头贴图 V（按当前 UI 缩放后的坐标）。 */
+    /**
+     * 下箭头贴图 V（按当前 UI 缩放后的坐标）。
+     */
     protected static final int LABEL_ARROW_V_DOWN = (32 + 32) / 2;
-    /** 箭头绘制宽度（屏幕像素）。 */
+    /**
+     * 箭头绘制宽度（屏幕像素）。
+     */
     protected static final int LABEL_ARROW_WIDTH = LABEL_WIDTH / 2;
-    /** 单个箭头绘制高度（屏幕像素）。 */
+    /**
+     * 单个箭头绘制高度（屏幕像素）。
+     */
     protected static final int LABEL_ARROW_HEIGHT = LABEL_HEIGHT / 2;
 
     // ── 内容区域参数 ────────────────────────────────────────────────────────────
 
-    /** 内容区域相对界面左上角的 X 偏移（半像素尺寸）。 */
+    /**
+     * 内容区域相对界面左上角的 X 偏移（半像素尺寸）。
+     */
     protected static final int CONTENT_X = 22;
-    /** 内容区域相对界面左上角的 Y 偏移（半像素尺寸）。 */
+    /**
+     * 内容区域相对界面左上角的 Y 偏移（半像素尺寸）。
+     */
     protected static final int CONTENT_Y = 21;
-    /** 内容区域可见宽度（Markdown 渲染坐标系，未缩放）。 */
+    /**
+     * 内容区域可见宽度（Markdown 渲染坐标系，未缩放）。
+     */
     protected static final int CONTENT_WIDTH = 264 - 6;
-    /** 内容区域可见高度（Markdown 渲染坐标系，未缩放）。 */
+    /**
+     * 内容区域可见高度（Markdown 渲染坐标系，未缩放）。
+     */
     protected static final int CONTENT_HEIGHT = 328 - 6;
-    /** 相邻两个 MDComponent 之间的垂直间距（像素）。 */
+    /**
+     * 相邻两个 MDComponent 之间的垂直间距（像素）。
+     */
     protected static final int CONTENT_SPACING = 5;
-    /** 内容区域整体缩放比例（缩小以模拟书页文字大小）。 */
+    /**
+     * 内容区域整体缩放比例（缩小以模拟书页文字大小）。
+     */
     protected static final float CONTENT_SCALE = 0.6f;
-    /** 每次滚轮事件滚动的像素距离（Markdown 坐标系）。 */
+    /**
+     * 每次滚轮事件滚动的像素距离（Markdown 坐标系）。
+     */
     protected static final float SCROLL_STEP = 16.0f;
 
-    /** Markdown 解析器实例。 */
+    /**
+     * Markdown 解析器实例。
+     */
     protected final MarkdownParser parser;
-    /** 当前文档资源位置。 */
+    /**
+     * 当前文档资源位置。
+     */
     protected final ResourceLocation documentLocation;
 
-    /** 解析后得到的 Markdown 渲染组件列表，按文档顺序排列。 */
+    /**
+     * 解析后得到的 Markdown 渲染组件列表，按文档顺序排列。
+     */
     protected final List<MDComponent> parsedComponents;
 
     // ── 界面布局变量（运行时计算）──────────────────────────────────────────────
 
-    /** 当前背景图像实际显示宽度（屏幕像素，= IMAGE_WIDTH / 2）。 */
+    /**
+     * 当前背景图像实际显示宽度（屏幕像素，= IMAGE_WIDTH / 2）。
+     */
     protected int imageWidth = IMAGE_WIDTH / 2;
-    /** 当前背景图像实际显示高度（屏幕像素，= IMAGE_HEIGHT / 2）。 */
+    /**
+     * 当前背景图像实际显示高度（屏幕像素，= IMAGE_HEIGHT / 2）。
+     */
     protected int imageHeight = IMAGE_HEIGHT / 2;
-    /** 侧边标签实际显示宽度（屏幕像素）。 */
+    /**
+     * 侧边标签实际显示宽度（屏幕像素）。
+     */
     protected int labelWidth = LABEL_WIDTH / 2;
-    /** 侧边标签实际显示高度（屏幕像素）。 */
+    /**
+     * 侧边标签实际显示高度（屏幕像素）。
+     */
     protected int labelHeight = LABEL_HEIGHT / 2;
-    /** 界面左侧在屏幕上的 X 坐标（居中对齐计算结果）。 */
+    /**
+     * 界面左侧在屏幕上的 X 坐标（居中对齐计算结果）。
+     */
     protected int leftPos;
-    /** 界面顶部在屏幕上的 Y 坐标（居中对齐计算结果）。 */
+    /**
+     * 界面顶部在屏幕上的 Y 坐标（居中对齐计算结果）。
+     */
     protected int topPos;
-    /** 当前内容滚动偏移量（Markdown 坐标系像素，向下为正）。 */
+    /**
+     * 当前内容滚动偏移量（Markdown 坐标系像素，向下为正）。
+     */
     protected float contentScroll;
-    /** 内容最大可滚动距离（等于内容总高度减去可见高度，最小为 0）。 */
+    /**
+     * 内容最大可滚动距离（等于内容总高度减去可见高度，最小为 0）。
+     */
     protected float maxContentScroll;
-    /** 当前标签列表滚动的起始行索引。 */
+    /**
+     * 当前标签列表滚动的起始行索引。
+     */
     protected int labelScrollRows;
-    /** 标签列表最大可滚动行数。 */
+    /**
+     * 标签列表最大可滚动行数。
+     */
     protected int maxLabelScrollRows;
-    /** 触控板等高精度滚轮的小数累积，按系统增量折算后取整到行滚动。 */
+    /**
+     * 触控板等高精度滚轮的小数累积，按系统增量折算后取整到行滚动。
+     */
     protected double labelScrollRemainder;
-    /** 当前标签列表（仅显示到二级）。 */
+    /**
+     * 当前标签列表（仅显示到二级）。
+     */
     protected List<LabelEntry> labelEntries = List.of();
-    /** 当前语言代码（用于文档定位回退）。 */
+    /**
+     * 当前语言代码（用于文档定位回退）。
+     */
     protected String currentLanguageCode = GuideDocumentLoader.DEFAULT_LANGUAGE_CODE;
-    /** 待定位的锚点（从其他页面链接过来时设置）。 */
+    /**
+     * 待定位的锚点（从其他页面链接过来时设置）。
+     */
     protected @Nullable String pendingAnchor;
-    /** H2 标题映射到其在内容区的起始 Y 坐标（用于锚点导航）。 */
+    /**
+     * H2 标题映射到其在内容区的起始 Y 坐标（用于锚点导航）。
+     */
     protected java.util.Map<String, Integer> h2Anchors = new java.util.HashMap<>();
 
     /**
@@ -203,7 +285,7 @@ public class GuideScreen extends Screen {
         this.renderBg(guiGraphics, partialTick, mouseX - i, mouseY - j);
         this.renderContent(guiGraphics, partialTick, mouseX - i, mouseY - j);
         pose.popPose();
-        
+
         // 显示悬停提示信息
         if (this.mouseInContentRange(mouseX, mouseY)) {
             this.renderHoverTooltip(guiGraphics, mouseX, mouseY);
@@ -408,14 +490,21 @@ public class GuideScreen extends Screen {
             guiGraphics.blit(GUIDE_LOCATION, originX, originY, this.imageWidth, 0, this.labelWidth, this.labelHeight);
 
             int textColor = isActive ? 0x8B5A2B : (entry.clickable ? 0x5D4630 : 0x3f3f3f);
+            PoseStack pose = guiGraphics.pose();
+            pose.pushPose();
+            pose.translate(originX, originY, 0);
+            pose.pushPose();
+            pose.scale(0.8f, 0.8f, 0);
             guiGraphics.drawString(
                 this.font,
                 entry.title,
-                originX + 7,
-                originY + 4,
+                3,
+                6,
                 textColor,
                 false
             );
+            pose.popPose();
+            pose.popPose();
         }
 
         this.renderLabelScrollHint(guiGraphics);
@@ -481,99 +570,99 @@ public class GuideScreen extends Screen {
         this.labelScrollRows = Mth.clamp(this.labelScrollRows + deltaRows, 0, this.maxLabelScrollRows);
     }
 
-     private void rebuildLabelEntries(ResourceManager resourceManager) {
-         List<String> files = GuideDocumentLoader.listFiles(resourceManager, this.documentLocation.getNamespace(), this.currentLanguageCode);
-         List<LabelEntry> rootEntries = new ArrayList<>();
-         Map<String, List<String>> childEntriesByParent = new LinkedHashMap<>();
-         List<String> guideChildren = new ArrayList<>();
+    private void rebuildLabelEntries(ResourceManager resourceManager) {
+        List<String> files = GuideDocumentLoader.listFiles(resourceManager, this.documentLocation.getNamespace(), this.currentLanguageCode);
+        List<LabelEntry> rootEntries = new ArrayList<>();
+        Map<String, List<String>> childEntriesByParent = new LinkedHashMap<>();
+        List<String> guideChildren = new ArrayList<>();
 
-         for (String file : files) {
-             String normalized = file.trim().replace('\\', '/');
-             if (normalized.isEmpty()) {
-                 continue;
-             }
+        for (String file : files) {
+            String normalized = file.trim().replace('\\', '/');
+            if (normalized.isEmpty()) {
+                continue;
+            }
 
-             // 侧栏最多显示到二级。
-             String[] segments = normalized.split("/");
-             if (segments.length > 3) {
-                 continue;
-             }
+            // 侧栏最多显示到二级。
+            String[] segments = normalized.split("/");
+            if (segments.length > 3) {
+                continue;
+            }
 
-             if (segments.length == 1) {
-                 rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
-                 continue;
-             }
+            if (segments.length == 1) {
+                rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
+                continue;
+            }
 
-             if (normalized.startsWith("examples/")) {
-                 if ("examples/index".equals(normalized)) {
-                     rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
-                 } else {
-                     childEntriesByParent.computeIfAbsent("examples/index", key -> new ArrayList<>()).add(normalized);
-                 }
-                 continue;
-             }
+            if (normalized.startsWith("examples/")) {
+                if ("examples/index".equals(normalized)) {
+                    rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
+                } else {
+                    childEntriesByParent.computeIfAbsent("examples/index", key -> new ArrayList<>()).add(normalized);
+                }
+                continue;
+            }
 
-             if (normalized.startsWith("tutorial/")) {
-                 if ("tutorial/index".equals(normalized)) {
-                     rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
-                 } else {
-                     childEntriesByParent.computeIfAbsent("tutorial/index", key -> new ArrayList<>()).add(normalized);
-                 }
-                 continue;
-             }
+            if (normalized.startsWith("tutorial/")) {
+                if ("tutorial/index".equals(normalized)) {
+                    rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
+                } else {
+                    childEntriesByParent.computeIfAbsent("tutorial/index", key -> new ArrayList<>()).add(normalized);
+                }
+                continue;
+            }
 
-             if (normalized.startsWith("guide/")) {
-                 guideChildren.add(normalized);
-                 continue;
-             }
-         }
+            if (normalized.startsWith("guide/")) {
+                guideChildren.add(normalized);
+                continue;
+            }
+        }
 
-         rootEntries.sort(Comparator
-             .comparing((LabelEntry entry) -> !"index".equalsIgnoreCase(entry.fileArgument))
-             .thenComparing(entry -> entry.fileArgument));
+        rootEntries.sort(Comparator
+            .comparing((LabelEntry entry) -> !"index".equalsIgnoreCase(entry.fileArgument))
+            .thenComparing(entry -> entry.fileArgument));
 
-         List<LabelEntry> finalEntries = new ArrayList<>();
-         for (LabelEntry rootEntry : rootEntries) {
-             finalEntries.add(rootEntry);
-             List<String> children = childEntriesByParent.get(rootEntry.fileArgument);
-             if (children == null || children.isEmpty()) {
-                 continue;
-             }
-             children.sort(String::compareTo);
-             for (String childPath : children) {
-                 finalEntries.add(new LabelEntry(childPath, 2, this.loadDocumentTitle(resourceManager, childPath), true));
-             }
-         }
+        List<LabelEntry> finalEntries = new ArrayList<>();
+        for (LabelEntry rootEntry : rootEntries) {
+            finalEntries.add(rootEntry);
+            List<String> children = childEntriesByParent.get(rootEntry.fileArgument);
+            if (children == null || children.isEmpty()) {
+                continue;
+            }
+            children.sort(String::compareTo);
+            for (String childPath : children) {
+                finalEntries.add(new LabelEntry(childPath, 2, this.loadDocumentTitle(resourceManager, childPath), true));
+            }
+        }
 
-         if (!guideChildren.isEmpty()) {
-             guideChildren.sort(String::compareTo);
-             finalEntries.add(new LabelEntry(null, 1, "GUIDE", false));
-             for (String guidePath : guideChildren) {
-                 finalEntries.add(new LabelEntry(guidePath, 2, this.loadDocumentTitle(resourceManager, guidePath), true));
-             }
-         }
+        if (!guideChildren.isEmpty()) {
+            guideChildren.sort(String::compareTo);
+            finalEntries.add(new LabelEntry(null, 1, "GUIDE", false));
+            for (String guidePath : guideChildren) {
+                finalEntries.add(new LabelEntry(guidePath, 2, this.loadDocumentTitle(resourceManager, guidePath), true));
+            }
+        }
 
-         this.labelEntries = List.copyOf(finalEntries);
-         this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - LABEL_VISIBLE_ROWS);
-         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
-     }
+        this.labelEntries = List.copyOf(finalEntries);
+        this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - LABEL_VISIBLE_ROWS);
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+    }
 
-     private String loadDocumentTitle(ResourceManager resourceManager, String fileArgument) {
-         Optional<ResourceLocation> location = GuideDocumentLoader.resolveExistingLocation(
-             resourceManager,
-             this.documentLocation.getNamespace(),
-             this.currentLanguageCode,
-             fileArgument
-         );
-         if (location.isEmpty()) {
-             return fileArgument;
-         }
-         Optional<MDDocument> doc = GuideDocumentCache.getParsedDocument(location.get());
-         if (doc.isPresent()) {
-             return doc.get().getTitle();
-         }
-         return fileArgument;
-     }
+    private String loadDocumentTitle(ResourceManager resourceManager, String fileArgument) {
+        Optional<ResourceLocation> location = GuideDocumentLoader.resolveExistingLocation(
+            resourceManager,
+            this.documentLocation.getNamespace(),
+            this.currentLanguageCode,
+            fileArgument
+        );
+        if (location.isEmpty()) {
+            return fileArgument;
+        }
+        Optional<MDDocument> doc = GuideDocumentCache.getParsedDocument(location.get());
+        if (doc.isPresent()) {
+            return doc.get().getTitle();
+        }
+        return fileArgument;
+    }
 
     private boolean tryOpenLabelAt(double mouseX, double mouseY) {
         if (this.minecraft == null) {
@@ -872,10 +961,10 @@ public class GuideScreen extends Screen {
     /**
      * 获取指定组件中某个 Markdown 坐标对应的文本样式。
      *
-     * @param component  Markdown 组件
-     * @param minecraft  Minecraft 客户端实例
-     * @param mouseX     相对于组件的 X 坐标（Markdown 坐标系）
-     * @param mouseY     相对于组件的 Y 坐标（Markdown 坐标系）
+     * @param component Markdown 组件
+     * @param minecraft Minecraft 客户端实例
+     * @param mouseX    相对于组件的 X 坐标（Markdown 坐标系）
+     * @param mouseY    相对于组件的 Y 坐标（Markdown 坐标系）
      * @return 命中的文本样式；若未命中则返回 {@code null}
      */
     @Nullable
