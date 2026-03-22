@@ -21,8 +21,11 @@ import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -398,13 +401,13 @@ public class GuideScreen extends Screen {
             int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
             int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
             boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
-            boolean isActive = entry.fileArgument.equals(currentFile);
-            if (isHover || isActive) {
+            boolean isActive = entry.fileArgument != null && entry.fileArgument.equals(currentFile);
+            if (entry.clickable && (isHover || isActive)) {
                 originX -= LABEL_HOVER_SHIFT;
             }
             guiGraphics.blit(GUIDE_LOCATION, originX, originY, this.imageWidth, 0, this.labelWidth, this.labelHeight);
 
-            int textColor = isActive ? 0x8B5A2B : 0x5D4630;
+            int textColor = isActive ? 0x8B5A2B : (entry.clickable ? 0x5D4630 : 0x3f3f3f);
             guiGraphics.drawString(
                 this.font,
                 entry.title,
@@ -480,54 +483,79 @@ public class GuideScreen extends Screen {
 
      private void rebuildLabelEntries(ResourceManager resourceManager) {
          List<String> files = GuideDocumentLoader.listFiles(resourceManager, this.documentLocation.getNamespace(), this.currentLanguageCode);
-         List<LabelEntry> entries = new ArrayList<>();
+         List<LabelEntry> rootEntries = new ArrayList<>();
+         Map<String, List<String>> childEntriesByParent = new LinkedHashMap<>();
+         List<String> guideChildren = new ArrayList<>();
+
          for (String file : files) {
-             LabelEntry entry = this.toLabelEntry(file, resourceManager);
-             if (entry != null) {
-                 entries.add(entry);
+             String normalized = file.trim().replace('\\', '/');
+             if (normalized.isEmpty()) {
+                 continue;
+             }
+
+             // 侧栏最多显示到二级。
+             String[] segments = normalized.split("/");
+             if (segments.length > 3) {
+                 continue;
+             }
+
+             if (segments.length == 1) {
+                 rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
+                 continue;
+             }
+
+             if (normalized.startsWith("examples/")) {
+                 if ("examples/index".equals(normalized)) {
+                     rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
+                 } else {
+                     childEntriesByParent.computeIfAbsent("examples/index", key -> new ArrayList<>()).add(normalized);
+                 }
+                 continue;
+             }
+
+             if (normalized.startsWith("tutorial/")) {
+                 if ("tutorial/index".equals(normalized)) {
+                     rootEntries.add(new LabelEntry(normalized, 1, this.loadDocumentTitle(resourceManager, normalized), true));
+                 } else {
+                     childEntriesByParent.computeIfAbsent("tutorial/index", key -> new ArrayList<>()).add(normalized);
+                 }
+                 continue;
+             }
+
+             if (normalized.startsWith("guide/")) {
+                 guideChildren.add(normalized);
+                 continue;
              }
          }
-         // 排序：一级按 index 优先 + 字典序，二级按层级 + 字典序
-         entries.sort((a, b) -> {
-             if (a.level != b.level) {
-                 return a.level - b.level;
+
+         rootEntries.sort(Comparator
+             .comparing((LabelEntry entry) -> !"index".equalsIgnoreCase(entry.fileArgument))
+             .thenComparing(entry -> entry.fileArgument));
+
+         List<LabelEntry> finalEntries = new ArrayList<>();
+         for (LabelEntry rootEntry : rootEntries) {
+             finalEntries.add(rootEntry);
+             List<String> children = childEntriesByParent.get(rootEntry.fileArgument);
+             if (children == null || children.isEmpty()) {
+                 continue;
              }
-             boolean aIsIndex = a.fileArgument.endsWith("index") || a.fileArgument.equals("index");
-             boolean bIsIndex = b.fileArgument.endsWith("index") || b.fileArgument.equals("index");
-             if (aIsIndex != bIsIndex) {
-                 return aIsIndex ? -1 : 1;
+             children.sort(String::compareTo);
+             for (String childPath : children) {
+                 finalEntries.add(new LabelEntry(childPath, 2, this.loadDocumentTitle(resourceManager, childPath), true));
              }
-             return a.fileArgument.compareTo(b.fileArgument);
-         });
-         this.labelEntries = List.copyOf(entries);
+         }
+
+         if (!guideChildren.isEmpty()) {
+             guideChildren.sort(String::compareTo);
+             finalEntries.add(new LabelEntry(null, 1, "GUIDE", false));
+             for (String guidePath : guideChildren) {
+                 finalEntries.add(new LabelEntry(guidePath, 2, this.loadDocumentTitle(resourceManager, guidePath), true));
+             }
+         }
+
+         this.labelEntries = List.copyOf(finalEntries);
          this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - LABEL_VISIBLE_ROWS);
          this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
-     }
-
-     private @Nullable LabelEntry toLabelEntry(String fileArgument, ResourceManager resourceManager) {
-         String normalized = fileArgument.trim().replace('\\', '/');
-         if (normalized.isEmpty()) {
-             return null;
-         }
-         String[] segments = normalized.split("/");
-         if (segments.length == 1) {
-             String title = this.loadDocumentTitle(resourceManager, normalized);
-             return new LabelEntry(normalized, 1, title);
-         }
-         if (segments.length == 2 && "index".equalsIgnoreCase(segments[1])) {
-             String title = this.loadDocumentTitle(resourceManager, normalized);
-             return new LabelEntry(normalized, 1, title);
-         }
-         if (segments.length == 2 && !"index".equalsIgnoreCase(segments[1])) {
-             String title = this.loadDocumentTitle(resourceManager, normalized);
-             return new LabelEntry(normalized, 2, title);
-         }
-         if (segments.length == 3 && "index".equalsIgnoreCase(segments[2])) {
-             String title = this.loadDocumentTitle(resourceManager, normalized);
-             return new LabelEntry(normalized, 2, title);
-         }
-         // 侧栏最多显示到二级，超过二级直接忽略。
-         return null;
      }
 
      private String loadDocumentTitle(ResourceManager resourceManager, String fileArgument) {
@@ -558,6 +586,9 @@ public class GuideScreen extends Screen {
         for (int index = start; index < end; index++) {
             int row = index - start;
             LabelEntry entry = this.labelEntries.get(index);
+            if (!entry.clickable || entry.fileArgument == null) {
+                continue;
+            }
             int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
             int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
@@ -854,7 +885,7 @@ public class GuideScreen extends Screen {
         return component.getStyleAtPosition(minecraft, mouseX, mouseY, CONTENT_WIDTH);
     }
 
-    private record LabelEntry(String fileArgument, int level, String title) {
+    private record LabelEntry(@Nullable String fileArgument, int level, String title, boolean clickable) {
     }
 
     /**
