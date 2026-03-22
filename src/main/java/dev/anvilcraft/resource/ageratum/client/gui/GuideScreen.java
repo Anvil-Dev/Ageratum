@@ -2,19 +2,28 @@ package dev.anvilcraft.resource.ageratum.client.gui;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.GuideDocumentCache;
+import dev.anvilcraft.resource.ageratum.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -40,6 +49,29 @@ public class GuideScreen extends Screen {
     protected static final int LABEL_WIDTH = 102;
     /** 侧边标签高度（原始像素）。 */
     protected static final int LABEL_HEIGHT = 32;
+    /** 侧边标签区域显示的最大行数。 */
+    protected static final int LABEL_VISIBLE_ROWS = 11;
+    /** 侧边标签行距（屏幕像素）。 */
+    protected static final int LABEL_ROW_SPACING = 17;
+    /** 标签首行 Y 偏移（相对界面左上角，屏幕像素）。 */
+    protected static final int LABEL_START_Y = 24;
+    /** 一级标签基础 X 偏移（相对界面左上角，屏幕像素）。 */
+    protected static final int LABEL_BASE_X = -30;
+    /** 二级标签额外缩进（屏幕像素）。 */
+    protected static final int LABEL_LEVEL2_INDENT = 10;
+    /** 标签悬停时向左滑出的距离（屏幕像素）。 */
+    protected static final int LABEL_HOVER_SHIFT = 5;
+
+    /** 侧栏箭头贴图 U（按当前 UI 缩放后的坐标）。 */
+    protected static final int LABEL_ARROW_U = 392 / 2;
+    /** 上箭头贴图 V（按当前 UI 缩放后的坐标）。 */
+    protected static final int LABEL_ARROW_V_UP = 32 / 2;
+    /** 下箭头贴图 V（按当前 UI 缩放后的坐标）。 */
+    protected static final int LABEL_ARROW_V_DOWN = (32 + 32) / 2;
+    /** 箭头绘制宽度（屏幕像素）。 */
+    protected static final int LABEL_ARROW_WIDTH = LABEL_WIDTH / 2;
+    /** 单个箭头绘制高度（屏幕像素）。 */
+    protected static final int LABEL_ARROW_HEIGHT = LABEL_HEIGHT / 2;
 
     // ── 内容区域参数 ────────────────────────────────────────────────────────────
 
@@ -60,6 +92,8 @@ public class GuideScreen extends Screen {
 
     /** Markdown 解析器实例。 */
     protected final MarkdownParser parser;
+    /** 当前文档资源位置。 */
+    protected final ResourceLocation documentLocation;
 
     /** 解析后得到的 Markdown 渲染组件列表，按文档顺序排列。 */
     protected final List<MDComponent> parsedComponents;
@@ -82,6 +116,20 @@ public class GuideScreen extends Screen {
     protected float contentScroll;
     /** 内容最大可滚动距离（等于内容总高度减去可见高度，最小为 0）。 */
     protected float maxContentScroll;
+    /** 当前标签列表滚动的起始行索引。 */
+    protected int labelScrollRows;
+    /** 标签列表最大可滚动行数。 */
+    protected int maxLabelScrollRows;
+    /** 触控板等高精度滚轮的小数累积，按系统增量折算后取整到行滚动。 */
+    protected double labelScrollRemainder;
+    /** 当前标签列表（仅显示到二级）。 */
+    protected List<LabelEntry> labelEntries = List.of();
+    /** 当前语言代码（用于文档定位回退）。 */
+    protected String currentLanguageCode = GuideDocumentLoader.DEFAULT_LANGUAGE_CODE;
+    /** 待定位的锚点（从其他页面链接过来时设置）。 */
+    protected @Nullable String pendingAnchor;
+    /** H2 标题映射到其在内容区的起始 Y 坐标（用于锚点导航）。 */
+    protected java.util.Map<String, Integer> h2Anchors = new java.util.HashMap<>();
 
     /**
      * 标准构造函数，从外部传入文档位置和 Markdown 文本。
@@ -91,6 +139,7 @@ public class GuideScreen extends Screen {
      */
     public GuideScreen(ResourceLocation documentLocation, String markdown) {
         super(Component.literal("Guide - " + documentLocation));
+        this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
         // 将 Markdown 文本解析为组件列表，后续逐帧渲染
         this.parsedComponents = this.parser.parse(markdown);
@@ -104,6 +153,7 @@ public class GuideScreen extends Screen {
      */
     public GuideScreen(ResourceLocation documentLocation, List<MDComponent> parsedComponents) {
         super(Component.literal("Guide - " + documentLocation));
+        this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
         this.parsedComponents = List.copyOf(parsedComponents);
     }
@@ -119,8 +169,13 @@ public class GuideScreen extends Screen {
         // 使界面在屏幕上水平/垂直居中
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
+        if (this.minecraft != null) {
+            this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
+            this.rebuildLabelEntries(this.minecraft.getResourceManager());
+        }
         // 防止窗口缩小后滚动量超出边界
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
     }
 
     /**
@@ -163,7 +218,17 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (!this.mouseInContentRange(mouseX, mouseY) || scrollY == 0.0D) {
+        if (scrollY == 0.0D) {
+            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        }
+        if (this.mouseInLabelRange(mouseX, mouseY)) {
+            int rowDelta = this.consumeLabelScrollRows(scrollY);
+            if (rowDelta != 0) {
+                this.scrollLabelsBy(rowDelta);
+            }
+            return true;
+        }
+        if (!this.mouseInContentRange(mouseX, mouseY)) {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
         // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
@@ -181,6 +246,11 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && this.mouseInLabelRange(mouseX, mouseY)) {
+            if (this.tryOpenLabelAt(mouseX, mouseY)) {
+                return true;
+            }
+        }
         if (!this.mouseInContentRange(mouseX, mouseY)) {
             return super.mouseClicked(mouseX, mouseY, button);
         }
@@ -188,8 +258,15 @@ public class GuideScreen extends Screen {
         // 左键点击时尝试触发 ClickEvent
         if (button == 0 && this.minecraft != null) {
             Style style = this.getStyleAtContentPosition(mouseX, mouseY);
-            if (style != null && style.getClickEvent() != null && this.handleComponentClicked(style)) {
-                return true;
+            if (style != null) {
+                ClickEvent clickEvent = style.getClickEvent();
+                if (clickEvent != null && clickEvent.getAction() == ClickEvent.Action.OPEN_URL
+                    && this.tryOpenLinkedGuide(clickEvent.getValue())) {
+                    return true;
+                }
+                if (clickEvent != null && this.handleComponentClicked(style)) {
+                    return true;
+                }
             }
         }
 
@@ -312,19 +389,339 @@ public class GuideScreen extends Screen {
      * @param mouseY      相对鼠标 Y
      */
     private void renderLabel(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        for (int k = 0; k < 11; k++) {
-            // 部分标签有额外的缩进（分组用）
-            int l = 5;
-            if (k != 0 && k != 3 && k != 9) {
-                l += 10;
-            }
-            int originX = -35 + l;
-            int originY = 24 + k * 17;
-            // 鼠标悬停且在左侧区域时，标签向左滑出
-            if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY) && mouseX < 11) {
-                originX -= 5;
+        int start = this.labelScrollRows;
+        int end = Math.min(this.labelEntries.size(), start + LABEL_VISIBLE_ROWS);
+        String currentFile = this.getCurrentFileArgument();
+        for (int index = start; index < end; index++) {
+            int row = index - start;
+            LabelEntry entry = this.labelEntries.get(index);
+            int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
+            int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
+            boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
+            boolean isActive = entry.fileArgument.equals(currentFile);
+            if (isHover || isActive) {
+                originX -= LABEL_HOVER_SHIFT;
             }
             guiGraphics.blit(GUIDE_LOCATION, originX, originY, this.imageWidth, 0, this.labelWidth, this.labelHeight);
+
+            int textColor = isActive ? 0x8B5A2B : 0x5D4630;
+            guiGraphics.drawString(
+                this.font,
+                entry.title,
+                originX + 7,
+                originY + 4,
+                textColor,
+                false
+            );
+        }
+
+        this.renderLabelScrollHint(guiGraphics);
+    }
+
+    private void renderLabelScrollHint(GuiGraphics guiGraphics) {
+        if (this.maxLabelScrollRows <= 0) {
+            return;
+        }
+
+        int arrowX = LABEL_BASE_X;
+        int arrowUpY = this.getArrowUpY();
+        int arrowDownY = this.getArrowDownY();
+        if (this.labelScrollRows > 0) {
+            float alpha = this.computeArrowAlpha(this.labelScrollRows);
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
+            guiGraphics.blit(GUIDE_LOCATION, arrowX, arrowUpY, LABEL_ARROW_U, LABEL_ARROW_V_UP, LABEL_ARROW_WIDTH, LABEL_ARROW_HEIGHT);
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+        int rowsToBottom = this.maxLabelScrollRows - this.labelScrollRows;
+        if (rowsToBottom > 0) {
+            float alpha = this.computeArrowAlpha(rowsToBottom);
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
+            guiGraphics.blit(
+                GUIDE_LOCATION,
+                arrowX,
+                arrowDownY,
+                LABEL_ARROW_U,
+                LABEL_ARROW_V_DOWN,
+                LABEL_ARROW_WIDTH,
+                LABEL_ARROW_HEIGHT
+            );
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+    }
+
+    private float computeArrowAlpha(int remainingRows) {
+        return Mth.clamp(0.35f + Math.min(remainingRows, 3) * 0.2f, 0.35f, 0.95f);
+    }
+
+    private int getArrowUpY() {
+        return LABEL_START_Y - LABEL_ARROW_HEIGHT - 2;
+    }
+
+    private int getArrowDownY() {
+        return LABEL_START_Y + this.getLabelViewportHeight() + 2;
+    }
+
+    private int getLabelViewportHeight() {
+        return (LABEL_VISIBLE_ROWS - 1) * LABEL_ROW_SPACING + this.labelHeight;
+    }
+
+    private int consumeLabelScrollRows(double scrollY) {
+        this.labelScrollRemainder += -scrollY;
+        int rowDelta = (int) Math.copySign(Math.floor(Math.abs(this.labelScrollRemainder) + 0.5d), this.labelScrollRemainder);
+        if (rowDelta != 0) {
+            this.labelScrollRemainder -= rowDelta;
+        }
+        return rowDelta;
+    }
+
+    private void scrollLabelsBy(int deltaRows) {
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows + deltaRows, 0, this.maxLabelScrollRows);
+    }
+
+     private void rebuildLabelEntries(ResourceManager resourceManager) {
+         List<String> files = GuideDocumentLoader.listFiles(resourceManager, this.documentLocation.getNamespace(), this.currentLanguageCode);
+         List<LabelEntry> entries = new ArrayList<>();
+         for (String file : files) {
+             LabelEntry entry = this.toLabelEntry(file, resourceManager);
+             if (entry != null) {
+                 entries.add(entry);
+             }
+         }
+         // 排序：一级按 index 优先 + 字典序，二级按层级 + 字典序
+         entries.sort((a, b) -> {
+             if (a.level != b.level) {
+                 return a.level - b.level;
+             }
+             boolean aIsIndex = a.fileArgument.endsWith("index") || a.fileArgument.equals("index");
+             boolean bIsIndex = b.fileArgument.endsWith("index") || b.fileArgument.equals("index");
+             if (aIsIndex != bIsIndex) {
+                 return aIsIndex ? -1 : 1;
+             }
+             return a.fileArgument.compareTo(b.fileArgument);
+         });
+         this.labelEntries = List.copyOf(entries);
+         this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - LABEL_VISIBLE_ROWS);
+         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+     }
+
+     private @Nullable LabelEntry toLabelEntry(String fileArgument, ResourceManager resourceManager) {
+         String normalized = fileArgument.trim().replace('\\', '/');
+         if (normalized.isEmpty()) {
+             return null;
+         }
+         String[] segments = normalized.split("/");
+         if (segments.length == 1) {
+             String title = this.loadDocumentTitle(resourceManager, normalized);
+             return new LabelEntry(normalized, 1, title);
+         }
+         if (segments.length == 2 && "index".equalsIgnoreCase(segments[1])) {
+             String title = this.loadDocumentTitle(resourceManager, normalized);
+             return new LabelEntry(normalized, 1, title);
+         }
+         if (segments.length == 2 && !"index".equalsIgnoreCase(segments[1])) {
+             String title = this.loadDocumentTitle(resourceManager, normalized);
+             return new LabelEntry(normalized, 2, title);
+         }
+         if (segments.length == 3 && "index".equalsIgnoreCase(segments[2])) {
+             String title = this.loadDocumentTitle(resourceManager, normalized);
+             return new LabelEntry(normalized, 2, title);
+         }
+         // 侧栏最多显示到二级，超过二级直接忽略。
+         return null;
+     }
+
+     private String loadDocumentTitle(ResourceManager resourceManager, String fileArgument) {
+         Optional<ResourceLocation> location = GuideDocumentLoader.resolveExistingLocation(
+             resourceManager,
+             this.documentLocation.getNamespace(),
+             this.currentLanguageCode,
+             fileArgument
+         );
+         if (location.isEmpty()) {
+             return fileArgument;
+         }
+         Optional<MDDocument> doc = GuideDocumentCache.getParsedDocument(location.get());
+         if (doc.isPresent()) {
+             return doc.get().getTitle();
+         }
+         return fileArgument;
+     }
+
+    private boolean tryOpenLabelAt(double mouseX, double mouseY) {
+        if (this.minecraft == null) {
+            return false;
+        }
+        int relMouseX = (int) Math.floor(mouseX - this.leftPos);
+        int relMouseY = (int) Math.floor(mouseY - this.topPos);
+        int start = this.labelScrollRows;
+        int end = Math.min(this.labelEntries.size(), start + LABEL_VISIBLE_ROWS);
+        for (int index = start; index < end; index++) {
+            int row = index - start;
+            LabelEntry entry = this.labelEntries.get(index);
+            int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
+            int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
+            if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
+                Optional<ResourceLocation> target = GuideDocumentLoader.resolveExistingLocation(
+                    this.minecraft.getResourceManager(),
+                    this.documentLocation.getNamespace(),
+                    this.currentLanguageCode,
+                    entry.fileArgument
+                );
+                return target.isPresent() && AgeratumClient.openGuideOnClient(target.get());
+            }
+        }
+        return false;
+    }
+
+    private String getCurrentFileArgument() {
+        String normalizedLanguage = this.currentLanguageCode.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+        String expectedPrefix = "ageratum/" + normalizedLanguage + "/";
+        String path = this.documentLocation.getPath();
+        if (!path.startsWith(expectedPrefix)) {
+            return "";
+        }
+        String relative = path.substring(expectedPrefix.length());
+        if (relative.endsWith(".md")) {
+            relative = relative.substring(0, relative.length() - 3);
+        }
+        return relative;
+    }
+
+    private boolean tryOpenLinkedGuide(@Nullable String rawTarget) {
+        if (rawTarget == null || rawTarget.isBlank() || this.minecraft == null) {
+            return false;
+        }
+        String target = rawTarget.trim();
+        String anchor = null;
+        int anchorIndex = target.indexOf('#');
+        if (anchorIndex >= 0) {
+            anchor = target.substring(anchorIndex + 1).trim();
+            target = target.substring(0, anchorIndex).trim();
+        }
+
+        // 仅锚点（如 #section）按原有组件点击流程处理。
+        if (target.isEmpty()) {
+            return false;
+        }
+        String lowerTarget = target.toLowerCase(Locale.ROOT);
+        if (lowerTarget.startsWith("http://") || lowerTarget.startsWith("https://") || lowerTarget.startsWith("mailto:")) {
+            return false;
+        }
+
+        ResourceManager resourceManager = this.minecraft.getResourceManager();
+        ResourceLocation parsed = ResourceLocation.tryParse(target);
+        if (target.contains(":") && parsed == null) {
+            return false;
+        }
+
+        Optional<ResourceLocation> resolved;
+        if (parsed != null && target.contains(":")) {
+            // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
+            if (parsed.getPath().startsWith("ageratum/") && parsed.getPath().endsWith(".md")) {
+                return AgeratumClient.openGuideOnClient(parsed, anchor);
+            }
+            resolved = GuideDocumentLoader.resolveExistingLocation(
+                resourceManager,
+                parsed.getNamespace(),
+                this.currentLanguageCode,
+                parsed.getPath()
+            );
+        } else {
+            resolved = this.resolveLocationWithoutNamespace(resourceManager, target);
+        }
+
+        return resolved.isPresent() && AgeratumClient.openGuideOnClient(resolved.get(), anchor);
+    }
+
+    /**
+     * 省略 namespace 时的文档解析顺序：
+     * 1) 当前文档同目录
+     * 2) 当前 namespace 根目录
+     * 3) ageratum namespace 根目录
+     */
+    private Optional<ResourceLocation> resolveLocationWithoutNamespace(ResourceManager resourceManager, String rawTarget) {
+        String normalizedTarget = rawTarget.replace('\\', '/').trim();
+        if (normalizedTarget.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String currentDir = this.getCurrentDirectoryPath();
+        String inCurrentDir = this.normalizePathAgainstBase(currentDir, normalizedTarget);
+        Optional<ResourceLocation> currentDirResolved = GuideDocumentLoader.resolveExistingLocation(
+            resourceManager,
+            this.documentLocation.getNamespace(),
+            this.currentLanguageCode,
+            inCurrentDir
+        );
+        if (currentDirResolved.isPresent()) {
+            return currentDirResolved;
+        }
+
+        String inNamespaceRoot = this.normalizePathAgainstBase("", normalizedTarget);
+        Optional<ResourceLocation> namespaceRootResolved = GuideDocumentLoader.resolveExistingLocation(
+            resourceManager,
+            this.documentLocation.getNamespace(),
+            this.currentLanguageCode,
+            inNamespaceRoot
+        );
+        if (namespaceRootResolved.isPresent()) {
+            return namespaceRootResolved;
+        }
+
+        return GuideDocumentLoader.resolveExistingLocation(
+            resourceManager,
+            Ageratum.MOD_ID,
+            this.currentLanguageCode,
+            inNamespaceRoot
+        );
+    }
+
+    private String getCurrentDirectoryPath() {
+        String currentFile = this.getCurrentFileArgument();
+        int slash = currentFile.lastIndexOf('/');
+        if (slash < 0) {
+            return "";
+        }
+        return currentFile.substring(0, slash);
+    }
+
+    /**
+     * 将相对路径规范化到给定基目录下，支持 ./ 与 ../，并阻止越过根目录。
+     */
+    private String normalizePathAgainstBase(String baseDir, String target) {
+        String source = target;
+        while (source.startsWith("/")) {
+            source = source.substring(1);
+        }
+        String combined;
+        if (baseDir.isEmpty() || source.startsWith("./") || source.startsWith("../")) {
+            combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
+        } else {
+            // 非显式相对路径默认按当前目录解析。
+            combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
+        }
+
+        List<String> parts = new ArrayList<>();
+        for (String segment : combined.split("/")) {
+            if (segment.isEmpty() || ".".equals(segment)) {
+                continue;
+            }
+            if ("..".equals(segment)) {
+                if (!parts.isEmpty()) {
+                    parts.remove(parts.size() - 1);
+                }
+                continue;
+            }
+            parts.add(segment);
+        }
+        return String.join("/", parts);
+    }
+
+    private String getClientLanguageCode(Minecraft minecraft) {
+        try {
+            return minecraft.getLanguageManager().getSelected();
+        } catch (RuntimeException exception) {
+            return GuideDocumentLoader.DEFAULT_LANGUAGE_CODE;
         }
     }
 
@@ -433,6 +830,14 @@ public class GuideScreen extends Screen {
         return mouseX >= contentLeft && mouseX <= contentRight && mouseY >= contentTop && mouseY <= contentBottom;
     }
 
+    private boolean mouseInLabelRange(double mouseX, double mouseY) {
+        int labelLeft = this.leftPos + LABEL_BASE_X - LABEL_HOVER_SHIFT;
+        int labelRight = this.leftPos + LABEL_BASE_X + LABEL_LEVEL2_INDENT + this.labelWidth;
+        int labelTop = this.topPos + this.getArrowUpY();
+        int labelBottom = this.topPos + this.getArrowDownY() + LABEL_ARROW_HEIGHT;
+        return mouseX >= labelLeft && mouseX <= labelRight && mouseY >= labelTop && mouseY <= labelBottom;
+    }
+
     /**
      * 获取指定组件中某个 Markdown 坐标对应的文本样式。
      *
@@ -447,5 +852,15 @@ public class GuideScreen extends Screen {
         MDComponent component, Minecraft minecraft, double mouseX, double mouseY
     ) {
         return component.getStyleAtPosition(minecraft, mouseX, mouseY, CONTENT_WIDTH);
+    }
+
+    private record LabelEntry(String fileArgument, int level, String title) {
+    }
+
+    /**
+     * 设置待定位锚点，init() 时会尝试定位。
+     */
+    public void setAnchor(@Nullable String anchor) {
+        this.pendingAnchor = anchor;
     }
 }

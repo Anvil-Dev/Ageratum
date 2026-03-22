@@ -1,33 +1,42 @@
-# Ageratum Markdown 解析器 - 完整测试套件
+# Ageratum 文档系统
 
-## 已实现：ATX 标题（此处展示 H1-H3）
+欢迎使用 Ageratum！这是一个为 Minecraft 模组设计的强大文档框架。
 
-### 三级标题 H3
+## 主要功能
 
----
+- 📖 完整的 Markdown 支持
+- 🎯 智能的两级导航系统
+- 🔗 灵活的文档间跳转
+- 🌐 多语言国际化支持
+- ⚡ 高性能缓存机制
 
-## 已实现：段落 + 内联样式
+## 快速导航
 
-普通段落，包含 **粗体**、*斜体*、~~删除线~~、[链接文本](https://example.com)，以及 <color=#39c5bb>自定义颜色</color>
-和 <o>混淆文本</o>。
+### 📚 指南与教程
 
-行内代码会保留所有 Markdown 字面量：`**不是粗体** _不是斜体_ ~~不是删除线~~ <color=#ff0000>不是颜色</color>`。
+- **[快速开始](guide)** - 开始使用 Ageratum
+  - [Markdown 语法](guide/introduction)
+  - [高级特性](guide/advanced)
+  - [API 参考](guide/api)
 
-多反引号代码跨度：``包含 `反引号` 的代码``。
+- **[教程系列](tutorial)** - 循序渐进的学习路径
+  - [初级教程](tutorial/basics)
+  - [中级教程](tutorial/intermediate)
+  - [高级教程](tutorial/advanced)
 
-自动链接 URL：<https://example.com/path?q=1>
-自动链接邮箱：<user@example.com>
+### 💡 示例与参考
 
-转义标点（应全部按字面符号渲染）：
-\* \_ \~ \` \[ \] \( \) \# \+ \- \. \! \| \{ \} \< \> \@ \\
+- **[代码示例](examples)** - 实战示例和最佳实践
+  - [简单示例](examples/simple)
+  - [实战示例](examples/practical)
+  - [最佳实践](examples/best_practices)
+  - [高级示例](examples/advanced_examples)
 
+### ❓ 常见问题
 
----
-
-## 已实现：悬停和点击事件
-
-悬停事件可在鼠标悬停时显示额外文本：
-- <hover type="SHOW_TEXT" data="这是一条有用的提示信息！">鼠标悬停在我上面</hover>
+- **[FAQ](faq)** - 常见问题解答
+- **[更新日志](changelog)** - 版本历史和更新说明
+- **[快速指南](guide)** - 快速参考
 
 点击事件允许文本响应点击操作：
 - <click type="OPEN_URL" data="https://example.com">点击打开链接</click>

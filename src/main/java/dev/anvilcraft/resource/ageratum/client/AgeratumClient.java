@@ -178,6 +178,16 @@ public class AgeratumClient {
      * 客户端本地打开文档；若不存在则返回 false。
      */
     public static boolean openGuideOnClient(ResourceLocation location) {
+        return openGuideOnClient(location, null);
+    }
+
+    /**
+     * 客户端本地打开文档，可选指定锚点；若不存在则返回 false。
+     *
+     * @param location 文档资源位置
+     * @param anchor   目标锚点（可为 null）
+     */
+    public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor) {
         Minecraft minecraft = Minecraft.getInstance();
         ResourceManager resourceManager = minecraft.getResourceManager();
         if (!GuideDocumentLoader.exists(resourceManager, location)) {
@@ -187,13 +197,17 @@ public class AgeratumClient {
         // 优先使用预解析缓存，缺失时回退为即时解析
         Optional<MDDocument> cachedDocument = GuideDocumentCache.getParsedDocument(location);
         if (cachedDocument.isPresent()) {
-            minecraft.setScreen(new GuideScreen(location, cachedDocument.get().components()));
+            GuideScreen screen = new GuideScreen(location, cachedDocument.get().components());
+            screen.setAnchor(anchor);
+            minecraft.setScreen(screen);
             return true;
         }
 
         String content = GuideDocumentLoader.read(resourceManager, location);
         MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
-        minecraft.setScreen(new GuideScreen(location, parsedDocument.components()));
+        GuideScreen screen = new GuideScreen(location, parsedDocument.components());
+        screen.setAnchor(anchor);
+        minecraft.setScreen(screen);
         return true;
     }
 }

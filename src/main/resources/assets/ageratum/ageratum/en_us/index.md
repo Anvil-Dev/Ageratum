@@ -1,17 +1,42 @@
-# Ageratum Markdown Parser — Full Test Suite
+# Ageratum Documentation System
 
-## Implemented: ATX headings (H1-H3 shown here)
+Welcome to Ageratum! A powerful documentation framework designed for Minecraft mods.
 
-### Heading H3
+## Key Features
 
----
+- 📖 Complete Markdown support
+- 🎯 Smart two-level navigation system
+- 🔗 Flexible cross-document jumping
+- 🌐 Multi-language internationalization
+- ⚡ High-performance caching mechanism
 
-## Implemented: Paragraph + inline styles
+## Quick Navigation
 
-Plain paragraph with **bold**, *italic*, ~~strikethrough~~, [link text](https://example.com), and <color=#39c5bb>custom color</color>
-and <o>obfuscated</o>.
+### 📚 Guides & Tutorials
 
-Inline code keeps all Markdown literal: `**not bold** _not italic_ ~~not strike~~ <color=#ff0000>no color</color>`.
+- **[Quick Start](guide)** - Get started with Ageratum
+  - [Markdown Syntax](guide/introduction)
+  - [Advanced Features](guide/advanced)
+  - [API Reference](guide/api)
+
+- **[Tutorial Series](tutorial)** - Progressive learning path
+  - [Beginner's Tutorial](tutorial/basics)
+  - [Intermediate Tutorial](tutorial/intermediate)
+  - [Advanced Tutorial](tutorial/advanced)
+
+### 💡 Examples & References
+
+- **[Code Examples](examples)** - Practical examples and best practices
+  - [Simple Example](examples/simple)
+  - [Practical Example](examples/practical)
+  - [Best Practices](examples/best_practices)
+  - [Advanced Examples](examples/advanced_examples)
+
+### ❓ FAQ & More
+
+- **[FAQ](faq)** - Frequently asked questions
+- **[Changelog](changelog)** - Version history and updates
+- **[Quick Guide](guide)** - Quick reference
 
 Multi-backtick code span: ``code with `backtick` inside``.
 
