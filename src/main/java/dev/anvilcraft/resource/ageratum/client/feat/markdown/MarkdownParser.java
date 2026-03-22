@@ -14,6 +14,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,13 +53,13 @@ public class MarkdownParser {
     private static final Pattern SETEXT_H1_PATTERN = Pattern.compile("^=+\\s*$");
     private static final Pattern SETEXT_H2_PATTERN = Pattern.compile("^-+\\s*$");
     private static final Pattern CODE_FENCE_PATTERN = Pattern.compile("^(`{3,}|~{3,})(.*)$");
-    private static final Pattern INDENTED_CODE_PATTERN = Pattern.compile("^(?:    |\\t)(.*)$");
+    private static final Pattern INDENTED_CODE_PATTERN = Pattern.compile("^(?: {4}|\\t)(.*)$");
     private static final Pattern TABLE_ROW_PATTERN = Pattern.compile("^\\|.*\\|\\s*$");
     private static final Pattern LINK_REF_DEF_PATTERN = Pattern.compile(
-        "^\\s{0,3}\\[([^\\]]+)]:\\s*(\\S+)(?:\\s+(?:\"[^\"]*\"|'[^']*'|\\([^)]*\\)))?\\s*$"
+        "^\\s{0,3}\\[([^]]+)]:\\s*(\\S+)(?:\\s+(?:\"[^\"]*\"|'[^']*'|\\([^)]*\\)))?\\s*$"
     );
-    private static final Pattern LINK_REF_FULL_PATTERN = Pattern.compile("\\[([^\\]]+)]\\[([^\\]]*)]");
-    private static final Pattern LINK_REF_SHORT_PATTERN = Pattern.compile("\\[([^\\]\\[]+)](?![\\[(])");
+    private static final Pattern LINK_REF_FULL_PATTERN = Pattern.compile("\\[([^]]+)]\\[([^]]*)]");
+    private static final Pattern LINK_REF_SHORT_PATTERN = Pattern.compile("\\[([^]\\[]+)](?![\\[(])");
 
     // ── 扩展语法模式定义 ────────────────────────────────────────────────
 
@@ -331,7 +332,6 @@ public class MarkdownParser {
             if (component == null) {
                 if (s.isBlank()) {
                     flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
-                    inIndentedCode = false;
                 } else {
                     paragraphBuilder.append(s).append("\n");
                 }
@@ -349,7 +349,6 @@ public class MarkdownParser {
 
         // 未闭合扩展块按忽略处理
 
-        inIndentedCode = false;
         flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
         return components;
     }
@@ -372,13 +371,11 @@ public class MarkdownParser {
         }
 
         List<String> yamlLines = new ArrayList<>(Math.max(0, closeIndex - 1));
-        for (int i = 1; i < closeIndex; i++) {
-            yamlLines.add(lines[i]);
-        }
+        yamlLines.addAll(Arrays.asList(lines).subList(1, closeIndex));
 
         StringBuilder bodyBuilder = new StringBuilder();
         for (int i = closeIndex + 1; i < lines.length; i++) {
-            if (bodyBuilder.length() > 0) {
+            if (!bodyBuilder.isEmpty()) {
                 bodyBuilder.append('\n');
             }
             bodyBuilder.append(lines[i]);
@@ -389,6 +386,7 @@ public class MarkdownParser {
     }
 
     private static Map<String, Object> parseFrontMatterYaml(List<String> yamlLines) {
+        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
         LinkedHashMap<String, Object> root = new LinkedHashMap<>();
         List<MapLevel> levels = new ArrayList<>();
         levels.add(new MapLevel(0, root));
@@ -408,11 +406,11 @@ public class MarkdownParser {
             }
 
             int indent = countYamlIndent(line);
-            while (levels.size() > 1 && indent < levels.get(levels.size() - 1).indent()) {
-                levels.remove(levels.size() - 1);
+            while (levels.size() > 1 && indent < levels.getLast().indent()) {
+                levels.removeLast();
             }
 
-            Map<String, Object> current = levels.get(levels.size() - 1).map();
+            Map<String, Object> current = levels.getLast().map();
             String key = trimmed.substring(0, colon).trim();
             String valuePart = trimmed.substring(colon + 1).trim();
             if (key.isEmpty()) {
@@ -448,7 +446,7 @@ public class MarkdownParser {
         return width;
     }
 
-    private static Object parseYamlScalar(String valuePart) {
+    private static @Nullable Object parseYamlScalar(String valuePart) {
         String value = valuePart.trim();
         if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
             return value.substring(1, value.length() - 1);
@@ -480,30 +478,26 @@ public class MarkdownParser {
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        Registry<MDExtensionComponentFactory> registry = AgeratumRegistries.EXTENSION_COMPONENT_FACTORY_REGISTRY_SUPPLIER.get();
-        if (registry == null) {
-            return null;
-        }
-        MDExtensionComponentFactory factory = registry.getOptional(block.id()).orElse(null);
-        if (factory == null) {
-            return null;
-        }
-        return factory.create(new MDExtensionContext(
-            block.id(),
-            block.rawParams(),
-            block.params(),
-            List.copyOf(renderedContent),
-            rawContent
-        ));
+        return getMdComponent(renderedContent, rawContent, block);
     }
 
     /**
      * 创建自闭合扩展组件。
      */
+    @SuppressWarnings("SameParameterValue")
     private static @Nullable MDComponent createExtensionComponent(
         SelfClosingBlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
+    ) {
+        return getMdComponent(renderedContent, rawContent, block);
+    }
+
+
+    private static @Nullable MDComponent getMdComponent(
+        List<MDComponent> renderedContent,
+        String rawContent,
+        SelfClosingBlockExtensionState block
     ) {
         Registry<MDExtensionComponentFactory> registry = AgeratumRegistries.EXTENSION_COMPONENT_FACTORY_REGISTRY_SUPPLIER.get();
         if (registry == null) {

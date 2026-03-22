@@ -12,11 +12,8 @@ import java.util.Map;
  * <p>用于表示 {@code ::: namespace:location ...} 或 {@code <namespace:location>...</namespace:location>}
  * 形式的块级扩展块。追踪打开状态和未分析的内容，用于块级语法解析。</p>
  */
-public final class BlockExtensionState {
+public final class BlockExtensionState extends SelfClosingBlockExtensionState {
     private final ExtensionBlockType type;
-    private final ResourceLocation id;
-    private final String rawParams;
-    private final Map<String, String> params;
     private final String closeTagWithNamespace;
     private final String closeTagWithoutNamespace;
     private final StringBuilder content = new StringBuilder();
@@ -42,10 +39,8 @@ public final class BlockExtensionState {
         String closeTagWithNamespace,
         String closeTagWithoutNamespace
     ) {
+        super(id, rawParams, params);
         this.type = type;
-        this.id = id;
-        this.rawParams = rawParams;
-        this.params = params;
         this.closeTagWithNamespace = closeTagWithNamespace;
         this.closeTagWithoutNamespace = closeTagWithoutNamespace;
     }
@@ -87,27 +82,6 @@ public final class BlockExtensionState {
      */
     public ExtensionBlockType type() {
         return this.type;
-    }
-
-    /**
-     * 获取扩展组件 ID。
-     */
-    public ResourceLocation id() {
-        return this.id;
-    }
-
-    /**
-     * 获取参数的原始字符串。
-     */
-    public String rawParams() {
-        return this.rawParams;
-    }
-
-    /**
-     * 获取解析后的参数键值对。
-     */
-    public Map<String, String> params() {
-        return this.params;
     }
 
     /**

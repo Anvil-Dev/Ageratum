@@ -12,7 +12,7 @@ import java.util.Map;
  * <p>用于表示 {@code <<namespace:location key=value .../>>} 形式的自闭合扩展块，
  * 提供与 {@link BlockExtensionState} 兼容的接口以便统一处理。</p>
  */
-public final class SelfClosingBlockExtensionState {
+public class SelfClosingBlockExtensionState {
     private final ResourceLocation id;
     private final String rawParams;
     private final Map<String, String> params;
