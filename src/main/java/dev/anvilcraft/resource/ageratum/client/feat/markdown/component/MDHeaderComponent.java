@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -14,8 +15,12 @@ import javax.annotation.Nullable;
  *
  * <p>支持 ATX 形式标题（{@code # ~ ######}），并根据标题级别调整缩放比例。</p>
  */
+@Getter
 public class MDHeaderComponent extends MDComponent {
     private static final Pattern HEADER_PATTERN = Pattern.compile("^\\s{0,3}(#{1,6})\\s+(.+?)\\s*#*\\s*$");
+    /**
+     * 标题级别（1-6）。
+     */
     protected final int level;
 
     /**
@@ -38,13 +43,6 @@ public class MDHeaderComponent extends MDComponent {
         int level = matcher.group(1).length();
         String headerText = matcher.group(2).trim();
         return new MDHeaderComponent(level, headerText);
-    }
-
-    /**
-     * 获取标题级别（1-6）。
-     */
-    public int getLevel() {
-        return this.level;
     }
 
     /**

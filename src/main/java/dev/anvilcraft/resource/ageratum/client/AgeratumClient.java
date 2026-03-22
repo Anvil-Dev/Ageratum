@@ -29,6 +29,7 @@ import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 @Mod(value = Ageratum.MOD_ID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
@@ -86,9 +87,6 @@ public class AgeratumClient {
                     Commands.argument("namespace", StringArgumentType.word())
                         .suggests((context, builder) -> {
                             Minecraft minecraft = Minecraft.getInstance();
-                            if (minecraft == null) {
-                                return builder.buildFuture();
-                            }
                             // 枚举资源包中所有含有 ageratum/*.md 的命名空间
                             return SharedSuggestionProvider.suggest(
                                 GuideDocumentLoader.listNamespaces(minecraft.getResourceManager(), getClientLanguageCode(minecraft)),
@@ -102,9 +100,6 @@ public class AgeratumClient {
                             Commands.argument("file", StringArgumentType.word())
                                 .suggests((context, builder) -> {
                                     Minecraft minecraft = Minecraft.getInstance();
-                                    if (minecraft == null) {
-                                        return builder.buildFuture();
-                                    }
                                     String namespace = StringArgumentType.getString(context, "namespace");
                                     // 枚举该命名空间下的所有 .md 文件（返回不含扩展名的相对路径）
                                     return SharedSuggestionProvider.suggest(
@@ -143,11 +138,8 @@ public class AgeratumClient {
      * @param fileArgument 文件名参数（可为 {@code null}，此时使用 index.md）
      * @return 命令执行结果码：1 表示成功，0 表示失败
      */
-    private static int openGuide(CommandContext<CommandSourceStack> context, String namespace, String fileArgument) {
+    private static int openGuide(CommandContext<CommandSourceStack> context, String namespace, @Nullable String fileArgument) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null) {
-            return 0;
-        }
 
         String languageCode = getClientLanguageCode(minecraft);
 

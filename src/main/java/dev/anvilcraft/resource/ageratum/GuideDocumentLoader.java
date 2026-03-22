@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.annotation.Nullable;
 
 /**
  * 文档加载工具类，负责从资源包中读取 Markdown 文档。
@@ -55,7 +56,7 @@ public final class GuideDocumentLoader {
      * @return 指向该文档的资源位置，格式为
      *         {@code namespace:ageratum/<languageCode>/<normalizedFile>.md}
      */
-    public static ResourceLocation toDocumentLocation(String namespace, String languageCode, String fileArgument) {
+    public static ResourceLocation toDocumentLocation(String namespace, String languageCode, @Nullable String fileArgument) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
         String normalizedFile = normalizeFileArgument(fileArgument);
         return ResourceLocation.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/" + normalizedFile);
@@ -68,7 +69,7 @@ public final class GuideDocumentLoader {
         ResourceManager resourceManager,
         String namespace,
         String languageCode,
-        String fileArgument
+        @Nullable String fileArgument
     ) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
         List<ResourceLocation> candidates = new ArrayList<>();
@@ -124,8 +125,7 @@ public final class GuideDocumentLoader {
      */
     public static List<String> listNamespaces(ResourceManager resourceManager, String languageCode) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
-        Set<String> namespaces = new TreeSet<>();
-        namespaces.addAll(listNamespacesForLanguage(resourceManager, normalizedLanguage));
+        Set<String> namespaces = new TreeSet<>(listNamespacesForLanguage(resourceManager, normalizedLanguage));
         if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
             namespaces.addAll(listNamespacesForLanguage(resourceManager, DEFAULT_LANGUAGE_CODE));
         }
@@ -143,8 +143,7 @@ public final class GuideDocumentLoader {
      */
     public static List<String> listFiles(ResourceManager resourceManager, String namespace, String languageCode) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
-        Set<String> result = new TreeSet<>();
-        result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/"));
+        Set<String> result = new TreeSet<>(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/"));
         if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
             result.addAll(listFilesForRoot(resourceManager, namespace, GUIDE_ROOT + "/" + DEFAULT_LANGUAGE_CODE + "/"));
         }
@@ -202,7 +201,7 @@ public final class GuideDocumentLoader {
      * @param fileArgument 原始文件名参数（可为 {@code null}）
      * @return 规范化后的文件名（含 {@code .md} 后缀）
      */
-    private static String normalizeFileArgument(String fileArgument) {
+    private static String normalizeFileArgument(@Nullable String fileArgument) {
         String file = fileArgument;
         // 缺省：使用首页文档
         if (file == null || file.isBlank()) {
@@ -223,7 +222,7 @@ public final class GuideDocumentLoader {
     /**
      * 规范化语言代码（小写并使用下划线分隔）。
      */
-    private static String normalizeLanguageCode(String languageCode) {
+    private static String normalizeLanguageCode(@Nullable String languageCode) {
         if (languageCode == null || languageCode.isBlank()) {
             return DEFAULT_LANGUAGE_CODE;
         }

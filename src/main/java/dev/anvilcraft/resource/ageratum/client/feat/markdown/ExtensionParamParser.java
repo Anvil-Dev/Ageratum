@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 
 /**
  * 扩展语法参数解析工具。
@@ -31,7 +32,7 @@ public final class ExtensionParamParser {
      * @param rawParams 原始参数字符串（可为 {@code null} 或空）
      * @return 解析后的参数映射（不可修改）
      */
-    public static Map<String, String> parse(String rawParams) {
+    public static Map<String, String> parse(@Nullable String rawParams) {
         if (rawParams == null || rawParams.isBlank()) {
             return Map.of();
         }

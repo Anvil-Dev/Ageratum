@@ -630,18 +630,7 @@ public abstract class MDComponent {
         AUTOLINK
     }
 
-    private static final class MarkdownTokenMatch {
-        private final MarkdownTokenType type;
-        private final int start;
-        private final int end;
-        private final String content;
-
-        private MarkdownTokenMatch(MarkdownTokenType type, int start, int end, String content) {
-            this.type = type;
-            this.start = start;
-            this.end = end;
-            this.content = content;
-        }
+    private record MarkdownTokenMatch(MarkdownTokenType type, int start, int end, String content) {
     }
 
     private record EscapedLiteral(String token, String value) {
