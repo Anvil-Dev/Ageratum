@@ -1,8 +1,6 @@
-package dev.anvilcraft.resource.ageratum;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import com.mojang.logging.LogUtils;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;

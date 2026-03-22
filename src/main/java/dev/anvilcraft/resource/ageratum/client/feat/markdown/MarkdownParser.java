@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
+import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;

@@ -2,11 +2,12 @@ package dev.anvilcraft.resource.ageratum.client.gui;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import dev.anvilcraft.resource.ageratum.GuideDocumentCache;
-import dev.anvilcraft.resource.ageratum.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -186,7 +187,11 @@ public class GuideScreen extends Screen {
     protected float maxContentScroll;
     /**
      * 当前标签列表滚动的起始行索引。
+     * -- GETTER --
+     *  返回当前侧栏滚动的起始行索引。
+
      */
+    @Getter
     protected int labelScrollRows;
     /**
      * 标签列表最大可滚动行数。
@@ -194,7 +199,11 @@ public class GuideScreen extends Screen {
     protected int maxLabelScrollRows;
     /**
      * 触控板等高精度滚轮的小数累积，按系统增量折算后取整到行滚动。
+     * -- GETTER --
+     *  返回当前侧栏滚动的小数累积量。
+
      */
+    @Getter
     protected double labelScrollRemainder;
     /**
      * 当前标签列表（仅显示到二级）。
@@ -242,20 +251,6 @@ public class GuideScreen extends Screen {
     public void setLabelScrollState(int labelScrollRows, double labelScrollRemainder) {
         this.labelScrollRows = Math.max(0, labelScrollRows);
         this.labelScrollRemainder = labelScrollRemainder;
-    }
-
-    /**
-     * 返回当前侧栏滚动的起始行索引。
-     */
-    public int getLabelScrollRows() {
-        return this.labelScrollRows;
-    }
-
-    /**
-     * 返回当前侧栏滚动的小数累积量。
-     */
-    public double getLabelScrollRemainder() {
-        return this.labelScrollRemainder;
     }
 
     /**

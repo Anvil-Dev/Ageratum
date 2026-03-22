@@ -1,4 +1,4 @@
-package dev.anvilcraft.resource.ageratum;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;

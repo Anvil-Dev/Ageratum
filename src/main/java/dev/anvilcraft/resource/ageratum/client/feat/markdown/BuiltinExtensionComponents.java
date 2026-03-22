@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import dev.anvilcraft.resource.ageratum.AgeratumRegistries;
+import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDNoticeBoxComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 

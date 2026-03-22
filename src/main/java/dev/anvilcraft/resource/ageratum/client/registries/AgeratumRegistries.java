@@ -1,5 +1,6 @@
-package dev.anvilcraft.resource.ageratum;
+package dev.anvilcraft.resource.ageratum.client.registries;
 
+import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
