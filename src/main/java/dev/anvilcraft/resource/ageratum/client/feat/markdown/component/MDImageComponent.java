@@ -69,7 +69,7 @@ public class MDImageComponent extends MDComponent {
      * 按缩放后的尺寸渲染图片。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
         Size size = this.resolveSize(minecraft);
         Size renderSize = this.computeRenderSize(size, maxX, maxY);
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {

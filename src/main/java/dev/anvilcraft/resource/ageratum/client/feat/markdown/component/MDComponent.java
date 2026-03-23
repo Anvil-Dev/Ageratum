@@ -68,7 +68,7 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
         PoseStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {

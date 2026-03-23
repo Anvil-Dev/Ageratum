@@ -1105,7 +1105,9 @@ public class GuideScreen extends Screen {
         // 逐个渲染 Markdown 组件，每个组件渲染后向下平移其高度加间距
         for (MDComponent component : this.parsedComponents) {
             pose.pushPose();
-            component.render(guiGraphics, this.minecraft, this.getContentWidth(), Integer.MAX_VALUE);
+            int scaleMouseX = mouseX - this.getContentStartX();
+            int scaleMouseY = mouseX - this.getContentStartY();
+            component.render(guiGraphics, this.minecraft, this.getContentWidth(), Integer.MAX_VALUE, scaleMouseX, scaleMouseY);
             pose.popPose();
             int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
             pose.translate(0, offsetY, 0);

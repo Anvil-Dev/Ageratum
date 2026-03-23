@@ -56,7 +56,7 @@ public class MDCodeBlockComponent extends MDComponent {
      * 渲染代码块主体与行号栏。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
         int blockHeight = this.getHeight(minecraft, maxX, maxY);
         guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
         guiGraphics.renderOutline(0, 0, maxX, blockHeight, BORDER_COLOR);

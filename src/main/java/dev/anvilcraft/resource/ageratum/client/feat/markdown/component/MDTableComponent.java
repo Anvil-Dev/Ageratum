@@ -125,7 +125,7 @@ public class MDTableComponent extends MDComponent {
      * 渲染表格边框、背景与单元格文本。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
         if (this.rows.isEmpty()) return;
         int colWidth = computeColWidth(maxX);
         int totalHeight = getHeight(minecraft, maxX, maxY);

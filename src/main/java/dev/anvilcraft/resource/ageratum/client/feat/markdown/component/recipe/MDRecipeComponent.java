@@ -134,14 +134,14 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+        public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
             if (component != null) {
-                this.component.render(guiGraphics, minecraft, maxX, maxY);
+                this.component.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
                 return;
             }
             ClientLevel level = minecraft.level;
             if (level == null) {
-                emptyComponent.render(guiGraphics, minecraft, maxX, maxY);
+                emptyComponent.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
                 return;
             }
             RecipeManager manager = level.getRecipeManager();
@@ -151,7 +151,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                     return;
                 }
             }
-            emptyComponent.render(guiGraphics, minecraft, maxX, maxY);
+            emptyComponent.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
         }
 
         /**
