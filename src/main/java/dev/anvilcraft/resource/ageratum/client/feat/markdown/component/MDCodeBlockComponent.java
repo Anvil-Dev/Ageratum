@@ -41,11 +41,14 @@ public class MDCodeBlockComponent extends MDComponent {
         for (String line : lines) {
             int indentation = 0;
             if (line.startsWith(" ")) {
-                indentation = line.indexOf(line.trim().charAt(0));
+                String trim = line.trim();
+                indentation = trim.isEmpty() ? 0 : line.indexOf(trim.charAt(0));
                 line = line.substring(indentation);
             } else if (line.startsWith("\t")) {
-                indentation = line.indexOf(line.trim().charAt(0)) * 4;
-                line = line.substring(line.indexOf(line.trim().charAt(0)));
+                String trim = line.trim();
+                int i = trim.isEmpty() ? 0 : line.indexOf(trim.charAt(0));
+                indentation = i * 4;
+                line = line.substring(i);
             }
             cachedLines.add(new CodeLineInfo(indentation, FormattedText.of(line, CODE_TEXT_STYLE)));
         }
