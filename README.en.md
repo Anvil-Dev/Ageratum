@@ -13,6 +13,8 @@
 
 A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game guides for other mods. Ageratum offers rich Markdown rendering, i18n localization, and an extensible custom syntax/component system.
 
+## [Documentation](https://anvil-dev.github.io/en/posts/docs/ageratum/)
+
 ## Features
 
 ### Core Markdown Support

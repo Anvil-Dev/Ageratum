@@ -13,6 +13,8 @@
 
 一个为 Minecraft Forge/NeoForge 设计的手册模组，用于为其它模组提供游戏内指引与文档阅读能力。Ageratum 提供丰富的 Markdown 渲染、i18n 国际化，以及可扩展的自定义语法与组件机制。
 
+## [文档](https://www.anvilcraft.dev/posts/docs/ageratum/)
+
 ## 功能特性
 
 ### 核心 Markdown 支持
