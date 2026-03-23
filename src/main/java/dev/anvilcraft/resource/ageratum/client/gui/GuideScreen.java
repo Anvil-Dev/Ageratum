@@ -745,7 +745,7 @@ public class GuideScreen extends Screen {
             ));
         } else {
             String name = directory.name();
-            MutableComponent component = Component.translatable(
+            MutableComponent component = Component.translatableWithFallback(
                 directory.namespace() + "ageratum.directory" + name.toLowerCase(Locale.ROOT) + ".label",
                 name.toUpperCase(Locale.ROOT)
             );

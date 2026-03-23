@@ -213,17 +213,22 @@ public final class GuideDocumentCache {
         }
 
         private NavigationTree freezeAsTree() {
-            NavigationDirectory directory = this.freezeAsDirectory();
+            NavigationDirectory directory = this.freezeAsDirectory(1);
             return new NavigationTree(directory.documents, directory.children);
         }
 
-        private NavigationDirectory freezeAsDirectory() {
+        private NavigationDirectory freezeAsDirectory(int level) {
             List<NavigationDocument> directoryDocuments = new ArrayList<>(this.documents);
+
             directoryDocuments.sort(Comparator.comparing(NavigationDocument::fileArgument));
+
+            if (level <= 1 && this.indexDocument != null) {
+                directoryDocuments.addFirst(this.indexDocument);
+            }
 
             List<NavigationDirectory> frozenChildren = new ArrayList<>();
             for (MutableDirectoryNode child : this.children.values()) {
-                frozenChildren.add(child.freezeAsDirectory());
+                frozenChildren.add(child.freezeAsDirectory(level + 1));
             }
             frozenChildren.sort(Comparator.comparing(NavigationDirectory::name));
 
