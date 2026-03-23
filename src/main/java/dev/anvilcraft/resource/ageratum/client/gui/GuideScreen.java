@@ -490,7 +490,14 @@ public class GuideScreen extends Screen {
             LabelEntry entry = this.labelEntries.get(index);
             int originX = this.getLabelBaseX() + (entry.level == 1 ? 0 : LABEL_LEVEL2_INDENT);
             int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
-            boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
+            boolean isHover = this.mouseInRange(
+                originX,
+                originY,
+                this.labelWidth,
+                this.labelHeight,
+                mouseX,
+                mouseY
+            ) && mouseX < this.getContentStartX();
             boolean isActive = entry.fileArgument != null && entry.fileArgument.equals(currentFile);
             if (entry.clickable && (isHover || isActive)) {
                 originX -= LABEL_HOVER_SHIFT;
@@ -782,6 +789,7 @@ public class GuideScreen extends Screen {
             return false;
         }
         int relMouseX = (int) Math.floor(mouseX - this.leftPos);
+        if (relMouseX >= this.getContentStartX()) return false;
         int relMouseY = (int) Math.floor(mouseY - this.topPos);
         int start = this.labelScrollRows;
         int end = Math.min(this.labelEntries.size(), start + this.getLabelVisibleRows());
