@@ -154,6 +154,7 @@ public class MarkdownParser {
         StringBuilder codeBlockBuilder = new StringBuilder();
         StringBuilder indentedCodeBuilder = new StringBuilder();
         String codeFence = null;
+        String codeFenceAll = null;
         boolean inIndentedCode = false;
         BlockExtensionState extensionBlock = null;
 
@@ -183,11 +184,12 @@ public class MarkdownParser {
                 if (closeMatcher.matches()
                     && closeMatcher.group(1).charAt(0) == codeFence.charAt(0)
                     && closeMatcher.group(1).length() >= codeFence.length()) {
-                    codeFence = null;
                     if (!codeBlockBuilder.isEmpty()) {
                         codeBlockBuilder.deleteCharAt(codeBlockBuilder.length() - 1);
                     }
-                    components.add(new MDCodeBlockComponent(codeBlockBuilder.toString()));
+                    components.add(new MDCodeBlockComponent(codeBlockBuilder.toString(), codeFenceAll.substring(codeFence.length())));
+                    codeFence = null;
+                    codeFenceAll = null;
                     codeBlockBuilder = new StringBuilder();
                 } else {
                     codeBlockBuilder.append(s).append("\n");
@@ -217,6 +219,7 @@ public class MarkdownParser {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 inIndentedCode = false;
                 codeFence = fenceMatcher.group(1);
+                codeFenceAll = s.trim();
                 continue;
             }
 

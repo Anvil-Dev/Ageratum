@@ -35,6 +35,10 @@ public class MDCodeBlockComponent extends MDComponent {
      * @param text 代码文本（允许包含换行）
      */
     public MDCodeBlockComponent(String text) {
+        this(text, "");
+    }
+
+    public MDCodeBlockComponent(String text, String extra) {
         super(FormattedText.of(text, CODE_TEXT_STYLE));
         String[] lines = text.split("\\n", -1);
         List<CodeLineInfo> cachedLines = new ArrayList<>(lines.length);
