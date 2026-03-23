@@ -1102,15 +1102,16 @@ public class GuideScreen extends Screen {
         // 移至内容区左上角，并向上平移以实现滚动（不再额外缩放）
         pose.translate(this.getContentStartX(), this.getContentStartY() - this.contentScroll, 0);
 
+        float translatedMouseX = mouseX - this.getContentStartX();
+        float translatedMouseY = mouseY - (this.getContentStartY() - this.contentScroll);
         // 逐个渲染 Markdown 组件，每个组件渲染后向下平移其高度加间距
         for (MDComponent component : this.parsedComponents) {
             pose.pushPose();
-            int scaleMouseX = mouseX - this.getContentStartX();
-            int scaleMouseY = mouseX - this.getContentStartY();
-            component.render(guiGraphics, this.minecraft, this.getContentWidth(), Integer.MAX_VALUE, scaleMouseX, scaleMouseY);
+            component.render(guiGraphics, this.minecraft, this.getContentWidth(), Integer.MAX_VALUE, translatedMouseX, translatedMouseY);
             pose.popPose();
             int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
             pose.translate(0, offsetY, 0);
+            translatedMouseY = translatedMouseY - offsetY;
         }
 
         pose.popPose();

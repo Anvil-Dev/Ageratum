@@ -32,9 +32,13 @@ import javax.annotation.Nullable;
  */
 @Getter
 public abstract class MDRecipeComponent extends MDImageComponent {
-    /** 原始材质尺寸宽度（像素）。 */
+    /**
+     * 原始材质尺寸宽度（像素）。
+     */
     private final int width;
-    /** 原始材质尺寸高度（像素）。 */
+    /**
+     * 原始材质尺寸高度（像素）。
+     */
     private final int height;
 
     /**
@@ -47,16 +51,16 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     }
 
     @Override
-    protected void renderContent(GuiGraphics guiGraphics, Size size) {
+    protected void renderContent(GuiGraphics guiGraphics, Size size, float mouseX, float mouseY) {
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
-        this.renderRecipe(guiGraphics);
+        this.renderRecipe(guiGraphics, mouseX, mouseY);
     }
 
     /**
      * 在组件底图上绘制配方具体内容（输入、输出等）。
      */
-    protected void renderRecipe(GuiGraphics guiGraphics) {
+    protected void renderRecipe(GuiGraphics guiGraphics, float mouseX, float mouseY) {
     }
 
     /**
@@ -121,11 +125,17 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      * 找到配方后再委托给实际组件渲染并缓存结果。</p>
      */
     static class MDRecipeComponentProxy extends MDRecipeComponent {
-        /** 无法解析配方时的回退组件（空文本，占位高度为 0）。 */
+        /**
+         * 无法解析配方时的回退组件（空文本，占位高度为 0）。
+         */
         private final MDComponent emptyComponent = new MDTextComponent("");
-        /** 已解析出的真实渲染组件；命中后会复用。 */
+        /**
+         * 已解析出的真实渲染组件；命中后会复用。
+         */
         private @Nullable MDRecipeComponent component = null;
-        /** 文档中声明的配方资源 ID。 */
+        /**
+         * 文档中声明的配方资源 ID。
+         */
         private final ResourceLocation location;
 
         public MDRecipeComponentProxy(ResourceLocation location) {
@@ -134,7 +144,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
+        public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
             if (component != null) {
                 this.component.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
                 return;
@@ -178,5 +188,13 @@ public abstract class MDRecipeComponent extends MDImageComponent {
             }
             return this.component.getHeight(minecraft, maxX, maxY);
         }
+    }
+
+    public boolean isHoverItem(int startX,int startY, float mouseX, float mouseY){
+        return this.isHover(startX, startY, 16, 16, mouseX, mouseY);
+    }
+
+    public boolean isHover(int startX,int startY, int width, int height, float mouseX, float mouseY){
+        return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
     }
 }

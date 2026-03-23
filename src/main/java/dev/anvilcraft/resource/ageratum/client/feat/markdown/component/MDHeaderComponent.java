@@ -76,11 +76,11 @@ public class MDHeaderComponent extends MDComponent {
      * 渲染标题文本；一级标题额外绘制一条分隔线。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, int mouseX, int mouseY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(this.getScale(), this.getScale(), 1);
-        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY), this.unscale(mouseX), this.unscale(mouseY));
+        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY), mouseX / this.getScale(), mouseY / this.getScale());
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
             guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
