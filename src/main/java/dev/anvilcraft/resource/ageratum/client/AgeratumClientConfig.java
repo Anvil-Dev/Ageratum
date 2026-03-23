@@ -13,4 +13,10 @@ import net.neoforged.fml.config.ModConfig;
 public class AgeratumClientConfig {
     @Comment("Do breadcrumbs record jumps from sidebar tabs")
     public boolean breadCrumbsHasLabel = false;
+
+    @Comment("Show line numbers in code blocks")
+    public boolean showCodeBlockLineNumbers = true;
+
+    @Comment("Allow line breaks in code block content")
+    public boolean allowCodeBlockLineContentLineBreaks = true;
 }

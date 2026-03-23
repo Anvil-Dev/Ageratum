@@ -15,7 +15,6 @@ import net.neoforged.fml.common.Mod;
  */
 @Mod(Ageratum.MOD_ID)
 public class Ageratum {
-
     /**
      * 模组 ID，也是默认命名空间。
      */
