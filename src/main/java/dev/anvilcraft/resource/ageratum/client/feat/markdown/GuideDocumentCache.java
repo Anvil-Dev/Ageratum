@@ -102,7 +102,7 @@ public final class GuideDocumentCache {
         }
 
         NavigationTreeKey key = new NavigationTreeKey(location.getNamespace(), normalizeLanguageCode(languageCode));
-        MutableDirectoryNode root = treeRoots.computeIfAbsent(key, ignored -> new MutableDirectoryNode(""));
+        MutableDirectoryNode root = treeRoots.computeIfAbsent(key, ignored -> new MutableDirectoryNode(location.getNamespace(), ""));
         root.insert(fileArgument, location, document.getTitle(fileArgument));
     }
 
@@ -172,6 +172,7 @@ public final class GuideDocumentCache {
     }
 
     public record NavigationDirectory(
+        String namespace,
         String name,
         @Nullable NavigationDocument indexDocument,
         List<NavigationDocument> documents,
@@ -183,13 +184,15 @@ public final class GuideDocumentCache {
     }
 
     private static final class MutableDirectoryNode {
+        private final String namespace;
         private final String name;
         private final Map<String, MutableDirectoryNode> children = new LinkedHashMap<>();
         private final List<NavigationDocument> documents = new ArrayList<>();
         @Nullable
         private NavigationDocument indexDocument;
 
-        private MutableDirectoryNode(String name) {
+        private MutableDirectoryNode(String namespace, String name) {
+            this.namespace = namespace;
             this.name = name;
         }
 
@@ -198,7 +201,7 @@ public final class GuideDocumentCache {
             MutableDirectoryNode current = this;
             for (int i = 0; i < segments.length - 1; i++) {
                 String segment = segments[i];
-                current = current.children.computeIfAbsent(segment, MutableDirectoryNode::new);
+                current = current.children.computeIfAbsent(segment, name -> new MutableDirectoryNode(this.namespace, name));
             }
             String fileName = segments[segments.length - 1];
             NavigationDocument document = new NavigationDocument(fileArgument, title, location);
@@ -225,6 +228,7 @@ public final class GuideDocumentCache {
             frozenChildren.sort(Comparator.comparing(NavigationDirectory::name));
 
             return new NavigationDirectory(
+                this.namespace,
                 this.name,
                 this.indexDocument,
                 List.copyOf(directoryDocuments),

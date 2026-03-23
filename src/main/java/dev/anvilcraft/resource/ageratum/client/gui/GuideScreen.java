@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -743,7 +744,12 @@ public class GuideScreen extends Screen {
                 true
             ));
         } else {
-            target.add(new LabelEntry(null, null, 1, Component.literal(directory.name().toUpperCase(Locale.ROOT)), false));
+            String name = directory.name();
+            MutableComponent component = Component.translatable(
+                directory.namespace() + "ageratum.directory" + name.toLowerCase(Locale.ROOT) + ".label",
+                name.toUpperCase(Locale.ROOT)
+            );
+            target.add(new LabelEntry(null, null, 1, component, false));
         }
 
         for (GuideDocumentCache.NavigationDocument document : directory.documents()) {
