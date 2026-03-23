@@ -1,8 +1,10 @@
 dependencies {
-    implementation(libs.anvillib.config)
-    jarJar(libs.anvillib.config)
-    implementation ('org.codelibs:jhighlight:1.1.1') { transitive = false }
-    additionalRuntimeClasspath 'org.codelibs:jhighlight:1.1.1'
-    implementation ('org.jsoup:jsoup:1.18.3') { transitive = false }
-    additionalRuntimeClasspath 'org.jsoup:jsoup:1.18.3'
+    implementation libs.anvillib.config
+    jarJar libs.anvillib.config
+    implementation(libs.jhighlight) { transitive = false }
+    additionalRuntimeClasspath libs.jhighlight
+    jarJar libs.jhighlight
+    implementation(libs.jsoup) { transitive = false }
+    additionalRuntimeClasspath libs.jsoup
+    jarJar(libs.jsoup)
 }
