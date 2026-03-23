@@ -56,22 +56,21 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         // 放大物品渲染，使其与背景框体视觉尺寸匹配。
-        pose.scale(1.6F, 1.6F, 1.0F);
-        pose.translate(5.5F, 4.0F, 0.0F);
+        pose.scale(2.0F, 2.0F, 1.0F);
+        pose.translate(4.0F, 3.0F, 0.0F);
         for (int i = 0; i < this.ingredients.size(); i++) {
             Ingredient ingredient = this.ingredients.get(i);
             if (ingredient.isEmpty()) continue;
             ItemStack[] items = ingredient.getItems();
             // 统一使用每个 Ingredient 的第一个候选物品作为静态预览。
-            int x = (i % 3) * 25;
-            int y = (i / 3) * 25;
+            int x = (i % 3) * 20;
+            int y = (i / 3) * 20;
             if (items.length > 0) {
                 ItemStack itemStack = items[0];
                 guiGraphics.renderItem(itemStack, x, y);
             }
         }
-        pose.translate(-0.5F, 0.0F, 0.0F);
-        guiGraphics.renderItem(this.resultItem, 125, 25);
+        guiGraphics.renderItem(this.resultItem, 100, 20);
         pose.popPose();
     }
 }

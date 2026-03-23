@@ -4,10 +4,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Style;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.annotation.Nullable;
 
 /**
@@ -30,7 +30,7 @@ public class MDHeaderComponent extends MDComponent {
      * @param text  标题文本
      */
     public MDHeaderComponent(int level, String text) {
-        super(text);
+        super(MDComponent.textFormat(text, MDHeaderComponent.getStyle(level)));
         this.level = level;
     }
 
@@ -49,7 +49,19 @@ public class MDHeaderComponent extends MDComponent {
      * 按标题级别计算渲染缩放比例。
      */
     private float getScale() {
-        return Math.max(1.5f - (this.level - 1) * 0.2f, 1.0f);
+        return switch (this.level) {
+            case 1 -> 2.0f;
+            case 2 -> 1.5f;
+            default -> 1.0f;
+        };
+    }
+
+    private static Style getStyle(int level) {
+        Style style = Style.EMPTY;
+        if (level % 2 != 0) {
+            return style.withBold(true);
+        }
+        return style;
     }
 
     private int scale(int value) {

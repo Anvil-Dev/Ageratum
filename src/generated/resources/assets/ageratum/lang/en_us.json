@@ -1,0 +1,7 @@
+{
+  "ageratum.configuration.bread_crumbs_has_label": "Bread Crumbs Has Label",
+  "ageratum.configuration.bread_crumbs_has_label.tooltip": "Do breadcrumbs record jumps from sidebar tabs",
+  "ageratum.configuration.section.ageratum.client.toml": "Ageratum Client Configuration",
+  "ageratum.configuration.section.ageratum.client.toml.title": "Ageratum Client Configuration",
+  "ageratum.configuration.title": "Ageratum Configuration"
+}

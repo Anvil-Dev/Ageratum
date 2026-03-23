@@ -1,0 +1,7 @@
+{
+  "ageratum.configuration.bread_crumbs_has_label": "面包屑记录标签",
+  "ageratum.configuration.bread_crumbs_has_label.tooltip": "面包屑是否记录从侧边栏标签的跳转",
+  "ageratum.configuration.section.ageratum.client.toml": "藿香 客户端配置",
+  "ageratum.configuration.section.ageratum.client.toml.title": "藿香 客户端配置",
+  "ageratum.configuration.title": "藿香 配置"
+}
