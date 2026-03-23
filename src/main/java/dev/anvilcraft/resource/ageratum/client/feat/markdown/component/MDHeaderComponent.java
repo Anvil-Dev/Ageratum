@@ -83,7 +83,8 @@ public class MDHeaderComponent extends MDComponent {
         super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY));
         pose.translate(0, 0, 0);
         if (this.level == 1) {
-            guiGraphics.hLine(5, this.unscale(maxX) - 10, 1, 0x88000000);
+            int y = minecraft.font.lineHeight / 2;
+            guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
         }
         pose.popPose();
     }
@@ -95,7 +96,7 @@ public class MDHeaderComponent extends MDComponent {
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int height = this.scale(super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY)));
         if (this.level == 1) {
-            height += 2;
+            height += minecraft.font.lineHeight;
         }
         return height;
     }
