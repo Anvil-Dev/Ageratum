@@ -1,5 +1,7 @@
 # Ageratum Documentation System
 
+![](ageratum:gui/mod_icon.png)
+
 Welcome to Ageratum! A powerful documentation framework designed for Minecraft mods.
 
 ## Key Features

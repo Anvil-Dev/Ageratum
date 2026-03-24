@@ -69,7 +69,7 @@ public class MDImageComponent extends MDComponent {
      * 按缩放后的尺寸渲染图片。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
         Size size = this.resolveSize(minecraft);
         Size renderSize = this.computeRenderSize(size, maxX, maxY);
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {
@@ -81,11 +81,11 @@ public class MDImageComponent extends MDComponent {
         pose.pushPose();
         pose.scale(scaleX, scaleY, 1.0f);
         this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
-        this.renderContent(guiGraphics, size);
+        this.renderContent(guiGraphics, size, mouseX / scaleX, mouseY / scaleY);
         pose.popPose();
     }
 
-    protected void renderContent(GuiGraphics guiGraphics, Size size) {
+    protected void renderContent(GuiGraphics guiGraphics, Size size, float mouseX, float mouseY) {
         this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 

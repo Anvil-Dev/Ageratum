@@ -30,7 +30,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     @Override
-    public final void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public final void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
         int y = 0;
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);

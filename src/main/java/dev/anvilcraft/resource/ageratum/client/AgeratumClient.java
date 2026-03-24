@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
+import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
@@ -41,6 +42,8 @@ public class AgeratumClient {
      * 模组日志记录器。
      */
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    public static final AgeratumClientConfig CONFIG = ConfigManager.register(Ageratum.MOD_ID, AgeratumClientConfig::new);
 
     /**
      * 模组客户端侧构造函数，由 NeoForge 在加载时调用。

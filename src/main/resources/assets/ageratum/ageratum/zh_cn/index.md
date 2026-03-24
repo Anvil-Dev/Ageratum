@@ -1,5 +1,7 @@
 # Ageratum 文档系统
 
+![](ageratum:gui/mod_icon.png)
+
 欢迎使用 Ageratum！这是一个为 Minecraft 模组设计的强大文档框架。
 
 ## 主要功能
@@ -15,22 +17,22 @@
 ### 📚 指南与教程
 
 - **[快速开始](guide)** - 开始使用 Ageratum
-  - [Markdown 语法](guide/introduction)
-  - [高级特性](guide/advanced)
-  - [API 参考](guide/api)
+    - [Markdown 语法](guide/introduction)
+    - [高级特性](guide/advanced)
+    - [API 参考](guide/api)
 
 - **[教程系列](tutorial)** - 循序渐进的学习路径
-  - [初级教程](tutorial/basics)
-  - [中级教程](tutorial/intermediate)
-  - [高级教程](tutorial/advanced)
+    - [初级教程](tutorial/basics)
+    - [中级教程](tutorial/intermediate)
+    - [高级教程](tutorial/advanced)
 
 ### 💡 示例与参考
 
 - **[代码示例](examples)** - 实战示例和最佳实践
-  - [简单示例](examples/simple)
-  - [实战示例](examples/practical)
-  - [最佳实践](examples/best_practices)
-  - [高级示例](examples/advanced_examples)
+    - [简单示例](examples/simple)
+    - [实战示例](examples/practical)
+    - [最佳实践](examples/best_practices)
+    - [高级示例](examples/advanced_examples)
 
 ### ❓ 常见问题
 
@@ -39,11 +41,13 @@
 - **[快速指南](guide)** - 快速参考
 
 点击事件允许文本响应点击操作：
+
 - <click type="OPEN_URL" data="https://example.com">点击打开链接</click>
 - <click type="COPY_TO_CLIPBOARD" data="一些要复制的文本">点击复制文本</click>
 - <click type="RUN_COMMAND" data="/ageratum ageratum">点击运行命令</click>
 
 您可以在同一文本中组合多种样式：
+
 - <hover type="SHOW_TEXT" data="组合事件！"><click type="OPEN_URL" data="https://example.com">在我上面悬停或点击我！</click></hover>
 
 ---
@@ -96,10 +100,10 @@ Setext 二级标题
                 - 4 级项目
 
 - 0 级项目，包含 *斜体*
-  - 1 级项目，包含 ~~删除线~~
-    - 2 级项目，包含 **粗体**
-      - 3 级项目，包含 `代码`
-        - 4 级项目
+    - 1 级项目，包含 ~~删除线~~
+        - 2 级项目，包含 **粗体**
+            - 3 级项目，包含 `代码`
+                - 4 级项目
 
 ### 有序列表（多层级）
 

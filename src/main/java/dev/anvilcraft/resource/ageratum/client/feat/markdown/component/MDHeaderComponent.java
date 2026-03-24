@@ -4,10 +4,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Style;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.annotation.Nullable;
 
 /**
@@ -30,7 +30,7 @@ public class MDHeaderComponent extends MDComponent {
      * @param text  标题文本
      */
     public MDHeaderComponent(int level, String text) {
-        super(text);
+        super(MDComponent.textFormat(text, MDHeaderComponent.getStyle(level)));
         this.level = level;
     }
 
@@ -49,7 +49,19 @@ public class MDHeaderComponent extends MDComponent {
      * 按标题级别计算渲染缩放比例。
      */
     private float getScale() {
-        return Math.max(1.5f - (this.level - 1) * 0.2f, 1.0f);
+        return switch (this.level) {
+            case 1 -> 2.0f;
+            case 2 -> 1.5f;
+            default -> 1.0f;
+        };
+    }
+
+    private static Style getStyle(int level) {
+        Style style = Style.EMPTY;
+        if (level % 2 != 0) {
+            return style.withBold(true);
+        }
+        return style;
     }
 
     private int scale(int value) {
@@ -64,14 +76,14 @@ public class MDHeaderComponent extends MDComponent {
      * 渲染标题文本；一级标题额外绘制一条分隔线。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(this.getScale(), this.getScale(), 1);
-        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY));
-        pose.translate(0, 0, 0);
+        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY), mouseX / this.getScale(), mouseY / this.getScale());
         if (this.level == 1) {
-            guiGraphics.hLine(5, this.unscale(maxX) - 10, 1, 0x88000000);
+            int y = minecraft.font.lineHeight / 2;
+            guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
         }
         pose.popPose();
     }
@@ -83,7 +95,7 @@ public class MDHeaderComponent extends MDComponent {
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int height = this.scale(super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY)));
         if (this.level == 1) {
-            height += 2;
+            height += minecraft.font.lineHeight;
         }
         return height;
     }

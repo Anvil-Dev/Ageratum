@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -44,41 +45,49 @@ public class GuideScreen extends Screen {
      * 背景纹理资源位置。
      */
     protected static final ResourceLocation GUIDE_LOCATION = Ageratum.location("textures/gui/guide/guide.png");
-
-    // ── 纹理与界面尺寸常量（原始像素，使用时除以 2 获得实际屏幕尺寸）──────────
-
+    protected static final int GUIDE_IMAGE_SIZE = 512;
     /**
      * 背景纹理完整宽度（原始像素）。
      */
-    protected static final int IMAGE_WIDTH = 392;
+    protected static final int GUIDE_IMAGE_WIDTH = 360;
     /**
      * 背景纹理完整高度（原始像素）。
      */
-    protected static final int IMAGE_HEIGHT = 466;
+    protected static final int GUIDE_IMAGE_HEIGHT = 232;
+    protected static final ResourceLocation LABEL_PRIMARY_LOCATION = Ageratum.location("textures/gui/guide/label_primary.png");
+    protected static final ResourceLocation LABEL_SECONDARY_LOCATION = Ageratum.location("textures/gui/guide/label_secondary.png");
+    protected static final int LABEL_IMAGE_SIZE = 64;
     /**
      * 侧边标签宽度（原始像素）。
      */
-    protected static final int LABEL_WIDTH = 102;
+    protected static final int LABEL_IMAGE_WIDTH = 60;
     /**
      * 侧边标签高度（原始像素）。
      */
-    protected static final int LABEL_HEIGHT = 32;
+    protected static final int LABEL_IMAGE_HEIGHT = 16;
+    protected static final ResourceLocation BUTTON_DOWN_LOCATION = Ageratum.location("textures/gui/guide/button_down.png");
+    protected static final ResourceLocation BUTTON_UP_LOCATION = Ageratum.location("textures/gui/guide/button_up.png");
+    protected static final ResourceLocation BUTTON_CLOSE_LOCATION = Ageratum.location("textures/gui/guide/button_close.png");
+    protected static final ResourceLocation BUTTON_RETURN_LOCATION = Ageratum.location("textures/gui/guide/button_back.png");
+    protected static final int BUTTON_IMAGE_SIZE = 32;
     /**
-     * 侧边标签区域显示的最大行数。
+     * 侧边标签宽度（原始像素）。
      */
-    protected static final int LABEL_VISIBLE_ROWS = 11;
+    protected static final int BUTTON_IMAGE_WIDTH = 32;
+    /**
+     * 侧边标签高度（原始像素）。
+     */
+    protected static final int BUTTON_IMAGE_HEIGHT = 16;
+
+    protected static final int MIN_HORIZONTAL_MARGIN = 25;
+
+    protected static final int MIN_VERTICAL_MARGIN = 10;
+
+    // ── 纹理与界面尺寸常量（原始像素，使用时除以 2 获得实际屏幕尺寸）──────────
     /**
      * 侧边标签行距（屏幕像素）。
      */
-    protected static final int LABEL_ROW_SPACING = 17;
-    /**
-     * 标签首行 Y 偏移（相对界面左上角，屏幕像素）。
-     */
-    protected static final int LABEL_START_Y = 24;
-    /**
-     * 一级标签基础 X 偏移（相对界面左上角，屏幕像素）。
-     */
-    protected static final int LABEL_BASE_X = -30;
+    protected static final int MIN_LABEL_ROW_MARGIN = 2;
     /**
      * 二级标签额外缩进（屏幕像素）。
      */
@@ -88,53 +97,11 @@ public class GuideScreen extends Screen {
      */
     protected static final int LABEL_HOVER_SHIFT = 5;
 
-    /**
-     * 侧栏箭头贴图 U（按当前 UI 缩放后的坐标）。
-     */
-    protected static final int LABEL_ARROW_U = 392 / 2;
-    /**
-     * 上箭头贴图 V（按当前 UI 缩放后的坐标）。
-     */
-    protected static final int LABEL_ARROW_V_UP = 32 / 2;
-    /**
-     * 下箭头贴图 V（按当前 UI 缩放后的坐标）。
-     */
-    protected static final int LABEL_ARROW_V_DOWN = (32 + 32) / 2;
-    /**
-     * 箭头绘制宽度（屏幕像素）。
-     */
-    protected static final int LABEL_ARROW_WIDTH = LABEL_WIDTH / 2;
-    /**
-     * 单个箭头绘制高度（屏幕像素）。
-     */
-    protected static final int LABEL_ARROW_HEIGHT = LABEL_HEIGHT / 2;
-
     // ── 内容区域参数 ────────────────────────────────────────────────────────────
-
-    /**
-     * 内容区域相对界面左上角的 X 偏移（半像素尺寸）。
-     */
-    protected static final int CONTENT_X = 22;
-    /**
-     * 内容区域相对界面左上角的 Y 偏移（半像素尺寸）。
-     */
-    protected static final int CONTENT_Y = 21;
-    /**
-     * 内容区域可见宽度（Markdown 渲染坐标系，未缩放）。
-     */
-    protected static final int CONTENT_WIDTH = 264 - 6;
-    /**
-     * 内容区域可见高度（Markdown 渲染坐标系，未缩放）。
-     */
-    protected static final int CONTENT_HEIGHT = 328 - 6;
     /**
      * 相邻两个 MDComponent 之间的垂直间距（像素）。
      */
-    protected static final int CONTENT_SPACING = 5;
-    /**
-     * 内容区域整体缩放比例（缩小以模拟书页文字大小）。
-     */
-    protected static final float CONTENT_SCALE = 0.6f;
+    protected static final int CONTENT_ROWS_MARGIN = 5;
     /**
      * 每次滚轮事件滚动的像素距离（Markdown 坐标系）。
      */
@@ -159,19 +126,19 @@ public class GuideScreen extends Screen {
     /**
      * 当前背景图像实际显示宽度（屏幕像素，= IMAGE_WIDTH / 2）。
      */
-    protected int imageWidth = IMAGE_WIDTH / 2;
+    protected int imageWidth = 0;
     /**
      * 当前背景图像实际显示高度（屏幕像素，= IMAGE_HEIGHT / 2）。
      */
-    protected int imageHeight = IMAGE_HEIGHT / 2;
+    protected int imageHeight = 0;
     /**
      * 侧边标签实际显示宽度（屏幕像素）。
      */
-    protected int labelWidth = LABEL_WIDTH / 2;
+    protected int labelWidth = LABEL_IMAGE_WIDTH;
     /**
      * 侧边标签实际显示高度（屏幕像素）。
      */
-    protected int labelHeight = LABEL_HEIGHT / 2;
+    protected int labelHeight = LABEL_IMAGE_HEIGHT;
     /**
      * 界面左侧在屏幕上的 X 坐标（居中对齐计算结果）。
      */
@@ -266,6 +233,17 @@ public class GuideScreen extends Screen {
     @Override
     protected void init() {
         // 使界面在屏幕上水平/垂直居中
+        float imageRatio = (float) GUIDE_IMAGE_WIDTH / GUIDE_IMAGE_HEIGHT;
+        float windowRatio = (float) this.width / this.height;
+        if (windowRatio > imageRatio) {
+            // 窗口较宽，限制高度以保持比例
+            this.imageHeight = Math.min(this.height - 2 * MIN_VERTICAL_MARGIN, GUIDE_IMAGE_HEIGHT);
+            this.imageWidth = (int) (this.imageHeight * imageRatio);
+        } else {
+            // 窗口较高，限制宽度以保持比例
+            this.imageWidth = Math.min(this.width - 2 * MIN_HORIZONTAL_MARGIN, GUIDE_IMAGE_WIDTH);
+            this.imageHeight = (int) (this.imageWidth / imageRatio);
+        }
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         if (this.minecraft != null) {
@@ -416,18 +394,18 @@ public class GuideScreen extends Screen {
             return null;
         }
 
-        double relX = mouseX - (this.leftPos + CONTENT_X);
-        double relY = mouseY - (this.topPos + CONTENT_Y);
-        double mdX = relX / CONTENT_SCALE;
-        double mdY = relY / CONTENT_SCALE + this.contentScroll;
+        double relX = mouseX - (this.leftPos + this.getContentStartX());
+        double relY = mouseY - (this.topPos + this.getContentStartY());
+        double mdX = relX;
+        double mdY = relY + this.contentScroll;
 
         double currentY = 0;
         for (MDComponent component : this.parsedComponents) {
-            int componentHeight = component.getHeight(this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE);
+            int componentHeight = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE);
             if (mdY >= currentY && mdY <= currentY + componentHeight) {
                 return this.getStyleAtComponentPosition(component, this.minecraft, mdX, mdY - currentY);
             }
-            currentY += componentHeight + CONTENT_SPACING;
+            currentY += componentHeight + CONTENT_ROWS_MARGIN;
         }
 
         return null;
@@ -440,7 +418,7 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        float pageStep = CONTENT_HEIGHT * 0.8f;
+        float pageStep = this.getContentHeight() / 2.0f;
         if (keyCode == GLFW.GLFW_KEY_UP) {
             this.scrollBy(-SCROLL_STEP);
             return true;
@@ -478,7 +456,17 @@ public class GuideScreen extends Screen {
      */
     private void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         // 将纹理左上角（UV 0,0）贴到界面左上角
-        guiGraphics.blit(GUIDE_LOCATION, 0, 0, 0, 0, this.imageWidth, this.imageHeight);
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        float scaleX = (float) this.imageWidth / GUIDE_IMAGE_WIDTH;
+        float scaleY = (float) this.imageHeight / GUIDE_IMAGE_HEIGHT;
+        pose.scale(this.getBgImageScale(), this.getBgImageScale(), 1.0f);
+        guiGraphics.blit(GUIDE_LOCATION, 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
+        pose.popPose();
+    }
+
+    private int getLabelScaleCountDown() {
+        return (int) Math.ceil(1 / this.getLabelImageScale());
     }
 
     /**
@@ -494,61 +482,108 @@ public class GuideScreen extends Screen {
      */
     private void renderLabel(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         int start = this.labelScrollRows;
-        int end = Math.min(this.labelEntries.size(), start + LABEL_VISIBLE_ROWS);
+        int end = Math.min(this.labelEntries.size(), start + this.getLabelVisibleRows());
         String currentFile = this.getCurrentFileArgument();
+        PoseStack pose = guiGraphics.pose();
         for (int index = start; index < end; index++) {
             int row = index - start;
             LabelEntry entry = this.labelEntries.get(index);
-            int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
-            int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
-            boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
+            int originX = this.getLabelBaseX() + (entry.level == 1 ? 0 : LABEL_LEVEL2_INDENT);
+            int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
+            boolean isHover = this.mouseInRange(
+                originX,
+                originY,
+                this.labelWidth,
+                this.labelHeight,
+                mouseX,
+                mouseY
+            ) && mouseX < this.getContentStartX();
             boolean isActive = entry.fileArgument != null && entry.fileArgument.equals(currentFile);
             if (entry.clickable && (isHover || isActive)) {
                 originX -= LABEL_HOVER_SHIFT;
             }
-            guiGraphics.blit(GUIDE_LOCATION, originX, originY, this.imageWidth, 0, this.labelWidth, this.labelHeight);
-
+            pose.pushPose();
+            pose.scale(this.getLabelImageScale(), this.getLabelImageScale(), 0);
+            guiGraphics.blit(
+                entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
+                originX * this.getLabelScaleCountDown(),
+                originY * this.getLabelScaleCountDown(),
+                0,
+                0,
+                0,
+                LABEL_IMAGE_WIDTH,
+                LABEL_IMAGE_HEIGHT,
+                LABEL_IMAGE_SIZE,
+                LABEL_IMAGE_SIZE
+            );
+            pose.popPose();
             int textColor = isActive ? 0x8B5A2B : (entry.clickable ? 0x5D4630 : 0x3f3f3f);
-            PoseStack pose = guiGraphics.pose();
-            pose.pushPose();
-            pose.translate(originX, originY, 0);
-            pose.pushPose();
-            pose.scale(0.8f, 0.8f, 0);
             guiGraphics.drawString(
                 this.font,
-                entry.title,
-                3,
-                6,
+                this.fitLabelTitle(entry.title),
+                originX + (entry.level == 1 ? 10 : 5),
+                originY + 4,
                 textColor,
                 false
             );
-            pose.popPose();
-            pose.popPose();
         }
         // Close Button
         int originX = this.getCloseButtonX();
         int originY = this.getCloseButtonY();
-        boolean isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
-        guiGraphics.blit(GUIDE_LOCATION, originX + (isHover ? 5 : 0), originY, this.imageWidth, 48, this.labelWidth, this.labelHeight);
+        boolean isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
+        pose.pushPose();
+        pose.scale(this.getLabelImageScale(), this.getLabelImageScale(), 0);
+        guiGraphics.blit(
+            BUTTON_CLOSE_LOCATION,
+            originX * this.getLabelScaleCountDown(),
+            originY * this.getLabelScaleCountDown(),
+            0,
+            0,
+            isHover ? BUTTON_IMAGE_HEIGHT : 0,
+            BUTTON_IMAGE_WIDTH,
+            BUTTON_IMAGE_HEIGHT,
+            BUTTON_IMAGE_SIZE,
+            BUTTON_IMAGE_SIZE
+        );
         // Return Button
         if (this.hasReturnButton()) {
             originY = this.getReturnButtonY();
-            isHover = this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY);
-            guiGraphics.blit(GUIDE_LOCATION, originX + (isHover ? 5 : 0), originY, this.imageWidth, 64, this.labelWidth, this.labelHeight);
+            isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
+            guiGraphics.blit(
+                BUTTON_RETURN_LOCATION,
+                originX * this.getLabelScaleCountDown(),
+                originY * this.getLabelScaleCountDown(),
+                0,
+                0,
+                isHover ? BUTTON_IMAGE_HEIGHT : 0,
+                BUTTON_IMAGE_WIDTH,
+                BUTTON_IMAGE_HEIGHT,
+                BUTTON_IMAGE_SIZE,
+                BUTTON_IMAGE_SIZE
+            );
         }
+        pose.popPose();
         this.renderLabelScrollHint(guiGraphics);
     }
 
     private int getCloseButtonX() {
-        return 160;
+        return this.imageWidth - 5;
+    }
+
+    public int getLabelBaseX() {
+        return -40;
+    }
+
+    private int getLabelStartY() {
+        return this.getContentStartY();
     }
 
     private int getCloseButtonY() {
-        return LABEL_START_Y;
+        return this.getLabelStartY();
     }
 
     private int getReturnButtonY() {
-        return LABEL_START_Y + LABEL_ROW_SPACING * 10;
+        return this.imageHeight - BUTTON_IMAGE_HEIGHT - this.getLabelStartY();
     }
 
     private boolean hasReturnButton() {
@@ -592,13 +627,27 @@ public class GuideScreen extends Screen {
             return;
         }
 
-        int arrowX = LABEL_BASE_X;
+        int arrowX = this.getLabelBaseX() + 5;
         int arrowUpY = this.getArrowUpY();
         int arrowDownY = this.getArrowDownY();
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.scale(this.getLabelImageScale(), this.getLabelImageScale(), 0);
         if (this.labelScrollRows > 0) {
             float alpha = this.computeArrowAlpha(this.labelScrollRows);
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-            guiGraphics.blit(GUIDE_LOCATION, arrowX, arrowUpY, LABEL_ARROW_U, LABEL_ARROW_V_UP, LABEL_ARROW_WIDTH, LABEL_ARROW_HEIGHT);
+            guiGraphics.blit(
+                BUTTON_UP_LOCATION,
+                arrowX * this.getLabelScaleCountDown(),
+                arrowUpY * this.getLabelScaleCountDown(),
+                0,
+                0,
+                0,
+                BUTTON_IMAGE_WIDTH,
+                BUTTON_IMAGE_HEIGHT,
+                BUTTON_IMAGE_SIZE,
+                BUTTON_IMAGE_SIZE
+            );
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
         int rowsToBottom = this.maxLabelScrollRows - this.labelScrollRows;
@@ -606,16 +655,20 @@ public class GuideScreen extends Screen {
             float alpha = this.computeArrowAlpha(rowsToBottom);
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
             guiGraphics.blit(
-                GUIDE_LOCATION,
-                arrowX,
-                arrowDownY,
-                LABEL_ARROW_U,
-                LABEL_ARROW_V_DOWN,
-                LABEL_ARROW_WIDTH,
-                LABEL_ARROW_HEIGHT
+                BUTTON_DOWN_LOCATION,
+                arrowX * this.getLabelScaleCountDown(),
+                arrowDownY * this.getLabelScaleCountDown(),
+                0,
+                0,
+                0,
+                BUTTON_IMAGE_WIDTH,
+                BUTTON_IMAGE_HEIGHT,
+                BUTTON_IMAGE_SIZE,
+                BUTTON_IMAGE_SIZE
             );
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
+        pose.popPose();
     }
 
     private float computeArrowAlpha(int remainingRows) {
@@ -623,15 +676,15 @@ public class GuideScreen extends Screen {
     }
 
     private int getArrowUpY() {
-        return LABEL_START_Y - LABEL_ARROW_HEIGHT - 2;
+        return 0;
     }
 
     private int getArrowDownY() {
-        return LABEL_START_Y + this.getLabelViewportHeight() + 2;
+        return this.imageHeight - this.getLabelRowOffset();
     }
 
     private int getLabelViewportHeight() {
-        return (LABEL_VISIBLE_ROWS - 1) * LABEL_ROW_SPACING + this.labelHeight;
+        return (this.getLabelVisibleRows() - 2) * this.getLabelRowOffset() + this.labelHeight;
     }
 
     private int consumeLabelScrollRows(double scrollY) {
@@ -683,7 +736,7 @@ public class GuideScreen extends Screen {
         }
 
         this.labelEntries = List.copyOf(finalEntries);
-        this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - LABEL_VISIBLE_ROWS);
+        this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
     }
 
@@ -698,7 +751,12 @@ public class GuideScreen extends Screen {
                 true
             ));
         } else {
-            target.add(new LabelEntry(null, null, 1, Component.literal(directory.name().toUpperCase(Locale.ROOT)), false));
+            String name = directory.name();
+            MutableComponent component = Component.translatableWithFallback(
+                directory.namespace() + "ageratum.directory" + name.toLowerCase(Locale.ROOT) + ".label",
+                name.toUpperCase(Locale.ROOT)
+            );
+            target.add(new LabelEntry(null, null, 1, component, false));
         }
 
         for (GuideDocumentCache.NavigationDocument document : directory.documents()) {
@@ -731,20 +789,21 @@ public class GuideScreen extends Screen {
             return false;
         }
         int relMouseX = (int) Math.floor(mouseX - this.leftPos);
+        if (relMouseX >= this.getContentStartX()) return false;
         int relMouseY = (int) Math.floor(mouseY - this.topPos);
         int start = this.labelScrollRows;
-        int end = Math.min(this.labelEntries.size(), start + LABEL_VISIBLE_ROWS);
+        int end = Math.min(this.labelEntries.size(), start + this.getLabelVisibleRows());
         for (int index = start; index < end; index++) {
             int row = index - start;
             LabelEntry entry = this.labelEntries.get(index);
             if (!entry.clickable || entry.location == null) {
                 continue;
             }
-            int originX = LABEL_BASE_X + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
-            int originY = LABEL_START_Y + row * LABEL_ROW_SPACING;
+            int originX = this.getLabelBaseX() + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
+            int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
                 List<ResourceLocation> breadCrumbs = this.breadCrumbs;
-                if (!entry.location.equals(this.documentLocation)) {
+                if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
                     breadCrumbs = new ArrayList<>(this.breadCrumbs);
                     breadCrumbs.add(this.documentLocation);
                     breadCrumbs = List.copyOf(breadCrumbs);
@@ -867,7 +926,7 @@ public class GuideScreen extends Screen {
                     return true;
                 }
             }
-            offsetY += component.getHeight(this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE) + CONTENT_SPACING;
+            offsetY += component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
         }
         return false;
     }
@@ -1040,30 +1099,67 @@ public class GuideScreen extends Screen {
         this.updateScrollBounds();
 
         // 计算屏幕坐标系下的裁剪矩形（需还原到屏幕绝对坐标）
-        int scissorX1 = this.leftPos + CONTENT_X;
-        int scissorY1 = this.topPos + CONTENT_Y;
-        int scissorX2 = scissorX1 + Math.round(CONTENT_WIDTH * CONTENT_SCALE);
-        int scissorY2 = scissorY1 + Math.round(CONTENT_HEIGHT * CONTENT_SCALE);
+        int scissorX1 = this.leftPos + this.getContentStartX();
+        int scissorY1 = this.topPos + this.getContentStartY();
+        int scissorX2 = scissorX1 + this.getContentWidth();
+        int scissorY2 = scissorY1 + this.getContentHeight();
         guiGraphics.enableScissor(scissorX1, scissorY1, scissorX2, scissorY2);
 
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        // 移至内容区左上角，缩放至书页尺寸，并向上平移以实现滚动
-        pose.translate(CONTENT_X, CONTENT_Y, 0);
-        pose.scale(CONTENT_SCALE, CONTENT_SCALE, 1);
-        pose.translate(0, -this.contentScroll, 0);
+        // 移至内容区左上角，并向上平移以实现滚动（不再额外缩放）
+        pose.translate(this.getContentStartX(), this.getContentStartY() - this.contentScroll, 0);
 
+        float translatedMouseX = mouseX - this.getContentStartX();
+        float translatedMouseY = mouseY - (this.getContentStartY() - this.contentScroll);
         // 逐个渲染 Markdown 组件，每个组件渲染后向下平移其高度加间距
         for (MDComponent component : this.parsedComponents) {
             pose.pushPose();
-            component.render(guiGraphics, this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE);
+            component.render(guiGraphics, this.minecraft, this.getContentWidth(), Integer.MAX_VALUE, translatedMouseX, translatedMouseY);
             pose.popPose();
-            int offsetY = component.getHeight(this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE) + CONTENT_SPACING;
+            int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
             pose.translate(0, offsetY, 0);
+            translatedMouseY = translatedMouseY - offsetY;
         }
 
         pose.popPose();
         guiGraphics.disableScissor();
+    }
+
+    public float getBgImageScale() {
+        return (float) this.imageWidth / GUIDE_IMAGE_WIDTH;
+    }
+
+    public float getLabelImageScale() {
+        return (float) this.labelWidth / LABEL_IMAGE_WIDTH;
+    }
+
+    public int getLabelVisibleRows() {
+        return (int) Math.floor((double) (this.getContentHeight() + MIN_LABEL_ROW_MARGIN) / (this.labelHeight + MIN_LABEL_ROW_MARGIN));
+    }
+
+    public int getLabelRowSpacing() {
+        return (int) Math.floor(((double) this.getContentHeight() / this.getLabelVisibleRows()) - this.labelHeight);
+    }
+
+    public int getLabelRowOffset() {
+        return this.labelHeight + this.getLabelRowSpacing();
+    }
+
+    public int getContentWidth() {
+        return this.imageWidth - 2 * this.getContentStartX();
+    }
+
+    public int getContentHeight() {
+        return this.imageHeight - 2 * this.getContentStartY();
+    }
+
+    public int getContentStartX() {
+        return (int) Math.ceil(15 * this.getBgImageScale());
+    }
+
+    public int getContentStartY() {
+        return (int) Math.ceil(18 * this.getBgImageScale());
     }
 
     /**
@@ -1077,10 +1173,10 @@ public class GuideScreen extends Screen {
         int totalHeight = 0;
         // 累加所有组件高度及组件间距
         for (MDComponent component : this.parsedComponents) {
-            totalHeight += component.getHeight(this.minecraft, CONTENT_WIDTH, Integer.MAX_VALUE) + CONTENT_SPACING;
+            totalHeight += component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
         }
         // 超出可见高度的部分即为最大滚动量
-        this.maxContentScroll = Math.max(0, totalHeight - CONTENT_HEIGHT);
+        this.maxContentScroll = Math.max(0, totalHeight - this.getContentHeight());
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
     }
 
@@ -1101,19 +1197,33 @@ public class GuideScreen extends Screen {
      * @return 在内容区域内返回 {@code true}
      */
     private boolean mouseInContentRange(double mouseX, double mouseY) {
-        int contentLeft = this.leftPos + CONTENT_X;
-        int contentTop = this.topPos + CONTENT_Y;
-        int contentRight = contentLeft + Math.round(CONTENT_WIDTH * CONTENT_SCALE);
-        int contentBottom = contentTop + Math.round(CONTENT_HEIGHT * CONTENT_SCALE);
+        int contentLeft = this.leftPos + this.getContentStartX();
+        int contentTop = this.topPos + this.getContentStartY();
+        int contentRight = contentLeft + this.getContentWidth();
+        int contentBottom = contentTop + this.getContentHeight();
         return mouseX >= contentLeft && mouseX <= contentRight && mouseY >= contentTop && mouseY <= contentBottom;
     }
 
     private boolean mouseInLabelRange(double mouseX, double mouseY) {
-        int labelLeft = this.leftPos + LABEL_BASE_X - LABEL_HOVER_SHIFT;
-        int labelRight = this.leftPos + LABEL_BASE_X + LABEL_LEVEL2_INDENT + this.labelWidth;
+        int labelLeft = this.leftPos + this.getLabelBaseX() - LABEL_HOVER_SHIFT;
+        int labelRight = this.leftPos + this.getLabelBaseX() + LABEL_LEVEL2_INDENT + this.labelWidth;
         int labelTop = this.topPos + this.getArrowUpY();
-        int labelBottom = this.topPos + this.getArrowDownY() + LABEL_ARROW_HEIGHT;
+        int labelBottom = this.topPos + this.getArrowDownY() + this.labelHeight;
         return mouseX >= labelLeft && mouseX <= labelRight && mouseY >= labelTop && mouseY <= labelBottom;
+    }
+
+    private String fitLabelTitle(Component title) {
+        String text = title.getString();
+        int maxWidth = Math.max(1, this.labelWidth - 6);
+        if (this.font.width(text) <= maxWidth) {
+            return text;
+        }
+        String ellipsis = "...";
+        int ellipsisWidth = this.font.width(ellipsis);
+        if (ellipsisWidth >= maxWidth) {
+            return this.font.plainSubstrByWidth(text, maxWidth);
+        }
+        return this.font.plainSubstrByWidth(text, maxWidth - ellipsisWidth) + ellipsis;
     }
 
     /**
@@ -1129,7 +1239,7 @@ public class GuideScreen extends Screen {
     private Style getStyleAtComponentPosition(
         MDComponent component, Minecraft minecraft, double mouseX, double mouseY
     ) {
-        return component.getStyleAtPosition(minecraft, mouseX, mouseY, CONTENT_WIDTH);
+        return component.getStyleAtPosition(minecraft, mouseX, mouseY, this.getContentWidth());
     }
 
     protected record LabelEntry(

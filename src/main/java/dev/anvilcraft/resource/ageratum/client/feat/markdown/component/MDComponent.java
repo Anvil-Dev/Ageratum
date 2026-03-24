@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
@@ -68,7 +67,7 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
         PoseStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {

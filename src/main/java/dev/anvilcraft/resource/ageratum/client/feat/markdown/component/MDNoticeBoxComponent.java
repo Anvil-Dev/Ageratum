@@ -52,7 +52,7 @@ public class MDNoticeBoxComponent extends MDComponent {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
         if (this.contentComponents.isEmpty()) {
             return;
         }
@@ -69,10 +69,11 @@ public class MDNoticeBoxComponent extends MDComponent {
         // 绘制内容
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.translate(PADDING + BORDER_WIDTH, PADDING, 0);
+        int translateX = PADDING + BORDER_WIDTH;
+        pose.translate(translateX, PADDING, 0);
 
         for (MDComponent component : this.contentComponents) {
-            component.render(guiGraphics, minecraft, contentWidth, Integer.MAX_VALUE);
+            component.render(guiGraphics, minecraft, contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING);
             int componentHeight = component.getHeight(minecraft, contentWidth, Integer.MAX_VALUE);
             pose.translate(0, componentHeight, 0);
         }

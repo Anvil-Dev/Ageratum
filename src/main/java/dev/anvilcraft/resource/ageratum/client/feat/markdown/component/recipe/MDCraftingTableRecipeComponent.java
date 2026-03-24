@@ -51,13 +51,15 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
     }
 
     @Override
-    protected void renderRecipe(GuiGraphics guiGraphics) {
+    protected void renderRecipe(GuiGraphics guiGraphics, float mouseX, float mouseY) {
         if (this.resultItem == null || this.ingredients == null) return;
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         // 放大物品渲染，使其与背景框体视觉尺寸匹配。
         pose.scale(1.6F, 1.6F, 1.0F);
         pose.translate(5.5F, 4.0F, 0.0F);
+        float scaledMouseX = mouseX / 1.6F - 5.5F;
+        float scaledMouseY = mouseY / 1.6F - 4.0F;
         for (int i = 0; i < this.ingredients.size(); i++) {
             Ingredient ingredient = this.ingredients.get(i);
             if (ingredient.isEmpty()) continue;
@@ -68,10 +70,24 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             if (items.length > 0) {
                 ItemStack itemStack = items[0];
                 guiGraphics.renderItem(itemStack, x, y);
+                guiGraphics.renderItemDecorations(Minecraft.getInstance().font, itemStack, x, y);
+                if (this.isHoverItem(x, y, scaledMouseX, scaledMouseY)) {
+                    guiGraphics.renderTooltip(
+                        Minecraft.getInstance().font,
+                        itemStack,
+                        (int) Math.floor(scaledMouseX),
+                        (int) Math.floor(scaledMouseY)
+                    );
+                }
             }
         }
         pose.translate(-0.5F, 0.0F, 0.0F);
+        scaledMouseX = scaledMouseX + 0.5F;
         guiGraphics.renderItem(this.resultItem, 125, 25);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 125, 25);
+        if (this.isHoverItem(125, 25, scaledMouseX, scaledMouseY)) {
+            guiGraphics.renderTooltip(Minecraft.getInstance().font, this.resultItem, Math.round(scaledMouseX), Math.round(scaledMouseY));
+        }
         pose.popPose();
     }
 }

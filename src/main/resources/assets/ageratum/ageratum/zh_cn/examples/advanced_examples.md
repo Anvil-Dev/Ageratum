@@ -10,7 +10,7 @@ navigation:
 
 ### 注册扩展
 
-```java
+```java{5-12}
 public class MyModComponents {
     public static final DeferredRegister<MDExtensionComponentFactory> COMPONENTS =
         AgeratumRegistries.createExtensionComponentFactoryRegister("mymod");
