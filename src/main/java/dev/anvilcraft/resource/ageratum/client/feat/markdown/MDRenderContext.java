@@ -12,16 +12,16 @@ import java.util.Optional;
 
 public record MDRenderContext(
     GuiGraphics graphics,
-    List<List<Component>> tooltipLines,
-    List<Optional<TooltipComponent>> visualTooltipComponent
+    List<Tooltip> tooltips
 ) {
     public void addTooltip(ItemStack stack) {
-        this.tooltipLines.add(Screen.getTooltipFromItem(Minecraft.getInstance(), stack));
-        this.visualTooltipComponent.add(stack.getTooltipImage());
+        this.tooltips.add(new Tooltip(Screen.getTooltipFromItem(Minecraft.getInstance(), stack), stack.getTooltipImage()));
     }
 
     public void renderTooltip(Component text) {
-        this.tooltipLines.add(List.of(text));
-        this.visualTooltipComponent.add(Optional.empty());
+        this.tooltips.add(new Tooltip(List.of(text), Optional.empty()));
+    }
+
+    public record Tooltip(List<Component> tooltipLines, Optional<TooltipComponent> visualTooltipComponent) {
     }
 }
