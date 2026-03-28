@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -63,22 +64,19 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
         for (int i = 0; i < this.ingredients.size(); i++) {
             Ingredient ingredient = this.ingredients.get(i);
             if (ingredient.isEmpty()) continue;
-            ItemStack[] items = ingredient.getItems();
-            // 统一使用每个 Ingredient 的第一个候选物品作为静态预览。
+            ItemStack displaying = RecipeUtil.getDisplayItem(ingredient);
+            if (displaying.isEmpty()) continue;
             int x = (i % 3) * 25;
             int y = (i / 3) * 25;
-            if (items.length > 0) {
-                ItemStack itemStack = items[0];
-                guiGraphics.renderItem(itemStack, x, y);
-                guiGraphics.renderItemDecorations(Minecraft.getInstance().font, itemStack, x, y);
-                if (this.isHoverItem(x, y, scaledMouseX, scaledMouseY)) {
-                    guiGraphics.renderTooltip(
-                        Minecraft.getInstance().font,
-                        itemStack,
-                        (int) Math.floor(scaledMouseX),
-                        (int) Math.floor(scaledMouseY)
-                    );
-                }
+            guiGraphics.renderItem(displaying, x, y);
+            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
+            if (this.isHoverItem(x, y, scaledMouseX, scaledMouseY)) {
+                guiGraphics.renderTooltip(
+                    Minecraft.getInstance().font,
+                    displaying,
+                    (int) Math.floor(scaledMouseX),
+                    (int) Math.floor(scaledMouseY)
+                );
             }
         }
         pose.translate(-0.5F, 0.0F, 0.0F);
