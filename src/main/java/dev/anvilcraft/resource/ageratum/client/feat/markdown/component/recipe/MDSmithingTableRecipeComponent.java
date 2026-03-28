@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.mixin.accessor.SmithingTransformRecipeAccessor;
 import dev.anvilcraft.resource.ageratum.mixin.accessor.SmithingTrimRecipeAccessor;
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
@@ -67,7 +68,8 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
     }
 
     @Override
-    protected void renderRecipe(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
+        GuiGraphics guiGraphics = context.graphics();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.translate(8F, 8F, 0.0F);
@@ -81,24 +83,15 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
             int x = (i % 3) * 19;
             guiGraphics.renderItem(displaying, x, 0);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, 0);
-            if (this.isHoverItem(x, 0, mouseX, mouseY)) {
-                guiGraphics.renderTooltip(
-                    Minecraft.getInstance().font,
-                    displaying,
-                    (int) Math.floor(mouseX),
-                    (int) Math.floor(mouseY)
-                );
-            }
+            this.renderTooltip(context, displaying, x, 0, mouseX, mouseY);
         }
         ItemStack resultItem = this.resultSupplier.get();
         guiGraphics.renderItem(resultItem, 92, 0);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
-        if (this.isHoverItem(92, 0, mouseX, mouseY)) {
-            guiGraphics.renderTooltip(Minecraft.getInstance().font, resultItem, Math.round(mouseX), Math.round(mouseY));
-        }
+        this.renderTooltip(context, resultItem, 92, 0, mouseX, mouseY);
         pose.popPose();
     }
-    
+
     private static Ingredient getRecipeTemplate(SmithingRecipe smithingRecipe) {
         return switch (smithingRecipe) {
             case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).getTemplate();
@@ -131,10 +124,16 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
             }
             case SmithingTrimRecipe recipe -> {
                 SmithingTrimRecipeAccessor accessor = (SmithingTrimRecipeAccessor) recipe;
-                
+
                 ItemStack base = RecipeUtil.getDisplayItem(accessor.getBase());
-                Optional<Holder.Reference<TrimMaterial>> materialOp = TrimMaterials.getFromIngredient(registries, RecipeUtil.getDisplayItem(accessor.getAddition()));
-                Optional<Holder.Reference<TrimPattern>> patternOp = TrimPatterns.getFromTemplate(registries, RecipeUtil.getDisplayItem(accessor.getTemplate()));
+                Optional<Holder.Reference<TrimMaterial>> materialOp = TrimMaterials.getFromIngredient(
+                    registries,
+                    RecipeUtil.getDisplayItem(accessor.getAddition())
+                );
+                Optional<Holder.Reference<TrimPattern>> patternOp = TrimPatterns.getFromTemplate(
+                    registries,
+                    RecipeUtil.getDisplayItem(accessor.getTemplate())
+                );
                 if (materialOp.isEmpty() || patternOp.isEmpty()) yield ItemStack.EMPTY;
 
                 ItemStack baseCopied = base.copyWithCount(1);

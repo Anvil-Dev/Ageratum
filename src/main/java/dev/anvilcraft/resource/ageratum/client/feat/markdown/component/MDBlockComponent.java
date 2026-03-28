@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -30,7 +31,15 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     @Override
-    public final void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public final void render(
+        MDRenderContext context,
+        Minecraft minecraft,
+        int maxX,
+        int maxY,
+        float mouseX,
+        float mouseY
+    ) {
+        GuiGraphics guiGraphics = context.graphics();
         int y = 0;
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);

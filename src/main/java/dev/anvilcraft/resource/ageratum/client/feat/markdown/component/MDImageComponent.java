@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -35,13 +36,23 @@ public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
     protected final ResourceLocation imageLocation;
+    protected final boolean shouldScaleUp;
+    protected float scale = 1.0f;
 
     /**
      * 创建图片组件。
      */
     public MDImageComponent(ResourceLocation imageLocation) {
+        this(imageLocation, false);
+    }
+
+    /**
+     * 创建图片组件。
+     */
+    public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp) {
         super(FormattedText.EMPTY);
         this.imageLocation = imageLocation.withPrefix("textures/");
+        this.shouldScaleUp = shouldScaleUp;
     }
 
     /**
@@ -69,7 +80,15 @@ public class MDImageComponent extends MDComponent {
      * 按缩放后的尺寸渲染图片。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context,
+        Minecraft minecraft,
+        int maxX,
+        int maxY,
+        float mouseX,
+        float mouseY
+    ) {
+        GuiGraphics guiGraphics = context.graphics();
         Size size = this.resolveSize(minecraft);
         Size renderSize = this.computeRenderSize(size, maxX, maxY);
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {
@@ -80,11 +99,12 @@ public class MDImageComponent extends MDComponent {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(scaleX, scaleY, 1.0f);
-        this.renderContent(guiGraphics, size, mouseX / scaleX, mouseY / scaleY);
+        this.renderContent(context, size, mouseX / scaleX, mouseY / scaleY);
         pose.popPose();
     }
 
-    protected void renderContent(GuiGraphics guiGraphics, Size size, float mouseX, float mouseY) {
+    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphics guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 
@@ -123,20 +143,30 @@ public class MDImageComponent extends MDComponent {
     }
 
     protected boolean shouldScaleUp() {
-        return false;
+        return this.shouldScaleUp;
     }
 
     /**
      * 在可用宽高约束下计算等比缩放后的尺寸。
      */
     protected Size computeRenderSize(Size source, int maxX, int maxY) {
+        float scale = computeScale(source, maxX, maxY);
+        this.scale = scale;
+        int width = Math.max(1, Math.round(source.width() * scale));
+        int height = Math.max(1, Math.round(source.height() * scale));
+        return new Size(width, height);
+    }
+
+    protected float computeScale(Size source, int maxX, int maxY) {
         int availableWidth = Math.max(1, maxX);
         int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : availableWidth;
         float scale = Math.min((float) availableWidth / source.width(), (float) availableHeight / source.height());
         if (!this.shouldScaleUp()) scale = Math.min(1.0f, scale);
-        int width = Math.max(1, Math.round(source.width() * scale));
-        int height = Math.max(1, Math.round(source.height() * scale));
-        return new Size(width, height);
+        return scale;
+    }
+
+    protected float getScaleInRender() {
+        return this.scale;
     }
 
     /**

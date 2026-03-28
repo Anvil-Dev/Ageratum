@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -67,7 +68,15 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context,
+        Minecraft minecraft,
+        int maxX,
+        int maxY,
+        float mouseX,
+        float mouseY
+    ) {
+        GuiGraphics guiGraphics = context.graphics();
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
         PoseStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {

@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -213,7 +214,15 @@ public class MDCodeBlockComponent extends MDComponent {
      * 渲染代码块主体与行号栏。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context,
+        Minecraft minecraft,
+        int maxX,
+        int maxY,
+        float mouseX,
+        float mouseY
+    ) {
+        GuiGraphics guiGraphics = context.graphics();
         int blockHeight = this.getHeight(minecraft, maxX, maxY);
         guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
         guiGraphics.renderOutline(0, 0, maxX, blockHeight, BORDER_COLOR);

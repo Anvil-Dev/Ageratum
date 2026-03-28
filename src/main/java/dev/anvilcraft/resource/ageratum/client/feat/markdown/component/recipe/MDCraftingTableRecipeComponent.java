@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -52,13 +53,15 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
     }
 
     @Override
-    protected void renderRecipe(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
+        GuiGraphics guiGraphics = context.graphics();
         if (this.resultItem == null || this.ingredients == null) return;
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.translate(9F, 9F, 0.0F);
         mouseX -= 9;
         mouseY -= 9;
+        PoseStack poseStack = guiGraphics.pose();
         for (int i = 0; i < this.ingredients.size(); i++) {
             Ingredient ingredient = this.ingredients.get(i);
             if (ingredient.isEmpty()) continue;
@@ -68,20 +71,16 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             int y = (i / 3) * 19;
             guiGraphics.renderItem(displaying, x, y);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
-            if (this.isHoverItem(x, y, mouseX, mouseY)) {
-                guiGraphics.renderTooltip(
-                    Minecraft.getInstance().font,
-                    displaying,
-                    (int) Math.floor(mouseX),
-                    (int) Math.floor(mouseY)
-                );
-            }
+            this.renderTooltip(context, displaying, x, y, mouseX, mouseY);
         }
         guiGraphics.renderItem(this.resultItem, 93, 19);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
         if (this.isHoverItem(93, 19, mouseX, mouseY)) {
-            guiGraphics.renderTooltip(Minecraft.getInstance().font, this.resultItem, Math.round(mouseX), Math.round(mouseY));
+            poseStack.pushPose();
+            poseStack.scale(1 / this.getScaleInRender(), 1 / this.getScaleInRender(), 1 / this.getScaleInRender());
+            poseStack.popPose();
         }
+        this.renderTooltip(context, this.resultItem, 93, 19, mouseX, mouseY);
         pose.popPose();
     }
 }

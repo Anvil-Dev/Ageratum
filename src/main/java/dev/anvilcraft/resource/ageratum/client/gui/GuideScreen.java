@@ -5,6 +5,7 @@ import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
@@ -19,6 +20,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import org.lwjgl.glfw.GLFW;
 
 import java.net.URLDecoder;
@@ -1113,9 +1115,17 @@ public class GuideScreen extends Screen {
         float translatedMouseX = mouseX - this.getContentStartX();
         float translatedMouseY = mouseY - (this.getContentStartY() - this.contentScroll);
         // 逐个渲染 Markdown 组件，每个组件渲染后向下平移其高度加间距
+        MDRenderContext context = new MDRenderContext(guiGraphics, new ArrayList<>(), new ArrayList<>());
         for (MDComponent component : this.parsedComponents) {
             pose.pushPose();
-            component.render(guiGraphics, this.minecraft, this.getContentWidth(), Integer.MAX_VALUE, translatedMouseX, translatedMouseY);
+            component.render(
+                context,
+                this.minecraft,
+                this.getContentWidth(),
+                Integer.MAX_VALUE,
+                translatedMouseX,
+                translatedMouseY
+            );
             pose.popPose();
             int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
             pose.translate(0, offsetY, 0);
@@ -1124,6 +1134,13 @@ public class GuideScreen extends Screen {
 
         pose.popPose();
         guiGraphics.disableScissor();
+        if (context.tooltipLines().size() == context.visualTooltipComponent().size()) {
+            for (int i = 0; i < context.tooltipLines().size(); i++) {
+                List<Component> components = context.tooltipLines().get(i);
+                Optional<TooltipComponent> tooltipComponent = context.visualTooltipComponent().get(i);
+                guiGraphics.renderTooltip(this.minecraft.font, components, tooltipComponent, mouseX, mouseY);
+            }
+        }
     }
 
     public float getBgImageScale() {

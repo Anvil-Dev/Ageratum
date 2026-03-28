@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
@@ -11,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -45,27 +47,23 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      * 创建配方组件。
      */
     public MDRecipeComponent(ResourceLocation imageLocation, int width, int height) {
-        super(imageLocation);
+        super(imageLocation, true);
         this.width = width;
         this.height = height;
     }
 
     @Override
-    protected void renderContent(GuiGraphics guiGraphics, Size size, float mouseX, float mouseY) {
+    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphics guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
-        this.renderRecipe(guiGraphics, mouseX, mouseY);
-    }
-
-    @Override
-    protected boolean shouldScaleUp() {
-        return true;
+        this.renderRecipe(context, mouseX, mouseY);
     }
 
     /**
      * 在组件底图上绘制配方具体内容（输入、输出等）。
      */
-    protected void renderRecipe(GuiGraphics guiGraphics, float mouseX, float mouseY) {
+    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
     }
 
     /**
@@ -149,14 +147,21 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+        public void render(
+            MDRenderContext context,
+            Minecraft minecraft,
+            int maxX,
+            int maxY,
+            float mouseX,
+            float mouseY
+        ) {
             if (component != null) {
-                this.component.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
+                this.component.render(context, minecraft, maxX, maxY, mouseX, mouseY);
                 return;
             }
             ClientLevel level = minecraft.level;
             if (level == null) {
-                emptyComponent.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
+                emptyComponent.render(context, minecraft, maxX, maxY, mouseX, mouseY);
                 return;
             }
             RecipeManager manager = level.getRecipeManager();
@@ -166,7 +171,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                     return;
                 }
             }
-            emptyComponent.render(guiGraphics, minecraft, maxX, maxY, mouseX, mouseY);
+            emptyComponent.render(context, minecraft, maxX, maxY, mouseX, mouseY);
         }
 
         /**
@@ -201,5 +206,18 @@ public abstract class MDRecipeComponent extends MDImageComponent {
 
     public boolean isHover(int startX, int startY, int width, int height, float mouseX, float mouseY) {
         return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
+    }
+
+    protected void renderTooltip(
+        MDRenderContext context,
+        ItemStack stack,
+        int startX,
+        int startY,
+        float mouseX,
+        float mouseY
+    ) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+        }
     }
 }

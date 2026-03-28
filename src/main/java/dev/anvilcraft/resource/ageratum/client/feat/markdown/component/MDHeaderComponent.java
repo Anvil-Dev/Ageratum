@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -76,11 +77,26 @@ public class MDHeaderComponent extends MDComponent {
      * 渲染标题文本；一级标题额外绘制一条分隔线。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context,
+        Minecraft minecraft,
+        int maxX,
+        int maxY,
+        float mouseX,
+        float mouseY
+    ) {
+        GuiGraphics guiGraphics = context.graphics();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(this.getScale(), this.getScale(), 1);
-        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY), mouseX / this.getScale(), mouseY / this.getScale());
+        super.render(
+            context,
+            minecraft,
+            this.unscale(maxX),
+            this.unscale(maxY),
+            mouseX / this.getScale(),
+            mouseY / this.getScale()
+        );
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
             guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
