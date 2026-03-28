@@ -57,6 +57,11 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         this.renderRecipe(guiGraphics, mouseX, mouseY);
     }
 
+    @Override
+    protected boolean shouldScaleUp() {
+        return true;
+    }
+
     /**
      * 在组件底图上绘制配方具体内容（输入、输出等）。
      */
@@ -190,11 +195,11 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
     }
 
-    public boolean isHoverItem(int startX,int startY, float mouseX, float mouseY){
+    public boolean isHoverItem(int startX, int startY, float mouseX, float mouseY) {
         return this.isHover(startX, startY, 16, 16, mouseX, mouseY);
     }
 
-    public boolean isHover(int startX,int startY, int width, int height, float mouseX, float mouseY){
+    public boolean isHover(int startX, int startY, int width, int height, float mouseX, float mouseY) {
         return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
     }
 }

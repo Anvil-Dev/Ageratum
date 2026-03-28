@@ -40,7 +40,7 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
      * 创建工作台配方组件。
      */
     public MDCraftingTableRecipeComponent(CraftingRecipe recipe) {
-        super(MDCraftingTableRecipeComponent.CRAFTING_TABLE_COMPONENT_TEXTURE, 256, 128);
+        super(MDCraftingTableRecipeComponent.CRAFTING_TABLE_COMPONENT_TEXTURE, 128, 72);
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             this.ingredients = null;
@@ -56,35 +56,31 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
         if (this.resultItem == null || this.ingredients == null) return;
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        // 放大物品渲染，使其与背景框体视觉尺寸匹配。
-        pose.scale(1.6F, 1.6F, 1.0F);
-        pose.translate(5.5F, 4.0F, 0.0F);
-        float scaledMouseX = mouseX / 1.6F - 5.5F;
-        float scaledMouseY = mouseY / 1.6F - 4.0F;
+        pose.translate(9F, 9F, 0.0F);
+        mouseX -= 9;
+        mouseY -= 9;
         for (int i = 0; i < this.ingredients.size(); i++) {
             Ingredient ingredient = this.ingredients.get(i);
             if (ingredient.isEmpty()) continue;
             ItemStack displaying = RecipeUtil.getDisplayItem(ingredient);
             if (displaying.isEmpty()) continue;
-            int x = (i % 3) * 25;
-            int y = (i / 3) * 25;
+            int x = (i % 3) * 19;
+            int y = (i / 3) * 19;
             guiGraphics.renderItem(displaying, x, y);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
-            if (this.isHoverItem(x, y, scaledMouseX, scaledMouseY)) {
+            if (this.isHoverItem(x, y, mouseX, mouseY)) {
                 guiGraphics.renderTooltip(
                     Minecraft.getInstance().font,
                     displaying,
-                    (int) Math.floor(scaledMouseX),
-                    (int) Math.floor(scaledMouseY)
+                    (int) Math.floor(mouseX),
+                    (int) Math.floor(mouseY)
                 );
             }
         }
-        pose.translate(-0.5F, 0.0F, 0.0F);
-        scaledMouseX = scaledMouseX + 0.5F;
-        guiGraphics.renderItem(this.resultItem, 125, 25);
-        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 125, 25);
-        if (this.isHoverItem(125, 25, scaledMouseX, scaledMouseY)) {
-            guiGraphics.renderTooltip(Minecraft.getInstance().font, this.resultItem, Math.round(scaledMouseX), Math.round(scaledMouseY));
+        guiGraphics.renderItem(this.resultItem, 93, 19);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
+        if (this.isHoverItem(93, 19, mouseX, mouseY)) {
+            guiGraphics.renderTooltip(Minecraft.getInstance().font, this.resultItem, Math.round(mouseX), Math.round(mouseY));
         }
         pose.popPose();
     }

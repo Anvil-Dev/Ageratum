@@ -80,7 +80,6 @@ public class MDImageComponent extends MDComponent {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale(scaleX, scaleY, 1.0f);
-        this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
         this.renderContent(guiGraphics, size, mouseX / scaleX, mouseY / scaleY);
         pose.popPose();
     }
@@ -123,6 +122,10 @@ public class MDImageComponent extends MDComponent {
         return this.computeRenderSize(size, maxX, maxY).height();
     }
 
+    protected boolean shouldScaleUp() {
+        return false;
+    }
+
     /**
      * 在可用宽高约束下计算等比缩放后的尺寸。
      */
@@ -130,7 +133,7 @@ public class MDImageComponent extends MDComponent {
         int availableWidth = Math.max(1, maxX);
         int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : availableWidth;
         float scale = Math.min((float) availableWidth / source.width(), (float) availableHeight / source.height());
-        scale = Math.min(1.0f, scale);
+        if (!this.shouldScaleUp()) scale = Math.min(1.0f, scale);
         int width = Math.max(1, Math.round(source.width() * scale));
         int height = Math.max(1, Math.round(source.height() * scale));
         return new Size(width, height);
