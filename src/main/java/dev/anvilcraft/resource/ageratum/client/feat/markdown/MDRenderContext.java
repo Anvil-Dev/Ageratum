@@ -18,7 +18,7 @@ public record MDRenderContext(
         this.tooltips.add(new Tooltip(Screen.getTooltipFromItem(Minecraft.getInstance(), stack), stack.getTooltipImage()));
     }
 
-    public void renderTooltip(Component text) {
+    public void addTooltip(Component text) {
         this.tooltips.add(new Tooltip(List.of(text), Optional.empty()));
     }
 
