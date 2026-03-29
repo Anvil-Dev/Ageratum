@@ -94,12 +94,10 @@ public class MDImageComponent extends MDComponent {
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {
             return;
         }
-        float scaleX = (float) renderSize.width() / size.width();
-        float scaleY = (float) renderSize.height() / size.height();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.scale(scaleX, scaleY, 1.0f);
-        this.renderContent(context, size, mouseX / scaleX, mouseY / scaleY);
+        pose.scale(renderSize.scale(), renderSize.scale(), renderSize.scale());
+        this.renderContent(context, size, mouseX / renderSize.scale(), mouseY / renderSize.scale());
         pose.popPose();
     }
 
@@ -154,7 +152,7 @@ public class MDImageComponent extends MDComponent {
         this.scale = scale;
         int width = Math.max(1, Math.round(source.width() * scale));
         int height = Math.max(1, Math.round(source.height() * scale));
-        return new Size(width, height);
+        return new Size(width, height, scale);
     }
 
     protected float computeScale(Size source, int maxX, int maxY) {
@@ -177,12 +175,12 @@ public class MDImageComponent extends MDComponent {
         if (cachedSize != null) {
             return cachedSize;
         }
-        Size size = new Size(16, 16);
+        Size size = new Size(16, 16, 1.0f);
         try {
             Resource resource = minecraft.getResourceManager().getResource(this.getImageLocation()).orElse(null);
             if (resource != null) {
                 try (NativeImage image = NativeImage.read(resource.open())) {
-                    size = new Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()));
+                    size = new Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()), 1.0f);
                 }
             }
         } catch (IOException ignored) {
@@ -195,7 +193,7 @@ public class MDImageComponent extends MDComponent {
     /**
      * 简单尺寸值对象。
      */
-    public record Size(int width, int height) {
+    public record Size(int width, int height, float scale) {
     }
 }
 

@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -83,7 +84,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        Size size = new Size(this.width, this.height);
+        Size size = new Size(this.width, this.height, 1.0f);
         return this.computeRenderSize(size, maxX, maxY).height();
     }
 
@@ -241,5 +242,13 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
         }
+    }
+
+    protected void renderItem(MDRenderContext context, ItemStack stack, int startX, int startY) {
+        GuiGraphics graphics = context.graphics();
+        PoseStack poseStack = graphics.pose();
+        poseStack.pushPose();
+        graphics.renderItem(stack, startX, startY);
+        poseStack.popPose();
     }
 }

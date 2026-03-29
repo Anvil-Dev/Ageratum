@@ -486,6 +486,7 @@ public class GuideScreen extends Screen {
         int end = Math.min(this.labelEntries.size(), start + this.getLabelVisibleRows());
         String currentFile = this.getCurrentFileArgument();
         PoseStack pose = guiGraphics.pose();
+        float labelImageScale = this.getLabelImageScale();
         for (int index = start; index < end; index++) {
             int row = index - start;
             LabelEntry entry = this.labelEntries.get(index);
@@ -504,7 +505,7 @@ public class GuideScreen extends Screen {
                 originX -= LABEL_HOVER_SHIFT;
             }
             pose.pushPose();
-            pose.scale(this.getLabelImageScale(), this.getLabelImageScale(), 0);
+            pose.scale(labelImageScale, labelImageScale, labelImageScale);
             guiGraphics.blit(
                 entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
                 originX * this.getLabelScaleCountDown(),
@@ -533,7 +534,7 @@ public class GuideScreen extends Screen {
         int originY = this.getCloseButtonY();
         boolean isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
         pose.pushPose();
-        pose.scale(this.getLabelImageScale(), this.getLabelImageScale(), 0);
+        pose.scale(labelImageScale, labelImageScale, labelImageScale);
         guiGraphics.blit(
             BUTTON_CLOSE_LOCATION,
             originX * this.getLabelScaleCountDown(),
@@ -633,7 +634,8 @@ public class GuideScreen extends Screen {
         int arrowDownY = this.getArrowDownY();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.scale(this.getLabelImageScale(), this.getLabelImageScale(), 0);
+        float labelImageScale = this.getLabelImageScale();
+        pose.scale(labelImageScale, labelImageScale, labelImageScale);
         if (this.labelScrollRows > 0) {
             float alpha = this.computeArrowAlpha(this.labelScrollRows);
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);

@@ -88,14 +88,15 @@ public class MDHeaderComponent extends MDComponent {
         GuiGraphics guiGraphics = context.graphics();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.scale(this.getScale(), this.getScale(), 1);
+        float scale = this.getScale();
+        pose.scale(scale, scale, scale);
         super.render(
             context,
             minecraft,
             this.unscale(maxX),
             this.unscale(maxY),
-            mouseX / this.getScale(),
-            mouseY / this.getScale()
+            mouseX / scale,
+            mouseY / scale
         );
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
