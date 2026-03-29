@@ -269,7 +269,7 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 ### 结构 NBT 组件
 
 使用 `structure`（或兼容别名 `nbt_structure`）扩展，可以在文档中渲染 `data/<namespace>/structure/*.nbt`
-结构文件的摘要与 NBT 树状视图：
+结构文件的摘要、俯视方块预览与 NBT 树状视图：
 
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
@@ -284,7 +284,8 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 - `maxEntries`：可选，每层最多显示的键/列表项数量，默认 `12`
 - 支持相对路径：如 `./test.nbt`、`../shared/demo.nbt`，相对于当前文档所在目录解析；可直接指向资源包中与 Markdown 同目录的 `.nbt` 文件
 - 预览模式下，相对路径会从 `run/ageratum_review/` 下的对应位置读取 `.nbt` 文件
-- 渲染内容：结构尺寸、调色板/方块/实体统计，以及受限深度的 NBT 树
+- 渲染内容：结构尺寸、调色板/方块/实体统计、俯视方块预览，以及受限深度的 NBT 树
+- 将鼠标悬停在预览区的方块上时，可查看方块 ID、结构坐标、palette 索引及是否带块实体数据
 - 回退行为：当结构文件不存在或读取失败时，组件会在文档中显示错误信息
 
 ---

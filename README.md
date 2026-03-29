@@ -333,7 +333,7 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 
 ### 结构 NBT 组件（`<structure/>` / `<nbt_structure/>`）
 
-使用结构扩展可以在文档中直接渲染 `.nbt` 结构文件的摘要与 NBT 树：
+使用结构扩展可以在文档中直接渲染 `.nbt` 结构文件的摘要、俯视方块预览与 NBT 树：
 
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
@@ -345,7 +345,8 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 - `maxDepth`：可选，最大展开深度，默认 `2`
 - `maxEntries`：可选，每层最多显示的键/列表项数量，默认 `12`
 - 支持相对路径，按当前文档目录解析；可直接读取资源包中与 Markdown 同目录的 `.nbt` 文件，预览模式下则会从 `run/ageratum_review/` 读取对应文件
-- 组件会优先显示结构尺寸、调色板、方块数、实体数等摘要，再展示受限深度的 NBT 树
+- 组件会优先显示结构尺寸、调色板、方块数、实体数等摘要，其后渲染俯视方块预览，并在下方展示受限深度的 NBT 树
+- 将鼠标悬停到预览区域的方块上时，可查看方块 ID、结构坐标、palette 索引及是否带块实体数据
 
 ## 许可证
 
