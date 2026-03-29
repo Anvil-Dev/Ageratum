@@ -8,6 +8,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import dev.anvilcraft.resource.ageratum.client.util.PathUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -1239,7 +1240,7 @@ public class GuideScreen extends Screen {
         }
 
         String currentDir = this.getCurrentDirectoryPath();
-        String inCurrentDir = this.normalizePathAgainstBase(currentDir, normalizedTarget);
+        String inCurrentDir = PathUtil.normalizePathAgainstBase(currentDir, normalizedTarget);
         Optional<ResourceLocation> currentDirResolved = GuideDocumentLoader.resolveExistingLocation(
             resourceManager,
             this.documentLocation.getNamespace(),
@@ -1250,7 +1251,7 @@ public class GuideScreen extends Screen {
             return currentDirResolved;
         }
 
-        String inNamespaceRoot = this.normalizePathAgainstBase("", normalizedTarget);
+        String inNamespaceRoot = PathUtil.normalizePathAgainstBase("", normalizedTarget);
         Optional<ResourceLocation> namespaceRootResolved = GuideDocumentLoader.resolveExistingLocation(
             resourceManager,
             this.documentLocation.getNamespace(),
@@ -1277,14 +1278,14 @@ public class GuideScreen extends Screen {
 
         if (resolveRelative) {
             String currentDir = this.getCurrentDirectoryPath();
-            String inCurrentDir = this.normalizePathAgainstBase(currentDir, normalizedTarget);
+            String inCurrentDir = PathUtil.normalizePathAgainstBase(currentDir, normalizedTarget);
             Optional<ResourceLocation> inCurrentDirLocation = this.tryResolvePreviewDocument(inCurrentDir);
             if (inCurrentDirLocation.isPresent()) {
                 return inCurrentDirLocation;
             }
         }
 
-        String inRoot = this.normalizePathAgainstBase("", normalizedTarget);
+        String inRoot = PathUtil.normalizePathAgainstBase("", normalizedTarget);
         return this.tryResolvePreviewDocument(inRoot);
     }
 
@@ -1307,33 +1308,6 @@ public class GuideScreen extends Screen {
             return "";
         }
         return currentFile.substring(0, slash);
-    }
-
-    /**
-     * 将相对路径规范化到给定基目录下，支持 ./ 与 ../，并阻止越过根目录。
-     */
-    private String normalizePathAgainstBase(String baseDir, String target) {
-        String source = target;
-        while (source.startsWith("/")) {
-            source = source.substring(1);
-        }
-        String combined;
-        combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
-
-        List<String> parts = new ArrayList<>();
-        for (String segment : combined.split("/")) {
-            if (segment.isEmpty() || ".".equals(segment)) {
-                continue;
-            }
-            if ("..".equals(segment)) {
-                if (!parts.isEmpty()) {
-                    parts.removeLast();
-                }
-                continue;
-            }
-            parts.add(segment);
-        }
-        return String.join("/", parts);
     }
 
     private String getClientLanguageCode(Minecraft minecraft) {
