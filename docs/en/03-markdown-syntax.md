@@ -268,7 +268,7 @@ Block content here — supports Markdown syntax.
 
 ### Structure NBT Component
 
-Use the `structure` extension (or the compatibility alias `nbt_structure`) to render a summary, top-down block preview, and bounded NBT tree view for
+Use the `structure` extension to render a summary, top-down block preview, and bounded NBT tree view for
 structure files stored under `data/<namespace>/structure/*.nbt`:
 
 ```markdown
@@ -276,7 +276,6 @@ structure files stored under `data/<namespace>/structure/*.nbt`:
 
 <structure id="./test.nbt"/>
 
-<nbt_structure id="example:ruins/arch" maxDepth="3" maxEntries="8"/>
 ```
 
 - `id` / `path`: required, target structure file `ResourceLocation`
@@ -300,7 +299,6 @@ structure files stored under `data/<namespace>/structure/*.nbt`:
 | `ageratum:danger`        | `::: danger` or `<danger/>`   | 🔴 Red danger box            |
 | `ageratum:recipe`        | `<recipe id="..."/>`          | Recipe rendering             |
 | `ageratum:structure`     | `<structure id="..."/>`       | Structure NBT summary + tree |
-| `ageratum:nbt_structure` | `<nbt_structure id="..."/>`   | Structure NBT summary + tree |
 
 ### Recipe Component
 

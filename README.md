@@ -331,7 +331,7 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
     );
 ```
 
-### 结构 NBT 组件（`<structure/>` / `<nbt_structure/>`）
+### 结构 NBT 组件（`<structure/>`）
 
 使用结构扩展可以在文档中直接渲染 `.nbt` 结构文件的摘要、俯视方块预览与 NBT 树：
 

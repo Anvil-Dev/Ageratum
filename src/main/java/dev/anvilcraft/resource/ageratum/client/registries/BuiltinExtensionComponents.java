@@ -71,16 +71,6 @@ public final class BuiltinExtensionComponents {
             () -> MDNBTStructureComponent::parse
         );
 
-    /**
-     * 结构 NBT 扩展组件兼容别名注册项。
-     *
-     * <p>对应 Markdown 扩展标签：{@code <nbt_structure id="namespace:path"/>}。</p>
-     */
-    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> NBT_STRUCTURE =
-        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
-            "nbt_structure",
-            () -> MDNBTStructureComponent::parse
-        );
 
     private BuiltinExtensionComponents() {
     }

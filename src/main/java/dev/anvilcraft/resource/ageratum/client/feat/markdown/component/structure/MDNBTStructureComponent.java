@@ -46,8 +46,7 @@ import javax.annotation.Nullable;
 /**
  * NBT 结构文件渲染组件。
  *
- * <p>该组件由扩展标签 {@code <structure id="namespace:path"/>} 或
- * {@code <nbt_structure id="namespace:path"/>} 创建，
+ * <p>该组件由扩展标签 {@code <structure id="namespace:path"/>} 创建，
  * 用于在文档中渲染结构文件摘要与 NBT 树状视图。</p>
  */
 public final class MDNBTStructureComponent extends MDComponent {
@@ -97,7 +96,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     public static MDComponent parse(MDExtensionContext context) {
         String rawId = context.params().getOrDefault("id", context.params().get("path"));
         if (rawId == null || rawId.isBlank()) {
-            return new MDTextComponent("[错误：structure / nbt_structure 需要 id 或 path 参数]");
+            return new MDTextComponent("[错误：structure 需要 id 或 path 参数]");
         }
 
         try {

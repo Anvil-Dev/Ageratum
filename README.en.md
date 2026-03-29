@@ -160,7 +160,7 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
     );
 ```
 
-### Structure NBT Component (`<structure/>` / `<nbt_structure/>`)
+### Structure NBT Component (`<structure/>`)
 
 Use the structure extension to render a summary, top-down block preview, and bounded NBT tree for `.nbt` structure files directly inside documents:
 

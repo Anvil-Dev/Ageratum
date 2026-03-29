@@ -268,7 +268,7 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 ### 结构 NBT 组件
 
-使用 `structure`（或兼容别名 `nbt_structure`）扩展，可以在文档中渲染 `data/<namespace>/structure/*.nbt`
+使用 `structure` 扩展，可以在文档中渲染 `data/<namespace>/structure/*.nbt`
 结构文件的摘要、俯视方块预览与 NBT 树状视图：
 
 ```markdown
@@ -276,7 +276,6 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 <structure id="./test.nbt"/>
 
-<nbt_structure id="example:ruins/arch" maxDepth="3" maxEntries="8"/>
 ```
 
 - `id` / `path`：必填，目标结构文件的 `ResourceLocation`
@@ -300,7 +299,6 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 | `ageratum:danger`        | `::: danger` 或 `<danger/>`   | 🔴 红色危险框        |
 | `ageratum:recipe`        | `<recipe id="..."/>`         | 配方渲染            |
 | `ageratum:structure`     | `<structure id="..."/>`      | 结构 NBT 摘要 + 树视图 |
-| `ageratum:nbt_structure` | `<nbt_structure id="..."/>`  | 结构 NBT 摘要 + 树视图 |
 
 ### 配方组件
 
