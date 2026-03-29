@@ -39,8 +39,8 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
     /**
      * 创建切石机配方组件。
      */
-    public MDStonecutterRecipeComponent(StonecutterRecipe recipe) {
-        super(MDStonecutterRecipeComponent.STONECUTTER_COMPONENT_TEXTURE, 128, 32);
+    public MDStonecutterRecipeComponent(StonecutterRecipe recipe, boolean enableAlignCenter) {
+        super(MDStonecutterRecipeComponent.STONECUTTER_COMPONENT_TEXTURE, 128, 32, enableAlignCenter);
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             this.ingredient = null;

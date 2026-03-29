@@ -40,8 +40,8 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
     /**
      * 创建工作台配方组件。
      */
-    public MDCraftingTableRecipeComponent(CraftingRecipe recipe) {
-        super(MDCraftingTableRecipeComponent.CRAFTING_TABLE_COMPONENT_TEXTURE, 128, 72);
+    public MDCraftingTableRecipeComponent(CraftingRecipe recipe, boolean enableAlignCenter) {
+        super(MDCraftingTableRecipeComponent.CRAFTING_TABLE_COMPONENT_TEXTURE, 128, 72, enableAlignCenter);
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             this.ingredients = null;

@@ -39,8 +39,8 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
     /**
      * 创建熔炉类配方组件。
      */
-    public MDFurnaceRecipeComponent(AbstractCookingRecipe recipe) {
-        super(MDFurnaceRecipeComponent.FURNACE_COMPONENT_TEXTURE, 128, 53);
+    public MDFurnaceRecipeComponent(AbstractCookingRecipe recipe, boolean enableAlignCenter) {
+        super(MDFurnaceRecipeComponent.FURNACE_COMPONENT_TEXTURE, 128, 53, enableAlignCenter);
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             this.ingredient = null;

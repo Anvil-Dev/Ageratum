@@ -54,8 +54,8 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
     /**
      * 创建锻造台配方组件。
      */
-    public MDSmithingTableRecipeComponent(SmithingRecipe recipe) {
-        super(MDSmithingTableRecipeComponent.SMITHING_TABLE_COMPONENT_TEXTURE, 128, 32);
+    public MDSmithingTableRecipeComponent(SmithingRecipe recipe, boolean enableAlignCenter) {
+        super(MDSmithingTableRecipeComponent.SMITHING_TABLE_COMPONENT_TEXTURE, 128, 32, enableAlignCenter);
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             throw new IllegalStateException("ClientLevel cannot be null while creating MDSmithingTableRecipeComponent!");

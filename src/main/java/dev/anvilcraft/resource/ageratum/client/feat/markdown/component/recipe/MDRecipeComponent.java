@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -21,7 +20,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
 /**
@@ -48,8 +47,8 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     /**
      * 创建配方组件。
      */
-    public MDRecipeComponent(ResourceLocation imageLocation, int width, int height) {
-        super(imageLocation, true);
+    public MDRecipeComponent(ResourceLocation imageLocation, int width, int height, boolean enableAlignCenter) {
+        super(imageLocation, false, enableAlignCenter);
         this.width = width;
         this.height = height;
     }
@@ -75,8 +74,9 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      */
     public static MDComponent parse(MDExtensionContext context) {
         String id = context.params().get("id");
+        boolean enableAlignCenter = "true".equals(context.params().getOrDefault("center", "true"));
         ResourceLocation location = ResourceLocation.parse(id);
-        return new MDRecipeComponentProxy(location);
+        return new MDRecipeComponentProxy(location, enableAlignCenter);
     }
 
     /**
@@ -100,26 +100,16 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         /**
          * 由具体配方实例创建可渲染组件。
          */
-        MDRecipeComponent create(T recipe);
+        MDRecipeComponent create(T recipe, boolean enableAlignCenter);
 
         /**
          * 使用 lambda 快速构造工厂。
          */
         static <R extends Recipe<?>> RecipeComponentFactory<R> create(
             RecipeType<R> type,
-            Function<R, MDRecipeComponent> function
+            BiFunction<R, Boolean, MDRecipeComponent> function
         ) {
-            return new RecipeComponentFactory<>() {
-                @Override
-                public List<RecipeType<? extends R>> type() {
-                    return List.of(type);
-                }
-
-                @Override
-                public MDRecipeComponent create(R recipe) {
-                    return function.apply(recipe);
-                }
-            };
+            return RecipeComponentFactory.create(function, type);
         }
 
         /**
@@ -127,7 +117,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
          */
         @SafeVarargs
         static <R extends Recipe<?>> RecipeComponentFactory<R> create(
-            Function<R, MDRecipeComponent> function,
+            BiFunction<R, Boolean, MDRecipeComponent> function,
             RecipeType<? extends R>... types
         ) {
             return new RecipeComponentFactory<>() {
@@ -137,8 +127,8 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                 }
 
                 @Override
-                public MDRecipeComponent create(R recipe) {
-                    return function.apply(recipe);
+                public MDRecipeComponent create(R recipe, boolean enableAlignCenter) {
+                    return function.apply(recipe, enableAlignCenter);
                 }
             };
         }
@@ -164,8 +154,8 @@ public abstract class MDRecipeComponent extends MDImageComponent {
          */
         private final ResourceLocation location;
 
-        public MDRecipeComponentProxy(ResourceLocation location) {
-            super(Ageratum.location("empty"), 0, 0);
+        public MDRecipeComponentProxy(ResourceLocation location, boolean enableAlignCenter) {
+            super(Ageratum.location("empty"), 0, 0, enableAlignCenter);
             this.location = location;
         }
 
@@ -207,7 +197,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
             for (RecipeComponentFactory<?> factory : AgeratumRegistries.RECIPE_COMPONENT_FACTORY_REGISTRY) {
                 if (factory.type().contains(type)) {
                     RecipeComponentFactory<T> factoryT = (RecipeComponentFactory<T>) factory;
-                    this.component = factoryT.create(value);
+                    this.component = factoryT.create(value, this.enableAlignCenter);
                     return true;
                 }
             }
@@ -242,13 +232,5 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
         }
-    }
-
-    protected void renderItem(MDRenderContext context, ItemStack stack, int startX, int startY) {
-        GuiGraphics graphics = context.graphics();
-        PoseStack poseStack = graphics.pose();
-        poseStack.pushPose();
-        graphics.renderItem(stack, startX, startY);
-        poseStack.popPose();
     }
 }

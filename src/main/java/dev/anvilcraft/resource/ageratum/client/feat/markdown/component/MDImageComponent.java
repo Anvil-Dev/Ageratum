@@ -37,6 +37,7 @@ public class MDImageComponent extends MDComponent {
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
     protected final ResourceLocation imageLocation;
     protected final boolean shouldScaleUp;
+    protected final boolean enableAlignCenter;
     protected float scale = 1.0f;
 
     /**
@@ -50,9 +51,17 @@ public class MDImageComponent extends MDComponent {
      * 创建图片组件。
      */
     public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp) {
+        this(imageLocation, shouldScaleUp, false);
+    }
+
+    /**
+     * 创建图片组件。
+     */
+    public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp, boolean enableAlignCenter) {
         super(FormattedText.EMPTY);
         this.imageLocation = imageLocation.withPrefix("textures/");
         this.shouldScaleUp = shouldScaleUp;
+        this.enableAlignCenter = enableAlignCenter;
     }
 
     /**
@@ -96,6 +105,9 @@ public class MDImageComponent extends MDComponent {
         }
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
+        if (this.enableAlignCenter) {
+            pose.translate((maxX - renderSize.width()) / 2.0f, 0, 0);
+        }
         pose.scale(renderSize.scale(), renderSize.scale(), renderSize.scale());
         this.renderContent(context, size, mouseX / renderSize.scale(), mouseY / renderSize.scale());
         pose.popPose();
