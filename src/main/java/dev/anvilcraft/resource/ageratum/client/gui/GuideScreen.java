@@ -80,7 +80,7 @@ public class GuideScreen extends Screen {
      */
     protected static final int BUTTON_IMAGE_HEIGHT = 16;
 
-    protected static final int MIN_HORIZONTAL_MARGIN = 25;
+    protected static final int MIN_HORIZONTAL_MARGIN = 32;
 
     protected static final int MIN_VERTICAL_MARGIN = 10;
 

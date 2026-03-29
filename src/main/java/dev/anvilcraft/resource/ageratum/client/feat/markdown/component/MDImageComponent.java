@@ -106,7 +106,9 @@ public class MDImageComponent extends MDComponent {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         if (this.enableAlignCenter) {
-            pose.translate((maxX - renderSize.width()) / 2.0f, 0, 0);
+            float translateX = (maxX - renderSize.width()) / 2.0f;
+            pose.translate(translateX, 0, 0);
+            mouseX -= translateX;
         }
         pose.scale(renderSize.scale(), renderSize.scale(), renderSize.scale());
         this.renderContent(context, size, mouseX / renderSize.scale(), mouseY / renderSize.scale());
