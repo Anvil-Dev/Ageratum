@@ -27,3 +27,19 @@
 <recipe id="minecraft:andesite_wall_from_andesite_stonecutting" />
 
 ---
+
+<recipe id="minecraft:iron_ingot_from_smelting_deepslate_iron_ore" />
+
+---
+
+<recipe id="minecraft:cooked_chicken_from_smoking" />
+
+---
+
+<recipe id="minecraft:iron_ingot_from_blasting_deepslate_iron_ore" />
+
+---
+
+<recipe id="minecraft:cooked_chicken_from_campfire_cooking" />
+
+---

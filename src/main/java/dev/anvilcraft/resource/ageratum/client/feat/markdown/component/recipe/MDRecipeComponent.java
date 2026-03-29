@@ -18,6 +18,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -93,7 +94,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         /**
          * 当前工厂支持的配方类型。
          */
-        RecipeType<T> type();
+        List<RecipeType<? extends T>> type();
 
         /**
          * 由具体配方实例创建可渲染组件。
@@ -109,8 +110,29 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         ) {
             return new RecipeComponentFactory<>() {
                 @Override
-                public RecipeType<R> type() {
-                    return type;
+                public List<RecipeType<? extends R>> type() {
+                    return List.of(type);
+                }
+
+                @Override
+                public MDRecipeComponent create(R recipe) {
+                    return function.apply(recipe);
+                }
+            };
+        }
+
+        /**
+         * 使用 lambda 快速构造工厂。
+         */
+        @SafeVarargs
+        static <R extends Recipe<?>> RecipeComponentFactory<R> create(
+            Function<R, MDRecipeComponent> function,
+            RecipeType<? extends R>... types
+        ) {
+            return new RecipeComponentFactory<>() {
+                @Override
+                public List<RecipeType<? extends R>> type() {
+                    return List.of(types);
                 }
 
                 @Override
@@ -182,7 +204,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
             T value = ((RecipeHolder<T>) holder).value();
             RecipeType<T> type = (RecipeType<T>) value.getType();
             for (RecipeComponentFactory<?> factory : AgeratumRegistries.RECIPE_COMPONENT_FACTORY_REGISTRY) {
-                if (factory.type() == type) {
+                if (factory.type().contains(type)) {
                     RecipeComponentFactory<T> factoryT = (RecipeComponentFactory<T>) factory;
                     this.component = factoryT.create(value);
                     return true;

@@ -10,23 +10,23 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.StonecutterRecipe;
 
 import javax.annotation.Nullable;
 
 /**
- * 切石机配方渲染组件。
+ * 熔炉类配方渲染组件。
  *
  * <p>将输入材料和输出物品绘制到固定背景纹理上，
  * 用于展示 {@link net.minecraft.world.item.crafting.RecipeType#CRAFTING} 配方。</p>
  */
 @Getter
-public class MDStonecutterRecipeComponent extends MDRecipeComponent {
+public class MDFurnaceRecipeComponent extends MDRecipeComponent {
     /**
-     * 切石机组件背景纹理。
+     * 熔炉类组件背景纹理。
      */
-    public static final ResourceLocation STONECUTTER_COMPONENT_TEXTURE = Ageratum.location("gui/component/stonecutter.png");
+    public static final ResourceLocation FURNACE_COMPONENT_TEXTURE = Ageratum.location("gui/component/furnace.png");
     /**
      * 输入材料；客户端世界缺失时为 {@code null}。
      */
@@ -37,10 +37,10 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
     private final @Nullable ItemStack resultItem;
 
     /**
-     * 创建切石机配方组件。
+     * 创建熔炉类配方组件。
      */
-    public MDStonecutterRecipeComponent(StonecutterRecipe recipe) {
-        super(MDStonecutterRecipeComponent.STONECUTTER_COMPONENT_TEXTURE, 128, 32);
+    public MDFurnaceRecipeComponent(AbstractCookingRecipe recipe) {
+        super(MDFurnaceRecipeComponent.FURNACE_COMPONENT_TEXTURE, 128, 53);
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             this.ingredient = null;
@@ -57,9 +57,9 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
         if (this.resultItem == null || this.ingredient == null) return;
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.translate(29F, 8F, 0.0F);
-        mouseX -= 28;
-        mouseY -= 7;
+        pose.translate(29F, 9F, 0.0F);
+        mouseX -= 29;
+        mouseY -= 9;
         RENDER_INGREDIENT:
         {
             if (this.ingredient.isEmpty()) break RENDER_INGREDIENT;
@@ -69,9 +69,9 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
             this.renderTooltip(context, displaying, 0, 0, mouseX, mouseY);
         }
-        guiGraphics.renderItem(this.resultItem, 54, 0);
-        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
-        this.renderTooltip(context, this.resultItem, 54, 0, mouseX, mouseY);
+        guiGraphics.renderItem(this.resultItem, 54, 10);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 10);
+        this.renderTooltip(context, this.resultItem, 54, 10, mouseX, mouseY);
         pose.popPose();
     }
 }
