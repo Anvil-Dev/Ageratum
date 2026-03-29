@@ -231,7 +231,7 @@ public class MDImageComponent extends MDComponent {
      * 获取图片原始尺寸，缺失时使用缓存或回退默认值。
      */
     protected Size resolveSize(Minecraft minecraft) {
-        if (AgeratumClient.PREVIEW_NAMESPACE.equals(this.getImageLocation().getNamespace())) {
+        if (AgeratumClient.isPreviewLocation(this.getImageLocation())) {
             return this.resolvePreviewSize(minecraft);
         }
 

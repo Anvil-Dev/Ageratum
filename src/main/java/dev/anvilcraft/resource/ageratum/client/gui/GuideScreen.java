@@ -1098,7 +1098,7 @@ public class GuideScreen extends Screen {
 
         Optional<ResourceLocation> resolved;
         if (parsed != null && target.contains(":")) {
-            if (AgeratumClient.PREVIEW_NAMESPACE.equals(parsed.getNamespace())) {
+            if (AgeratumClient.isPreviewLocation(parsed)) {
                 resolved = this.resolvePreviewLocation(parsed.getPath(), false);
             } else {
             // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。

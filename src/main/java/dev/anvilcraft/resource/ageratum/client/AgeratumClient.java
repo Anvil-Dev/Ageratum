@@ -248,15 +248,22 @@ public class AgeratumClient {
         }
 
         String content = GuideDocumentLoader.read(resourceManager, location);
-        MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
-        GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs);
-        screen.setAnchor(anchor);
-        screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
-        minecraft.setScreen(screen);
-        return true;
+        return AgeratumClient.parseDocumentAndSetScreen(
+            location,
+            anchor,
+            breadCrumbs,
+            minecraft,
+            inheritedLabelScrollRows,
+            inheritedLabelScrollRemainder,
+            content
+        );
     }
 
-    private static boolean openPreviewGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
+    private static boolean openPreviewGuideOnClient(
+        ResourceLocation location,
+        @Nullable String anchor,
+        List<ResourceLocation> breadCrumbs
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
         Path previewFile = resolvePreviewDocumentPath(location);
         if (!Files.isRegularFile(previewFile)) {
@@ -278,6 +285,26 @@ public class AgeratumClient {
             return false;
         }
 
+        return AgeratumClient.parseDocumentAndSetScreen(
+            location,
+            anchor,
+            breadCrumbs,
+            minecraft,
+            inheritedLabelScrollRows,
+            inheritedLabelScrollRemainder,
+            content
+        );
+    }
+
+    private static boolean parseDocumentAndSetScreen(
+        ResourceLocation location,
+        @Nullable String anchor,
+        List<ResourceLocation> breadCrumbs,
+        Minecraft minecraft,
+        int inheritedLabelScrollRows,
+        double inheritedLabelScrollRemainder,
+        String content
+    ) {
         MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
         GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs);
         screen.setAnchor(anchor);
