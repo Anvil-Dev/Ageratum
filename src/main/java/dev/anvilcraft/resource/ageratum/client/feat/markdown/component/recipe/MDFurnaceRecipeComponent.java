@@ -35,6 +35,10 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
      * 输出物品；客户端世界缺失时为 {@code null}。
      */
     private final @Nullable ItemStack resultItem;
+    /**
+     * 吐司图标；客户端世界缺失时为 {@code null}。
+     */
+    private final @Nullable ItemStack toastSymbol;
 
     /**
      * 创建熔炉类配方组件。
@@ -45,10 +49,13 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
         if (level == null) {
             this.ingredient = null;
             this.resultItem = null;
+            this.toastSymbol = null;
             return;
         }
         this.ingredient = recipe.getIngredients().getFirst();
         this.resultItem = recipe.getResultItem(level.registryAccess());
+        this.toastSymbol = recipe.getToastSymbol();
+
     }
 
     @Override
@@ -57,8 +64,8 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
         if (this.resultItem == null || this.ingredient == null) return;
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.translate(29F, 9F, 0.0F);
-        mouseX -= 29;
+        pose.translate(38F, 9F, 0.0F);
+        mouseX -= 38;
         mouseY -= 9;
         RENDER_INGREDIENT:
         {
@@ -72,6 +79,11 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
         guiGraphics.renderItem(this.resultItem, 54, 10);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 10);
         this.renderTooltip(context, this.resultItem, 54, 10, mouseX, mouseY);
+        if (this.toastSymbol != null) {
+            guiGraphics.renderItem(this.toastSymbol, -28, 12);
+            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.toastSymbol, -28, 12);
+            this.renderTooltip(context, this.toastSymbol, -28, 12, mouseX, mouseY);
+        }
         pose.popPose();
     }
 }
