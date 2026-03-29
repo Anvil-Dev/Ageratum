@@ -11,7 +11,8 @@
 
 # Ageratum - In-Game Handbook Framework
 
-A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game guides for other mods. Ageratum offers rich Markdown rendering, i18n localization, and an extensible custom syntax/component system.
+A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game guides for other mods. Ageratum offers rich Markdown
+rendering, i18n localization, and an extensible custom syntax/component system.
 
 ## [Documentation](https://anvil-dev.github.io/en/posts/docs/ageratum/)
 
@@ -20,6 +21,7 @@ A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game
 ### Core Markdown Support
 
 ✅ **Block Elements**
+
 - ATX headings (`# ~ ######`) and Setext headings (underline style)
 - Paragraphs and line breaks
 - Ordered, unordered, and task lists (multi-level nesting)
@@ -30,6 +32,7 @@ A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game
 - Images (namespace-local references)
 
 ✅ **Inline Elements**
+
 - **bold**, *italic*, ~~strikethrough~~
 - Inline code spans (multi-backtick support)
 - [Links](https://example.com) and autolinks
@@ -38,6 +41,7 @@ A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game
 - **Hover and Click Events** (`<hover>` and `<click>` tags)
 
 ✅ **Advanced Features**
+
 - Reference link definitions and reference link syntax
 - Automatic link expansion
 - Code block line numbers
@@ -54,6 +58,7 @@ A handbook-focused mod for Minecraft Forge/NeoForge, designed to provide in-game
 Two block-level extension syntaxes for custom components:
 
 #### 1. Colon Syntax
+
 ```markdown
 ::: info
 This is an info box.
@@ -73,6 +78,7 @@ This is a danger warning.
 ```
 
 #### 2. Tag Syntax
+
 ```markdown
 <namespace:component key="value" param=123>
 Block content supports Markdown syntax.
@@ -104,6 +110,7 @@ Display tooltip text when hovering over text:
 ```
 
 **Supported Types:**
+
 - `SHOW_TEXT` - Display plain text tooltip (`data` is the tooltip content)
 
 #### Click Events (`<click>`)
@@ -117,6 +124,7 @@ Execute an action when clicking on text:
 ```
 
 **Supported Types:**
+
 - `OPEN_URL` - Open a URL (`data` is the complete URL)
 - `COPY_TO_CLIPBOARD` - Copy text to clipboard (`data` is the text to copy)
 - `SUGGEST_COMMAND` - Suggest a command in chat (`data` is the command text)
@@ -152,6 +160,19 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
     );
 ```
 
+### Structure NBT Component (`<structure/>` / `<nbt_structure/>`)
+
+Use the structure extension to render a summary and bounded NBT tree for `.nbt` structure files directly inside documents:
+
+```markdown
+<structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+```
+
+- `id` / `path`: required, target structure file `ResourceLocation`
+- `maxDepth`: optional, maximum expansion depth, default `2`
+- `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
+- The component first shows structure metadata such as size, palette, block count, and entity count, then renders a depth-limited NBT tree
+
 ### Preloading & Caching
 
 - Automatically scans and pre-parses Markdown documents to `MDComponent` lists on resource load
@@ -165,7 +186,9 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 Ageratum.openGuide(ResourceLocation location);
 
 // Server: notify client via network packet
-Ageratum.openGuide(ResourceLocation location);
+Ageratum.
+
+openGuide(ResourceLocation location);
 ```
 
 ## Project Structure
@@ -245,17 +268,21 @@ public static final DeferredRegister<MDExtensionComponentFactory> EXT_COMPONENT_
     AgeratumRegistries.createExtensionComponentFactoryRegister("your_modid");
 
 public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> CUSTOM =
-    EXT_COMPONENT_FACTORIES.register("custom", () ->
-        context -> new MyComponent(context.renderedContent(), context.params())
+    EXT_COMPONENT_FACTORIES.register(
+        "custom", () ->
+            context -> new MyComponent(context.renderedContent(), context.params())
     );
 
 // In your mod constructor
-EXT_COMPONENT_FACTORIES.register(modEventBus);
+EXT_COMPONENT_FACTORIES.
+
+register(modEventBus);
 ```
 
 #### Register Custom Inline Style Parser
 
-Inline style parsers are registered through `INLINE_STYLE_PARSER_REGISTRY_KEY`. `MDComponent` queries this registry and resolves matches by position + parser priority.
+Inline style parsers are registered through `INLINE_STYLE_PARSER_REGISTRY_KEY`. `MDComponent` queries this registry and resolves matches by
+position + parser priority.
 
 ```java
 package com.example.mymod.client.markdown;
@@ -313,6 +340,7 @@ See full guide: `docs/inline-style-parser-example.en.md`.
 #### Add Documentation
 
 Create in resource pack:
+
 ```
 assets/<namespace>/ageratum/<language>/index.md
 assets/<namespace>/ageratum/en_us/index.md

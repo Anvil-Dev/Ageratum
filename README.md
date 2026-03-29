@@ -11,7 +11,8 @@
 
 # Ageratum - 模组手册框架
 
-一个为 Minecraft Forge/NeoForge 设计的手册模组，用于为其它模组提供游戏内指引与文档阅读能力。Ageratum 提供丰富的 Markdown 渲染、i18n 国际化，以及可扩展的自定义语法与组件机制。
+一个为 Minecraft Forge/NeoForge 设计的手册模组，用于为其它模组提供游戏内指引与文档阅读能力。Ageratum 提供丰富的 Markdown 渲染、i18n
+国际化，以及可扩展的自定义语法与组件机制。
 
 ## [文档](https://www.anvilcraft.dev/posts/docs/ageratum/)
 
@@ -20,6 +21,7 @@
 ### 核心 Markdown 支持
 
 ✅ **块级元素**
+
 - ATX 标题（`# ~ ######`）与 Setext 标题（下划线式）
 - 段落与换行处理
 - 有序列表、无序列表、任务列表（支持多层嵌套）
@@ -30,6 +32,7 @@
 - 图片（命名空间本地化引用）
 
 ✅ **内联元素**
+
 - **粗体**、*斜体*、~~删除线~~
 - 行内代码跨度（支持多反引号）
 - [超链接](https://example.com) 与自动链接
@@ -38,6 +41,7 @@
 - **悬停与点击事件**（`<hover>` 与 `<click>` 标签）
 
 ✅ **高级特性**
+
 - 引用链接定义与引用链接语法
 - 链接自动展开
 - 代码块行号与语法着色
@@ -54,6 +58,7 @@
 两种块级扩展语法允许自定义组件：
 
 #### 1. 冒号语法
+
 ```markdown
 ::: info
 这是一个提示框。
@@ -73,6 +78,7 @@
 ```
 
 #### 2. 标签语法
+
 ```markdown
 <namespace:component key="value" param=123>
 块内容支持 Markdown 语法。
@@ -104,6 +110,7 @@
 ```
 
 **支持的类型：**
+
 - `SHOW_TEXT`：显示纯文本提示信息（`data` 为提示文本内容）
 
 #### 点击事件（`<click>`）
@@ -117,6 +124,7 @@
 ```
 
 **支持的类型：**
+
 - `OPEN_URL`：打开网址（`data` 为完整 URL）
 - `COPY_TO_CLIPBOARD`：复制文本到剪贴板（`data` 为要复制的内容）
 - `SUGGEST_COMMAND`：在聊天框中建议命令（`data` 为命令文本）
@@ -142,7 +150,9 @@
 Ageratum.openGuide(ResourceLocation location);
 
 // 服务端通知客户端打开（网络发包）
-Ageratum.openGuide(ResourceLocation location);
+Ageratum.
+
+openGuide(ResourceLocation location);
 ```
 
 ## 项目结构
@@ -220,12 +230,15 @@ public static final DeferredRegister<MDExtensionComponentFactory> EXT_COMPONENT_
     AgeratumRegistries.createExtensionComponentFactoryRegister("your_modid");
 
 public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> CUSTOM =
-    EXT_COMPONENT_FACTORIES.register("custom", () ->
-        context -> new MyComponent(context.renderedContent(), context.params())
+    EXT_COMPONENT_FACTORIES.register(
+        "custom", () ->
+            context -> new MyComponent(context.renderedContent(), context.params())
     );
 
 // 在你的模组构造函数中
-EXT_COMPONENT_FACTORIES.register(modEventBus);
+EXT_COMPONENT_FACTORIES.
+
+register(modEventBus);
 ```
 
 #### 注册自定义行内样式解析器
@@ -288,6 +301,7 @@ Markdown 使用示例：
 #### 添加文档
 
 在资源包中创建：
+
 ```
 assets/<namespace>/ageratum/<language>/index.md
 assets/<namespace>/ageratum/en_us/index.md
@@ -316,6 +330,19 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
         () -> MDRecipeComponent.RecipeComponentFactory.create(RecipeType.SMELTING, MDSmeltingRecipeComponent::new)
     );
 ```
+
+### 结构 NBT 组件（`<structure/>` / `<nbt_structure/>`）
+
+使用结构扩展可以在文档中直接渲染 `.nbt` 结构文件的摘要与 NBT 树：
+
+```markdown
+<structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+```
+
+- `id` / `path`：必填，目标结构文件的 `ResourceLocation`
+- `maxDepth`：可选，最大展开深度，默认 `2`
+- `maxEntries`：可选，每层最多显示的键/列表项数量，默认 `12`
+- 组件会优先显示结构尺寸、调色板、方块数、实体数等摘要，再展示受限深度的 NBT 树
 
 ## 许可证
 

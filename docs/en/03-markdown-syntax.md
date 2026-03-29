@@ -12,10 +12,15 @@ Both ATX (`#`) and Setext (underline) styles are supported:
 
 ```markdown
 # Heading 1
+
 ## Heading 2
+
 ### Heading 3
+
 #### Heading 4
+
 ##### Heading 5
+
 ###### Heading 6
 
 Setext Heading 1
@@ -122,6 +127,7 @@ Use three or more `-`, `*`, or `_` (spaces allowed between them):
 
 ```markdown
 ---
+
 ***
 ___
 ```
@@ -193,7 +199,9 @@ Images **must be on their own line** and use namespace-qualified paths:
 [shortcut]
 
 [ref-id]: https://example.com
+
 [collapsed]: https://example.com/c
+
 [shortcut]: https://example.com/s
 ```
 
@@ -206,7 +214,8 @@ Images **must be on their own line** and use namespace-qualified paths:
 
 ### Escape Characters
 
-CommonMark escapable punctuation (`!`, `"`, `#`, `$`, `%`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `-`, `.`, `/`, `:`, `;`, `<`, `=`, `>`, `?`, `@`, `[`, `\`, `]`, `^`, `_`, `` ` ``, `{`, `|`, `}`, `~`):
+CommonMark escapable punctuation (`!`, `"`, `#`, `$`, `%`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `-`, `.`, `/`, `:`, `;`, `<`, `=`, `>`, `?`,
+`@`, `[`, `\`, `]`, `^`, `_`, `` ` ``, `{`, `|`, `}`, `~`):
 
 ```markdown
 \*not italic\*
@@ -257,17 +266,36 @@ Block content here — supports Markdown syntax.
 - Parameters use `key="value"` or `key=value` format
 - Self-closing tags (`/>`) have no block content
 
+### Structure NBT Component
+
+Use the `structure` extension (or the compatibility alias `nbt_structure`) to render a summary and bounded NBT tree view for
+structure files stored under `data/<namespace>/structure/*.nbt`:
+
+```markdown
+<structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+
+<nbt_structure id="example:ruins/arch" maxDepth="3" maxEntries="8"/>
+```
+
+- `id` / `path`: required, target structure file `ResourceLocation`
+- `maxDepth`: optional, maximum expansion depth, default `2`
+- `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
+- Rendered content: structure size, palette/block/entity counts, and a depth-limited NBT tree
+- Fallback behavior: if the structure file is missing or cannot be read, the component shows an inline error message
+
 ---
 
 ## Built-in Extension Components
 
-| Component ID | Trigger | Appearance |
-|-------------|---------|------------|
-| `ageratum:info` | `::: info` or `<info/>` | 🔵 Blue info box |
-| `ageratum:tip` | `::: tip` or `<tip/>` | 🟢 Green tip box |
-| `ageratum:warning` | `::: warning` or `<warning/>` | 🟠 Orange warning box |
-| `ageratum:danger` | `::: danger` or `<danger/>` | 🔴 Red danger box |
-| `ageratum:recipe` | `<recipe id="..."/>` | Recipe rendering |
+| Component ID             | Trigger                       | Appearance                   |
+|--------------------------|-------------------------------|------------------------------|
+| `ageratum:info`          | `::: info` or `<info/>`       | 🔵 Blue info box             |
+| `ageratum:tip`           | `::: tip` or `<tip/>`         | 🟢 Green tip box             |
+| `ageratum:warning`       | `::: warning` or `<warning/>` | 🟠 Orange warning box        |
+| `ageratum:danger`        | `::: danger` or `<danger/>`   | 🔴 Red danger box            |
+| `ageratum:recipe`        | `<recipe id="..."/>`          | Recipe rendering             |
+| `ageratum:structure`     | `<structure id="..."/>`       | Structure NBT summary + tree |
+| `ageratum:nbt_structure` | `<nbt_structure id="..."/>`   | Structure NBT summary + tree |
 
 ### Recipe Component
 
@@ -276,6 +304,7 @@ Block content here — supports Markdown syntax.
 ```
 
 Parameters:
+
 - `id`: **Required** — target recipe `ResourceLocation`
 
 ---
@@ -302,16 +331,16 @@ Renders as randomly-changing "scrambled" characters.
 
 ```markdown
 <hover type="SHOW_TEXT" data="Tooltip content">Hover over me</hover>
-<hover type="SHOW_ITEM" data="{\"id\":\"minecraft:diamond\",\"count\":1}">Hover for item</hover>
-<hover type="SHOW_ENTITY" data="{\"type\":\"minecraft:zombie\",\"id\":\"...\",\"name\":\"Zombie\"}">Hover for entity</hover>
+<hover type="SHOW_ITEM" data="{"id":"minecraft:diamond","count":1}">Hover for item</hover>
+<hover type="SHOW_ENTITY" data="{"type":"minecraft:zombie","id":"...","name":"Zombie"}">Hover for entity</hover>
 ```
 
 Supported types:
 
-| `type` | `data` format | Description |
-|--------|--------------|-------------|
-| `SHOW_TEXT` | Plain string | Show text tooltip |
-| `SHOW_ITEM` | ItemStackInfo JSON | Show item tooltip |
+| `type`        | `data` format          | Description         |
+|---------------|------------------------|---------------------|
+| `SHOW_TEXT`   | Plain string           | Show text tooltip   |
+| `SHOW_ITEM`   | ItemStackInfo JSON     | Show item tooltip   |
 | `SHOW_ENTITY` | EntityTooltipInfo JSON | Show entity tooltip |
 
 ### Click Events
@@ -325,12 +354,12 @@ Supported types:
 
 Supported types:
 
-| `type` | `data` format | Description |
-|--------|--------------|-------------|
-| `OPEN_URL` | Full URL | Open a web page |
-| `COPY_TO_CLIPBOARD` | Any text | Copy to clipboard |
-| `SUGGEST_COMMAND` | Command text | Fill into chat box |
-| `RUN_COMMAND` | Command text | Execute immediately |
+| `type`              | `data` format | Description         |
+|---------------------|---------------|---------------------|
+| `OPEN_URL`          | Full URL      | Open a web page     |
+| `COPY_TO_CLIPBOARD` | Any text      | Copy to clipboard   |
+| `SUGGEST_COMMAND`   | Command text  | Fill into chat box  |
+| `RUN_COMMAND`       | Command text  | Execute immediately |
 
 ### Combining Styles
 

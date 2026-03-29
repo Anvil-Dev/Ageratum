@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDNoticeBoxComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.structure.MDNBTStructureComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
@@ -57,6 +58,28 @@ public final class BuiltinExtensionComponents {
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "recipe",
             () -> MDRecipeComponent::parse
+        );
+
+    /**
+     * 结构 NBT 扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <structure id="namespace:path"/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> STRUCTURE =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "structure",
+            () -> MDNBTStructureComponent::parse
+        );
+
+    /**
+     * 结构 NBT 扩展组件兼容别名注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <nbt_structure id="namespace:path"/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> NBT_STRUCTURE =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "nbt_structure",
+            () -> MDNBTStructureComponent::parse
         );
 
     private BuiltinExtensionComponents() {
