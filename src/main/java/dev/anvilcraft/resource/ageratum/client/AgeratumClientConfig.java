@@ -24,5 +24,5 @@ public class AgeratumClientConfig {
     public boolean enablePreview = false;
 
     @Comment("Preview mode path")
-    public String previewPath = "";
+    public String previewPath = "ageratum_review";
 }

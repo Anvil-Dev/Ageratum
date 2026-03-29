@@ -24,11 +24,16 @@ import org.lwjgl.glfw.GLFW;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.TreeMap;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /**
@@ -107,6 +112,7 @@ public class GuideScreen extends Screen {
      * 每次滚轮事件滚动的像素距离（Markdown 坐标系）。
      */
     protected static final float SCROLL_STEP = 16.0f;
+    protected static final long PREVIEW_REFRESH_INTERVAL_MS = 500L;
 
     /**
      * Markdown 解析器实例。
@@ -121,6 +127,10 @@ public class GuideScreen extends Screen {
      * 解析后得到的 Markdown 渲染组件列表，按文档顺序排列。
      */
     protected final List<MDComponent> parsedComponents;
+    protected final @Nullable Path previewDocumentPath;
+    protected long previewDocumentLastModified;
+    protected long previewDocumentLastSize;
+    protected long nextPreviewRefreshTime;
 
     // ── 界面布局变量（运行时计算）──────────────────────────────────────────────
 
@@ -198,8 +208,88 @@ public class GuideScreen extends Screen {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
-        this.parsedComponents = List.copyOf(parsedComponents);
+        this.parsedComponents = new ArrayList<>(parsedComponents);
         this.breadCrumbs = breadCrumbs;
+        if (AgeratumClient.isPreviewLocation(documentLocation)) {
+            this.previewDocumentPath = AgeratumClient.resolvePreviewDocumentPath(documentLocation);
+            this.recordPreviewDocumentFingerprint();
+        } else {
+            this.previewDocumentPath = null;
+            this.previewDocumentLastModified = -1L;
+            this.previewDocumentLastSize = -1L;
+        }
+        this.nextPreviewRefreshTime = 0L;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        this.tryRefreshPreviewDocument();
+    }
+
+    private void tryRefreshPreviewDocument() {
+        if (!AgeratumClient.CONFIG.enablePreview || this.previewDocumentPath == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now < this.nextPreviewRefreshTime) {
+            return;
+        }
+        this.nextPreviewRefreshTime = now + PREVIEW_REFRESH_INTERVAL_MS;
+        if (!Files.isRegularFile(this.previewDocumentPath)) {
+            return;
+        }
+
+        long currentModified;
+        long currentSize;
+        try {
+            currentModified = Files.getLastModifiedTime(this.previewDocumentPath).toMillis();
+            currentSize = Files.size(this.previewDocumentPath);
+        } catch (Exception ignored) {
+            return;
+        }
+
+        if (currentModified == this.previewDocumentLastModified && currentSize == this.previewDocumentLastSize) {
+            return;
+        }
+        this.reloadPreviewDocumentAtPreviousPosition();
+    }
+
+    private void reloadPreviewDocumentAtPreviousPosition() {
+        if (this.previewDocumentPath == null) {
+            return;
+        }
+        String markdown;
+        try {
+            markdown = Files.readString(this.previewDocumentPath, StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            return;
+        }
+
+        float previousScroll = this.contentScroll;
+        this.parsedComponents.clear();
+        this.parsedComponents.addAll(this.parser.parseDocument(this.documentLocation, markdown).components());
+        this.recordPreviewDocumentFingerprint();
+        if (this.minecraft != null) {
+            this.rebuildLabelEntries(this.minecraft.getResourceManager());
+        }
+        this.updateScrollBounds();
+        this.contentScroll = Mth.clamp(previousScroll, 0.0f, this.maxContentScroll);
+    }
+
+    private void recordPreviewDocumentFingerprint() {
+        if (this.previewDocumentPath == null || !Files.isRegularFile(this.previewDocumentPath)) {
+            this.previewDocumentLastModified = -1L;
+            this.previewDocumentLastSize = -1L;
+            return;
+        }
+        try {
+            this.previewDocumentLastModified = Files.getLastModifiedTime(this.previewDocumentPath).toMillis();
+            this.previewDocumentLastSize = Files.size(this.previewDocumentPath);
+        } catch (Exception ignored) {
+            this.previewDocumentLastModified = -1L;
+            this.previewDocumentLastSize = -1L;
+        }
     }
 
     /**
@@ -689,6 +779,11 @@ public class GuideScreen extends Screen {
     }
 
     private void rebuildLabelEntries(ResourceManager resourceManager) {
+        if (AgeratumClient.isPreviewLocation(this.documentLocation)) {
+            this.rebuildPreviewLabelEntries();
+            return;
+        }
+
         Optional<GuideDocumentCache.NavigationTree> cachedTree = GuideDocumentCache.getNavigationTree(
             this.documentLocation.getNamespace(),
             this.currentLanguageCode
@@ -726,6 +821,156 @@ public class GuideScreen extends Screen {
         this.labelEntries = List.copyOf(finalEntries);
         this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+    }
+
+    private void rebuildPreviewLabelEntries() {
+        Path previewRoot = AgeratumClient.getPreviewRootPath();
+        if (!Files.isDirectory(previewRoot)) {
+            this.labelEntries = List.of();
+            this.maxLabelScrollRows = 0;
+            this.labelScrollRows = 0;
+            return;
+        }
+
+        PreviewDirectoryNode root = new PreviewDirectoryNode("");
+        try (Stream<Path> paths = Files.walk(previewRoot)) {
+            paths.filter(Files::isRegularFile)
+                .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".md"))
+                .forEach(path -> this.insertPreviewDocument(root, previewRoot, path));
+        } catch (Exception ignored) {
+            this.labelEntries = List.of();
+            this.maxLabelScrollRows = 0;
+            this.labelScrollRows = 0;
+            return;
+        }
+
+        List<LabelEntry> finalEntries = new ArrayList<>();
+
+        root.documents.sort(Comparator.comparing(PreviewDocument::fileArgument));
+        if (root.indexDocument != null) {
+            root.documents.addFirst(root.indexDocument);
+        }
+        for (PreviewDocument rootDocument : root.documents) {
+            finalEntries.add(this.toPreviewLabel(rootDocument, 1));
+        }
+
+        for (PreviewDirectoryNode childDirectory : root.children.values()) {
+            this.appendPreviewDirectoryLabels(finalEntries, childDirectory);
+        }
+
+        this.labelEntries = List.copyOf(finalEntries);
+        this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - this.getLabelVisibleRows());
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+    }
+
+    private void insertPreviewDocument(PreviewDirectoryNode root, Path previewRoot, Path absolutePath) {
+        Path relativePath = previewRoot.relativize(absolutePath);
+        String normalizedPath = relativePath.toString().replace('\\', '/');
+        if (normalizedPath.length() <= 3 || !normalizedPath.endsWith(".md")) {
+            return;
+        }
+        String fileArgument = normalizedPath.substring(0, normalizedPath.length() - 3);
+        if (fileArgument.isBlank()) {
+            return;
+        }
+
+        String[] segments = fileArgument.split("/");
+        PreviewDirectoryNode current = root;
+        for (int i = 0; i < segments.length - 1; i++) {
+            String segment = segments[i];
+            current = current.children.computeIfAbsent(segment, PreviewDirectoryNode::new);
+        }
+        ResourceLocation location = AgeratumClient.toPreviewLocation(fileArgument);
+        PreviewDocument document = new PreviewDocument(
+            fileArgument,
+            this.resolvePreviewDocumentTitle(absolutePath, fileArgument, location),
+            location
+        );
+        String fileName = segments[segments.length - 1];
+        if ("index".equalsIgnoreCase(fileName)) {
+            current.indexDocument = document;
+        } else {
+            current.documents.add(document);
+        }
+    }
+
+    private String resolvePreviewDocumentTitle(Path absolutePath, String fileArgument, ResourceLocation location) {
+        try {
+            String markdown = Files.readString(absolutePath, StandardCharsets.UTF_8);
+            return this.parser.parseDocument(location, markdown).getTitle(fileArgument);
+        } catch (Exception ignored) {
+            return this.previewTitleFor(fileArgument);
+        }
+    }
+
+    private void appendPreviewDirectoryLabels(List<LabelEntry> target, PreviewDirectoryNode directory) {
+        if (directory.indexDocument != null) {
+            target.add(this.toPreviewLabel(directory.indexDocument, 1));
+        } else {
+            target.add(new LabelEntry(
+                null,
+                null,
+                1,
+                Component.literal(this.previewDirectoryTitle(directory.name)),
+                false
+            ));
+        }
+
+        directory.documents.sort(Comparator.comparing(PreviewDocument::fileArgument));
+        for (PreviewDocument document : directory.documents) {
+            target.add(this.toPreviewLabel(document, 2));
+        }
+
+        for (PreviewDirectoryNode childDirectory : directory.children.values()) {
+            if (childDirectory.indexDocument != null) {
+                target.add(this.toPreviewLabel(childDirectory.indexDocument, 2));
+            }
+        }
+    }
+
+    private LabelEntry toPreviewLabel(PreviewDocument document, int level) {
+        return new LabelEntry(
+            document.fileArgument,
+            document.location,
+            level,
+            Component.literal(document.title),
+            true
+        );
+    }
+
+    private String previewTitleFor(String fileArgument) {
+        int slash = fileArgument.lastIndexOf('/');
+        String name = slash >= 0 ? fileArgument.substring(slash + 1) : fileArgument;
+        if ("index".equalsIgnoreCase(name)) {
+            String directory = slash >= 0 ? fileArgument.substring(0, slash) : "index";
+            int dirSlash = directory.lastIndexOf('/');
+            String dirName = dirSlash >= 0 ? directory.substring(dirSlash + 1) : directory;
+            return this.previewDirectoryTitle(dirName);
+        }
+        return this.previewDirectoryTitle(name);
+    }
+
+    private String previewDirectoryTitle(String name) {
+        String normalized = name.replace('_', ' ').replace('-', ' ').trim();
+        if (normalized.isBlank()) {
+            return "INDEX";
+        }
+        String[] split = normalized.split("\\s+");
+        StringBuilder builder = new StringBuilder(normalized.length());
+        for (int i = 0; i < split.length; i++) {
+            String part = split[i];
+            if (part.isEmpty()) {
+                continue;
+            }
+            if (i > 0 && !builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1));
+            }
+        }
+        return builder.toString();
     }
 
     private void appendDirectoryLabels(List<LabelEntry> target, GuideDocumentCache.NavigationDirectory directory) {
@@ -803,6 +1048,13 @@ public class GuideScreen extends Screen {
     }
 
     private String getCurrentFileArgument() {
+        if (AgeratumClient.isPreviewLocation(this.documentLocation)) {
+            String path = this.documentLocation.getPath();
+            if (path.endsWith(".md")) {
+                path = path.substring(0, path.length() - 3);
+            }
+            return path;
+        }
         String normalizedLanguage = this.currentLanguageCode.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         String expectedPrefix = "ageratum/" + normalizedLanguage + "/";
         String path = this.documentLocation.getPath();
@@ -846,6 +1098,9 @@ public class GuideScreen extends Screen {
 
         Optional<ResourceLocation> resolved;
         if (parsed != null && target.contains(":")) {
+            if (AgeratumClient.PREVIEW_NAMESPACE.equals(parsed.getNamespace())) {
+                resolved = this.resolvePreviewLocation(parsed.getPath(), false);
+            } else {
             // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
             if (parsed.getPath().startsWith("ageratum/") && parsed.getPath().endsWith(".md")) {
                 List<ResourceLocation> breadCrumbs = this.breadCrumbs;
@@ -862,6 +1117,7 @@ public class GuideScreen extends Screen {
                 this.currentLanguageCode,
                 parsed.getPath()
             );
+            }
         } else {
             resolved = this.resolveLocationWithoutNamespace(resourceManager, target);
         }
@@ -970,6 +1226,13 @@ public class GuideScreen extends Screen {
      * 3) ageratum namespace 根目录
      */
     private Optional<ResourceLocation> resolveLocationWithoutNamespace(ResourceManager resourceManager, String rawTarget) {
+        if (AgeratumClient.isPreviewLocation(this.documentLocation)) {
+            Optional<ResourceLocation> previewResolved = this.resolvePreviewLocation(rawTarget, true);
+            if (previewResolved.isPresent()) {
+                return previewResolved;
+            }
+        }
+
         String normalizedTarget = rawTarget.replace('\\', '/').trim();
         if (normalizedTarget.isEmpty()) {
             return Optional.empty();
@@ -1004,6 +1267,37 @@ public class GuideScreen extends Screen {
             this.currentLanguageCode,
             inNamespaceRoot
         );
+    }
+
+    private Optional<ResourceLocation> resolvePreviewLocation(String rawTarget, boolean resolveRelative) {
+        String normalizedTarget = rawTarget.replace('\\', '/').trim();
+        if (normalizedTarget.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (resolveRelative) {
+            String currentDir = this.getCurrentDirectoryPath();
+            String inCurrentDir = this.normalizePathAgainstBase(currentDir, normalizedTarget);
+            Optional<ResourceLocation> inCurrentDirLocation = this.tryResolvePreviewDocument(inCurrentDir);
+            if (inCurrentDirLocation.isPresent()) {
+                return inCurrentDirLocation;
+            }
+        }
+
+        String inRoot = this.normalizePathAgainstBase("", normalizedTarget);
+        return this.tryResolvePreviewDocument(inRoot);
+    }
+
+    private Optional<ResourceLocation> tryResolvePreviewDocument(String candidate) {
+        ResourceLocation direct = AgeratumClient.toPreviewLocation(candidate);
+        if (java.nio.file.Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(direct))) {
+            return Optional.of(direct);
+        }
+        ResourceLocation index = AgeratumClient.toPreviewLocation(candidate + "/index");
+        if (java.nio.file.Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(index))) {
+            return Optional.of(index);
+        }
+        return Optional.empty();
     }
 
     private String getCurrentDirectoryPath() {
@@ -1248,6 +1542,20 @@ public class GuideScreen extends Screen {
         Component title,
         boolean clickable
     ) {
+    }
+
+    private static final class PreviewDirectoryNode {
+        private final String name;
+        private final TreeMap<String, PreviewDirectoryNode> children = new TreeMap<>();
+        private final List<PreviewDocument> documents = new ArrayList<>();
+        private @Nullable PreviewDocument indexDocument;
+
+        private PreviewDirectoryNode(String name) {
+            this.name = name;
+        }
+    }
+
+    private record PreviewDocument(String fileArgument, String title, ResourceLocation location) {
     }
 
     /**

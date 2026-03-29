@@ -8,10 +8,12 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.FormattedText;
@@ -20,6 +22,8 @@ import net.minecraft.server.packs.resources.Resource;
 import org.joml.Matrix4f;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,6 +44,7 @@ public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
     private static final Pattern FALLBACK_IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^)]+)\\)\\s*$");
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
+    private static final Map<ResourceLocation, PreviewImageState> PREVIEW_IMAGE_CACHE = new HashMap<>();
     protected final ResourceLocation imageLocation;
     protected final boolean shouldScaleUp;
     protected final boolean enableAlignCenter;
@@ -226,6 +231,10 @@ public class MDImageComponent extends MDComponent {
      * 获取图片原始尺寸，缺失时使用缓存或回退默认值。
      */
     protected Size resolveSize(Minecraft minecraft) {
+        if (AgeratumClient.PREVIEW_NAMESPACE.equals(this.getImageLocation().getNamespace())) {
+            return this.resolvePreviewSize(minecraft);
+        }
+
         Size cachedSize = IMAGE_SIZE_CACHE.get(this.getImageLocation());
         if (cachedSize != null) {
             return cachedSize;
@@ -245,10 +254,45 @@ public class MDImageComponent extends MDComponent {
         return size;
     }
 
+    private Size resolvePreviewSize(Minecraft minecraft) {
+        Path imagePath = AgeratumClient.resolvePreviewAssetPath(this.getImageLocation().getPath());
+        if (!Files.isRegularFile(imagePath)) {
+            return new Size(16, 16, 1.0f);
+        }
+
+        long modifiedMillis;
+        long fileSize;
+        try {
+            modifiedMillis = Files.getLastModifiedTime(imagePath).toMillis();
+            fileSize = Files.size(imagePath);
+        } catch (IOException ignored) {
+            return new Size(16, 16, 1.0f);
+        }
+
+        PreviewImageState cached = PREVIEW_IMAGE_CACHE.get(this.getImageLocation());
+        if (cached != null && cached.modifiedMillis() == modifiedMillis && cached.fileSize() == fileSize) {
+            return cached.size();
+        }
+
+        try {
+            NativeImage image = NativeImage.read(Files.newInputStream(imagePath));
+            Size size = new Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()), 1.0f);
+            minecraft.getTextureManager().register(this.getImageLocation(), new DynamicTexture(image));
+            PREVIEW_IMAGE_CACHE.put(this.getImageLocation(), new PreviewImageState(modifiedMillis, fileSize, size));
+            return size;
+        } catch (IOException exception) {
+            log.debug("Failed to load preview image: {}", imagePath, exception);
+            return new Size(16, 16, 1.0f);
+        }
+    }
+
     /**
      * 简单尺寸值对象。
      */
     public record Size(int width, int height, float scale) {
+    }
+
+    private record PreviewImageState(long modifiedMillis, long fileSize, Size size) {
     }
 }
 

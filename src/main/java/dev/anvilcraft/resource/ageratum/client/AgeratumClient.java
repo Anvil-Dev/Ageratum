@@ -32,8 +32,12 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -44,6 +48,7 @@ public class AgeratumClient {
      * 模组日志记录器。
      */
     private static final Logger LOGGER = LogUtils.getLogger();
+    public static final String PREVIEW_NAMESPACE = "ageratum_review";
 
     public static final AgeratumClientConfig CONFIG = ConfigManager.register(Ageratum.MOD_ID, AgeratumClientConfig::new);
 
@@ -101,7 +106,11 @@ public class AgeratumClient {
                             source.sendFailure(Component.translatable("commands.ageratum.preview.disable"));
                             return 0;
                         }
-                        Path previewPath = FMLLoader.getGamePath().resolve(AgeratumClient.CONFIG.previewPath);
+                        ResourceLocation previewLocation = toPreviewLocation("index");
+                        if (!openGuideOnClient(previewLocation, List.of())) {
+                            source.sendFailure(Component.literal("Preview index.md not found: " + resolvePreviewDocumentPath(previewLocation)));
+                            return 0;
+                        }
                         return 1;
                     })
                 )
@@ -211,6 +220,10 @@ public class AgeratumClient {
      * @param anchor   目标锚点（可为 null）
      */
     public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
+        if (isPreviewLocation(location)) {
+            return openPreviewGuideOnClient(location, anchor, breadCrumbs);
+        }
+
         Minecraft minecraft = Minecraft.getInstance();
         ResourceManager resourceManager = minecraft.getResourceManager();
         if (!GuideDocumentLoader.exists(resourceManager, location)) {
@@ -241,5 +254,100 @@ public class AgeratumClient {
         screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
         minecraft.setScreen(screen);
         return true;
+    }
+
+    private static boolean openPreviewGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Path previewFile = resolvePreviewDocumentPath(location);
+        if (!Files.isRegularFile(previewFile)) {
+            return false;
+        }
+
+        int inheritedLabelScrollRows = 0;
+        double inheritedLabelScrollRemainder = 0.0d;
+        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+            inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
+            inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
+        }
+
+        String content;
+        try {
+            content = Files.readString(previewFile, StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            LOGGER.warn("Failed to read preview document: {}", previewFile, exception);
+            return false;
+        }
+
+        MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
+        GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs);
+        screen.setAnchor(anchor);
+        screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
+        minecraft.setScreen(screen);
+        return true;
+    }
+
+    public static boolean isPreviewLocation(ResourceLocation location) {
+        return PREVIEW_NAMESPACE.equals(location.getNamespace());
+    }
+
+    public static ResourceLocation toPreviewLocation(@Nullable String fileArgument) {
+        String normalized = normalizePreviewFileArgument(fileArgument);
+        return ResourceLocation.fromNamespaceAndPath(PREVIEW_NAMESPACE, normalized);
+    }
+
+    public static Path getPreviewRootPath() {
+        return FMLLoader.getGamePath().resolve(AgeratumClient.CONFIG.previewPath).normalize();
+    }
+
+    public static Path resolvePreviewDocumentPath(ResourceLocation location) {
+        String path = location.getPath();
+        if (!path.endsWith(".md")) {
+            path += ".md";
+        }
+        return resolvePreviewPath(path);
+    }
+
+    public static Path resolvePreviewAssetPath(String relativePath) {
+        return resolvePreviewPath(relativePath);
+    }
+
+    private static String normalizePreviewFileArgument(@Nullable String fileArgument) {
+        String file = fileArgument;
+        if (file == null || file.isBlank()) {
+            file = "index";
+        }
+        file = file.trim().replace('\\', '/');
+        while (file.startsWith("/")) {
+            file = file.substring(1);
+        }
+        if (file.endsWith(".md")) {
+            file = file.substring(0, file.length() - 3);
+        }
+        String[] segments = file.split("/");
+        List<String> normalizedSegments = new java.util.ArrayList<>();
+        for (String segment : segments) {
+            if (segment.isEmpty() || ".".equals(segment)) {
+                continue;
+            }
+            if ("..".equals(segment)) {
+                if (!normalizedSegments.isEmpty()) {
+                    normalizedSegments.removeLast();
+                }
+                continue;
+            }
+            normalizedSegments.add(segment.toLowerCase(Locale.ROOT));
+        }
+        if (normalizedSegments.isEmpty()) {
+            return "index";
+        }
+        return String.join("/", normalizedSegments);
+    }
+
+    private static Path resolvePreviewPath(String relativePath) {
+        String normalized = relativePath.replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        return getPreviewRootPath().resolve(normalized).normalize();
     }
 }
