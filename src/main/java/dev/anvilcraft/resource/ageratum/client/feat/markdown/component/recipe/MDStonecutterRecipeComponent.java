@@ -26,7 +26,7 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
     /**
      * 切石机组件背景纹理。
      */
-    public static final ResourceLocation STONECUTTER_COMPONENT_TEXTURE = Ageratum.location("gui/component/stonecutter.png");
+    public static final ResourceLocation STONECUTTER_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/stonecutter.png");
     /**
      * 输入材料；客户端世界缺失时为 {@code null}。
      */

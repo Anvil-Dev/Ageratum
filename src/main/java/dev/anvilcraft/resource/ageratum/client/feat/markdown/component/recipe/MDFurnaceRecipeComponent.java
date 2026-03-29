@@ -26,7 +26,7 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
     /**
      * 熔炉类组件背景纹理。
      */
-    public static final ResourceLocation FURNACE_COMPONENT_TEXTURE = Ageratum.location("gui/component/furnace.png");
+    public static final ResourceLocation FURNACE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/furnace.png");
     /**
      * 输入材料；客户端世界缺失时为 {@code null}。
      */

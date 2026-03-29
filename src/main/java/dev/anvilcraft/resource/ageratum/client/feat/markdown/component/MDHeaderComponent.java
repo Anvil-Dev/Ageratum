@@ -6,6 +6,7 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +39,7 @@ public class MDHeaderComponent extends MDComponent {
     /**
      * 尝试从单行文本解析标题组件。
      */
-    public static @Nullable MDHeaderComponent parse(String text) {
+    public static @Nullable MDHeaderComponent parse(ResourceLocation sourceLocation, String text) {
         Matcher matcher = HEADER_PATTERN.matcher(text);
         if (!matcher.matches()) return null;
         int level = matcher.group(1).length();

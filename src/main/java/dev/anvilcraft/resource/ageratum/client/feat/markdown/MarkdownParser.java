@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
@@ -10,6 +9,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDListCom
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDQuoteComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTableComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 
@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -112,28 +113,21 @@ public class MarkdownParser {
      * @param markdown 原始 Markdown 文本
      * @return 按渲染顺序排列的组件列表
      */
-    public List<MDComponent> parse(String markdown) {
-        return this.parseDocument(markdown).components();
-    }
-
-    /**
-     * 将 Markdown 文本解析为文档模型（front matter + 组件列表）。
-     */
-    public MDDocument parseDocument(String markdown) {
-        return this.parseDocument(null, markdown);
+    public List<MDComponent> parse(ResourceLocation sourceLocation, String markdown) {
+        return this.parseDocument(sourceLocation, markdown).components();
     }
 
     /**
      * 将 Markdown 文本解析为文档模型，并携带文档来源位置。
      */
-    public MDDocument parseDocument(@Nullable ResourceLocation sourceLocation, String markdown) {
+    public MDDocument parseDocument(ResourceLocation sourceLocation, String markdown) {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         FrontMatterParseResult frontMatterParseResult = extractFrontMatter(normalized);
-        List<MDComponent> components = this.parseComponents(frontMatterParseResult.body());
+        List<MDComponent> components = this.parseComponents(sourceLocation, frontMatterParseResult.body());
         return new MDDocument(sourceLocation, frontMatterParseResult.frontMatter(), components);
     }
 
-    private List<MDComponent> parseComponents(String markdownBody) {
+    private List<MDComponent> parseComponents(ResourceLocation sourceLocation, String markdownBody) {
         String normalized = markdownBody;
         String[] split = normalized.split("\n", -1);
 
@@ -164,7 +158,7 @@ public class MarkdownParser {
                 if (extensionBlock.matchesCloseLine(s)) {
                     flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                     String rawContent = extensionBlock.rawContent();
-                    List<MDComponent> renderedContent = this.parse(rawContent);
+                    List<MDComponent> renderedContent = this.parse(sourceLocation, rawContent);
                     MDComponent extensionComponent = createExtensionComponent(extensionBlock, renderedContent, rawContent);
                     if (extensionComponent != null) {
                         components.add(extensionComponent);
@@ -339,7 +333,7 @@ public class MarkdownParser {
             }
 
             // ── ATX 标题 / 图片 / 注册的行级解析器 ─────────────────
-            MDComponent component = this.parseComponent(s);
+            MDComponent component = this.parseComponent(sourceLocation, s);
             if (component == null) {
                 if (s.isBlank()) {
                     flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
@@ -799,9 +793,9 @@ public class MarkdownParser {
     /**
      * 使用已注册解析器尝试将一行文本解析为组件。
      */
-    public @Nullable MDComponent parseComponent(String string) {
+    public @Nullable MDComponent parseComponent(ResourceLocation sourceLocation, String string) {
         for (MDComponentParserHolder parserHolder : this.mdComponentParserHolders) {
-            MDComponent component = parserHolder.parser().apply(string);
+            MDComponent component = parserHolder.parser().apply(sourceLocation, string);
             if (component != null) return component;
         }
         return null;
@@ -811,7 +805,7 @@ public class MarkdownParser {
      * 行级组件解析函数接口。
      */
     @FunctionalInterface
-    public interface MDComponentParser extends Function<String, MDComponent> {
+    public interface MDComponentParser extends BiFunction<ResourceLocation, String, MDComponent> {
     }
 
     /**

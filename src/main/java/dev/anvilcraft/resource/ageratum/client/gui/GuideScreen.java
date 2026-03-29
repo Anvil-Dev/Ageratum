@@ -189,21 +189,6 @@ public class GuideScreen extends Screen {
     protected List<ResourceLocation> breadCrumbs;
 
     /**
-     * 标准构造函数，从外部传入文档位置和 Markdown 文本。
-     *
-     * @param documentLocation 文档资源位置，用于构造界面标题
-     * @param markdown         要渲染的 Markdown 原始文本
-     */
-    public GuideScreen(ResourceLocation documentLocation, String markdown, List<ResourceLocation> breadCrumbs) {
-        super(Component.literal("Guide - " + documentLocation));
-        this.documentLocation = documentLocation;
-        this.parser = new MarkdownParser();
-        // 将 Markdown 文本解析为组件列表，后续逐帧渲染
-        this.parsedComponents = this.parser.parse(markdown);
-        this.breadCrumbs = breadCrumbs;
-    }
-
-    /**
      * 使用预解析组件创建界面，避免重复解析 Markdown 文本。
      *
      * @param documentLocation 文档资源位置，用于构造界面标题

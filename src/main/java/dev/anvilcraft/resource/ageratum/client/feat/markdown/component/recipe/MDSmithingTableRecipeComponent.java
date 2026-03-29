@@ -41,7 +41,7 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
     /**
      * 锻造台组件背景纹理。
      */
-    public static final ResourceLocation SMITHING_TABLE_COMPONENT_TEXTURE = Ageratum.location("gui/component/smithing_table.png");
+    public static final ResourceLocation SMITHING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/smithing_table.png");
     /**
      * 输入材料列表
      */

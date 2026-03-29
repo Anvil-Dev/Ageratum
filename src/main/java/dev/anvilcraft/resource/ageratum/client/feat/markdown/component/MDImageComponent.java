@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
@@ -20,6 +21,8 @@ import org.joml.Matrix4f;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,8 +35,10 @@ import javax.annotation.Nullable;
  * {@code textures/} 目录下并按可用区域等比缩放。</p>
  */
 @Getter
+@Slf4j
 public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
+    private static final Pattern FALLBACK_IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^)]+)\\)\\s*$");
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
     protected final ResourceLocation imageLocation;
     protected final boolean shouldScaleUp;
@@ -59,7 +64,7 @@ public class MDImageComponent extends MDComponent {
      */
     public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp, boolean enableAlignCenter) {
         super(FormattedText.EMPTY);
-        this.imageLocation = imageLocation.withPrefix("textures/");
+        this.imageLocation = imageLocation;
         this.shouldScaleUp = shouldScaleUp;
         this.enableAlignCenter = enableAlignCenter;
     }
@@ -67,10 +72,10 @@ public class MDImageComponent extends MDComponent {
     /**
      * 尝试将一行文本解析为图片组件。
      */
-    public static @Nullable MDImageComponent parse(String text) {
+    public static @Nullable MDImageComponent parse(ResourceLocation sourceLocation, String text) {
         Matcher matcher = IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
-            return null;
+            return MDImageComponent.fallbackParse(sourceLocation, text);
         }
         String namespace = matcher.group(1);
         String file = matcher.group(2).trim().replace('\\', '/');
@@ -78,11 +83,47 @@ public class MDImageComponent extends MDComponent {
             file = file.substring(1);
         }
         try {
-            ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, file);
+            ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
             return new MDImageComponent(imageLocation);
         } catch (RuntimeException exception) {
             return null;
         }
+    }
+
+    public static @Nullable MDImageComponent fallbackParse(ResourceLocation sourceLocation, String text) {
+        Matcher matcher = FALLBACK_IMAGE_PATTERN.matcher(text);
+        if (!matcher.matches()) {
+            return null;
+        }
+        try {
+            String path = getParsedPath(sourceLocation, matcher.group(1));
+            return new MDImageComponent(sourceLocation.withPath(path));
+        } catch (RuntimeException exception) {
+            log.debug(exception.getLocalizedMessage(), exception);
+            return null;
+        }
+    }
+
+    private static String getParsedPath(ResourceLocation sourceLocation, String path) {
+        String[] splitPath = path.split("/");
+        String locationPath = sourceLocation.getPath();
+        LinkedList<String> splitLocationPathList = new LinkedList<>(List.of(locationPath.split("/")));
+        splitLocationPathList.pollLast();
+        for (String pat : splitPath) {
+            if (".".equals(pat)) continue;
+            if ("..".equals(pat)) {
+                splitLocationPathList.pollLast();
+                continue;
+            }
+            splitLocationPathList.add(pat);
+        }
+        StringBuilder pathBuilder = new StringBuilder();
+        splitLocationPathList.forEach(str -> {
+            pathBuilder.append(str);
+            pathBuilder.append("/");
+        });
+        pathBuilder.deleteCharAt(pathBuilder.length() - 1);
+        return pathBuilder.toString();
     }
 
     /**
