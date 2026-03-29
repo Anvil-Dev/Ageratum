@@ -43,6 +43,7 @@ public interface MDExtensionComponentFactory {
 
 ```java
 public record MDExtensionContext(
+    ResourceLocation sourceLocation, // 当前文档位置
     ResourceLocation id,          // 组件 ID，如 mymod:my_component
     String rawParams,             // 原始参数字符串（冒号语法时可用）
     Map<String, String> params,   // 解析后的参数键值对（标签语法时可用）

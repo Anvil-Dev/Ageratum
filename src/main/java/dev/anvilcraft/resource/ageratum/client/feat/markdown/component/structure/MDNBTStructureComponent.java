@@ -52,8 +52,8 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
     private static final int ERROR_COLOR = 0xB91C1C;
     private static final int MAX_TEXT_PREVIEW_LENGTH = 80;
 
-    public MDNBTStructureComponent(ResourceLocation location, int maxDepth, int maxEntries) {
-        this(prepare(location, Math.max(1, maxDepth), Math.max(1, maxEntries)));
+    private MDNBTStructureComponent(StructureTarget target, int maxDepth, int maxEntries) {
+        this(prepare(target, Math.max(1, maxDepth), Math.max(1, maxEntries)));
     }
 
     private MDNBTStructureComponent(PreparedData preparedData) {
@@ -70,10 +70,10 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
         }
 
         try {
-            ResourceLocation location = ResourceLocation.parse(rawId);
+            StructureTarget target = StructureTarget.resolve(context.sourceLocation(), rawId);
             int maxDepth = parsePositiveInt(context, "maxDepth", DEFAULT_MAX_DEPTH);
             int maxEntries = parsePositiveInt(context, "maxEntries", DEFAULT_MAX_ENTRIES);
-            return new MDNBTStructureComponent(location, maxDepth, maxEntries);
+            return new MDNBTStructureComponent(target, maxDepth, maxEntries);
         } catch (Exception exception) {
             return new MDTextComponent("[错误：无法解析结构组件参数 - " + exception.getMessage() + "]");
         }
@@ -100,13 +100,13 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
         }
     }
 
-    private static PreparedData prepare(ResourceLocation location, int maxDepth, int maxEntries) {
+    private static PreparedData prepare(StructureTarget target, int maxDepth, int maxEntries) {
         List<StructureLine> lines = new ArrayList<>();
-        lines.add(new StructureLine(0, TITLE_COLOR, "Structure: " + location));
+        lines.add(new StructureLine(0, TITLE_COLOR, "Structure: " + target.displayPath()));
 
-        try (InputStream inputStream = openStructureStream(location)) {
+        try (InputStream inputStream = openStructureStream(target)) {
             if (inputStream == null) {
-                lines.add(new StructureLine(0, ERROR_COLOR, "无法找到结构文件：" + location));
+                lines.add(new StructureLine(0, ERROR_COLOR, "无法找到结构文件：" + target.displayPath()));
                 return toPreparedData(lines);
             }
 
@@ -237,15 +237,17 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
         return Math.max(1, Integer.parseInt(value));
     }
 
-    private static @Nullable InputStream openStructureStream(ResourceLocation location) throws IOException {
-        for (String candidate : candidateResourcePaths(location)) {
-            if (AgeratumClient.isPreviewLocation(location)) {
+    private static @Nullable InputStream openStructureStream(StructureTarget target) throws IOException {
+        if (AgeratumClient.isPreviewLocation(target.location())) {
+            for (String candidate : target.previewCandidatePaths()) {
                 Path previewPath = AgeratumClient.resolvePreviewAssetPath(candidate);
                 if (Files.isRegularFile(previewPath)) {
                     return Files.newInputStream(previewPath);
                 }
             }
+        }
 
+        for (String candidate : candidateResourcePaths(target.location())) {
             InputStream stream = MDNBTStructureComponent.class.getClassLoader().getResourceAsStream(candidate);
             if (stream != null) {
                 return stream;
@@ -271,6 +273,42 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
             normalized = normalized.substring(0, normalized.length() - 4);
         }
         return normalized;
+    }
+
+    private static String ensureNbtExtension(String path) {
+        return path.endsWith(".nbt") ? path : path + ".nbt";
+    }
+
+    private static String getCurrentDirectoryPath(ResourceLocation location) {
+        String currentFile = location.getPath();
+        int slash = currentFile.lastIndexOf('/');
+        if (slash < 0) {
+            return "";
+        }
+        return currentFile.substring(0, slash);
+    }
+
+    private static String normalizePathAgainstBase(String baseDir, String target) {
+        String source = target.replace('\\', '/').trim();
+        while (source.startsWith("/")) {
+            source = source.substring(1);
+        }
+        String combined = baseDir.isEmpty() ? source : baseDir + "/" + source;
+
+        ArrayList<String> parts = new ArrayList<>();
+        for (String segment : combined.split("/")) {
+            if (segment.isEmpty() || ".".equals(segment)) {
+                continue;
+            }
+            if ("..".equals(segment)) {
+                if (!parts.isEmpty()) {
+                    parts.removeLast();
+                }
+                continue;
+            }
+            parts.add(segment);
+        }
+        return String.join("/", parts);
     }
 
     private static int getLevelLineColor(int level) {
@@ -321,6 +359,26 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
     }
 
     private record PreparedData(List<CachedItem<StructureLine>> lines, FormattedText componentText) {
+    }
+
+    public record StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths) {
+        public static StructureTarget resolve(ResourceLocation sourceLocation, String rawTarget) {
+            String trimmed = rawTarget.trim();
+            if (trimmed.contains(":")) {
+                ResourceLocation location = ResourceLocation.parse(trimmed);
+                List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
+                    ? List.of(ensureNbtExtension(normalizePathAgainstBase("", location.getPath())))
+                    : List.of();
+                return new StructureTarget(location, trimmed, previewPaths);
+            }
+
+            String resolvedPath = normalizePathAgainstBase(getCurrentDirectoryPath(sourceLocation), trimmed);
+            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
+            List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
+                ? List.of(ensureNbtExtension(resolvedPath))
+                : List.of();
+            return new StructureTarget(location, trimmed, previewPaths);
+        }
     }
 
     public record StructureLine(int level, int color, String text) {

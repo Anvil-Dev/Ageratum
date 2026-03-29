@@ -167,6 +167,7 @@ Context object received by an extension component factory.
 
 ```java
 public record MDExtensionContext(
+    ResourceLocation sourceLocation,      // Current document location
     ResourceLocation id,                   // e.g. mymod:section
     String rawParams,                      // Raw params string (colon syntax)
     Map<String, String> params,            // Parsed key-value pairs (tag syntax)

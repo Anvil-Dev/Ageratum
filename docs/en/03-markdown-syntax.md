@@ -274,12 +274,16 @@ structure files stored under `data/<namespace>/structure/*.nbt`:
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
 
+<structure id="./test.nbt"/>
+
 <nbt_structure id="example:ruins/arch" maxDepth="3" maxEntries="8"/>
 ```
 
 - `id` / `path`: required, target structure file `ResourceLocation`
 - `maxDepth`: optional, maximum expansion depth, default `2`
 - `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
+- Relative paths are supported, for example `./test.nbt` or `../shared/demo.nbt`, resolved against the current document directory
+- In preview mode, relative paths are loaded from the matching location under `run/ageratum_review/`
 - Rendered content: structure size, palette/block/entity counts, and a depth-limited NBT tree
 - Fallback behavior: if the structure file is missing or cannot be read, the component shows an inline error message
 

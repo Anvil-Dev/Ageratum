@@ -166,11 +166,14 @@ Use the structure extension to render a summary and bounded NBT tree for `.nbt` 
 
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+
+<structure id="./test.nbt"/>
 ```
 
 - `id` / `path`: required, target structure file `ResourceLocation`
 - `maxDepth`: optional, maximum expansion depth, default `2`
 - `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
+- Relative paths are supported and resolved against the current document directory; in preview mode the matching `.nbt` file is loaded from `run/ageratum_review/`
 - The component first shows structure metadata such as size, palette, block count, and entity count, then renders a depth-limited NBT tree
 
 ### Preloading & Caching

@@ -43,6 +43,7 @@ public interface MDExtensionComponentFactory {
 
 ```java
 public record MDExtensionContext(
+    ResourceLocation sourceLocation,   // Current document location
     ResourceLocation id,               // Component ID, e.g. mymod:section
     String rawParams,                  // Raw parameter string (colon syntax)
     Map<String, String> params,        // Parsed key-value pairs (tag syntax)

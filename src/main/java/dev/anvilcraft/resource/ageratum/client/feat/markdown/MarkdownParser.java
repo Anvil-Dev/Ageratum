@@ -159,7 +159,7 @@ public class MarkdownParser {
                     flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                     String rawContent = extensionBlock.rawContent();
                     List<MDComponent> renderedContent = this.parse(sourceLocation, rawContent);
-                    MDComponent extensionComponent = createExtensionComponent(extensionBlock, renderedContent, rawContent);
+                    MDComponent extensionComponent = createExtensionComponent(sourceLocation, extensionBlock, renderedContent, rawContent);
                     if (extensionComponent != null) {
                         components.add(extensionComponent);
                     } else {
@@ -192,7 +192,7 @@ public class MarkdownParser {
             }
 
             // ── 自闭合扩展语法 ──────────────────────────────────────
-            MDComponent selfClosingExtension = trySelfClosingExtensionBlock(s);
+            MDComponent selfClosingExtension = trySelfClosingExtensionBlock(sourceLocation, s);
             if (selfClosingExtension != null) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 components.add(selfClosingExtension);
@@ -479,11 +479,12 @@ public class MarkdownParser {
      * 创建扩展组件。
      */
     private static @Nullable MDComponent createExtensionComponent(
+        ResourceLocation sourceLocation,
         BlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        return getMdComponent(renderedContent, rawContent, block);
+        return getMdComponent(sourceLocation, renderedContent, rawContent, block);
     }
 
     /**
@@ -491,15 +492,17 @@ public class MarkdownParser {
      */
     @SuppressWarnings("SameParameterValue")
     private static @Nullable MDComponent createExtensionComponent(
+        ResourceLocation sourceLocation,
         SelfClosingBlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
     ) {
-        return getMdComponent(renderedContent, rawContent, block);
+        return getMdComponent(sourceLocation, renderedContent, rawContent, block);
     }
 
 
     private static @Nullable MDComponent getMdComponent(
+        ResourceLocation sourceLocation,
         List<MDComponent> renderedContent,
         String rawContent,
         SelfClosingBlockExtensionState block
@@ -510,6 +513,7 @@ public class MarkdownParser {
             return null;
         }
         return factory.create(new MDExtensionContext(
+            sourceLocation,
             block.id(),
             block.rawParams(),
             block.params(),
@@ -563,7 +567,7 @@ public class MarkdownParser {
     /**
      * 尝试解析自闭合扩展。
      */
-    private static @Nullable MDComponent trySelfClosingExtensionBlock(String line) {
+    private static @Nullable MDComponent trySelfClosingExtensionBlock(ResourceLocation sourceLocation, String line) {
         String trimmed = line.trim();
         if (containsInlineClosingTag(trimmed)) {
             return null;
@@ -581,6 +585,7 @@ public class MarkdownParser {
             String rawParams = tagMatcher.group(2) == null ? "" : tagMatcher.group(2).trim();
             Map<String, String> params = ExtensionParamParser.parse(rawParams);
             return createExtensionComponent(
+                sourceLocation,
                 new SelfClosingBlockExtensionState(id, rawParams, params),
                 List.of(),
                 ""
