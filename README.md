@@ -344,7 +344,7 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 - `id` / `path`：必填，目标结构文件的 `ResourceLocation`
 - `maxDepth`：可选，最大展开深度，默认 `2`
 - `maxEntries`：可选，每层最多显示的键/列表项数量，默认 `12`
-- 支持相对路径，按当前文档目录解析；预览模式下会从 `run/ageratum_review/` 读取对应 `.nbt` 文件
+- 支持相对路径，按当前文档目录解析；可直接读取资源包中与 Markdown 同目录的 `.nbt` 文件，预览模式下则会从 `run/ageratum_review/` 读取对应文件
 - 组件会优先显示结构尺寸、调色板、方块数、实体数等摘要，再展示受限深度的 NBT 树
 
 ## 许可证

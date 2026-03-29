@@ -196,6 +196,14 @@ Tilde fenced code block is now supported.
 
 ---
 
+## 已实现：结构NBT
+
+<structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+
+<structure id="./test.nbt"/>
+
+---
+
 ## Implemented: Image (line-only, namespace:path)
 
 ![](ageratum:gui/guide/guide.png)

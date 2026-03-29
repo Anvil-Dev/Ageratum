@@ -20,6 +20,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -245,6 +246,11 @@ public final class MDNBTStructureComponent extends MDBlockComponent<MDNBTStructu
                     return Files.newInputStream(previewPath);
                 }
             }
+        }
+
+        Resource directResource = Minecraft.getInstance().getResourceManager().getResource(target.location()).orElse(null);
+        if (directResource != null) {
+            return directResource.open();
         }
 
         for (String candidate : candidateResourcePaths(target.location())) {

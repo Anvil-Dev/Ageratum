@@ -181,6 +181,14 @@ _ 被转义
 
 ---
 
+## 已实现：结构NBT
+
+<structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+
+<structure id="./test.nbt"/>
+
+---
+
 ## 已实现：图片（独占一行，namespace:path）
 
 ![](ageratum:gui/guide/guide.png)
