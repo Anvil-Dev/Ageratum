@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDCraftingTableRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDSmithingTableRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDStonecutterRecipeComponent;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
@@ -28,6 +29,15 @@ public class BuiltinRecipeComponentFactories {
         AgeratumRegistries.RECIPE_COMPONENT_FACTORIES.register(
             "smithing",
             () -> MDRecipeComponent.RecipeComponentFactory.create(RecipeType.SMITHING, MDSmithingTableRecipeComponent::new)
+        );
+
+    /**
+     * 切石机配方渲染工厂（{@code RecipeType.STONECUTTING}）。
+     */
+    public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, MDRecipeComponent.RecipeComponentFactory<?>> STONECUTTER =
+        AgeratumRegistries.RECIPE_COMPONENT_FACTORIES.register(
+            "stonecutter",
+            () -> MDRecipeComponent.RecipeComponentFactory.create(RecipeType.STONECUTTING, MDStonecutterRecipeComponent::new)
         );
 
     /**
