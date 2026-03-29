@@ -14,5 +14,6 @@ public class AgeratumLanguageProvider extends LanguageProvider {
     @Override
     protected void addTranslations() {
         ConfigData.readConfigClass(this, AgeratumClientConfig.class);
+        this.add("commands.ageratum.preview.disable", "Preview is not enabled");
     }
 }

@@ -7,5 +7,10 @@
   "ageratum.configuration.allow_code_block_line_content_line_breaks": "允许代码块中的行内容换行",
   "ageratum.configuration.allow_code_block_line_content_line_breaks.tooltip": "允许在代码块内容中插入换行符",
   "ageratum.configuration.show_code_block_line_numbers": "显示代码块的行号",
-  "ageratum.configuration.show_code_block_line_numbers.tooltip": "在代码块中显示行号"
+  "ageratum.configuration.show_code_block_line_numbers.tooltip": "在代码块中显示行号",
+  "ageratum.configuration.enable_preview": "启用预览模式",
+  "ageratum.configuration.enable_preview.tooltip": "是否启用预览模式（启用该模式后，可以实时查看指定路径下文档的更改情况）",
+  "ageratum.configuration.preview_path": "预览路径",
+  "ageratum.configuration.preview_path.tooltip": "用于设置预览模式的路径",
+  "commands.ageratum.preview.disable": "预览功能未启用"
 }

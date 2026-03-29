@@ -19,4 +19,10 @@ public class AgeratumClientConfig {
 
     @Comment("Allow line breaks in code block content")
     public boolean allowCodeBlockLineContentLineBreaks = true;
+
+    @Comment("Whether to enable preview mode (enabling it will allow real-time previews of changes to documents in the specified path)")
+    public boolean enablePreview = false;
+
+    @Comment("Preview mode path")
+    public String previewPath = "";
 }

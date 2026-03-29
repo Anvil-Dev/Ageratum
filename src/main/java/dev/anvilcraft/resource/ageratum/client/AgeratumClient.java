@@ -27,10 +27,12 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -92,6 +94,17 @@ public class AgeratumClient {
     public static void onCommandRegister(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(
             Commands.literal("ageratum")
+                .then(
+                    Commands.literal("preview").executes(context -> {
+                        CommandSourceStack source = context.getSource();
+                        if (!AgeratumClient.CONFIG.enablePreview) {
+                            source.sendFailure(Component.translatable("commands.ageratum.preview.disable"));
+                            return 0;
+                        }
+                        Path previewPath = FMLLoader.getGamePath().resolve(AgeratumClient.CONFIG.previewPath);
+                        return 1;
+                    })
+                )
                 .then(
                     // ── 第一个参数：命名空间 ──────────────────────────
                     Commands.argument("namespace", StringArgumentType.word())

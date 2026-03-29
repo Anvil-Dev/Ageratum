@@ -3,9 +3,14 @@
   "ageratum.configuration.allow_code_block_line_content_line_breaks.tooltip": "Allow line breaks in code block content",
   "ageratum.configuration.bread_crumbs_has_label": "Bread Crumbs Has Label",
   "ageratum.configuration.bread_crumbs_has_label.tooltip": "Do breadcrumbs record jumps from sidebar tabs",
+  "ageratum.configuration.enable_preview": "Enable Preview",
+  "ageratum.configuration.enable_preview.tooltip": "Whether to enable preview mode (enabling it will allow real-time previews of changes to documents in the specified path)",
+  "ageratum.configuration.preview_path": "Preview Path",
+  "ageratum.configuration.preview_path.tooltip": "Preview mode path",
   "ageratum.configuration.section.ageratum.client.toml": "Ageratum Client Configuration",
   "ageratum.configuration.section.ageratum.client.toml.title": "Ageratum Client Configuration",
   "ageratum.configuration.show_code_block_line_numbers": "Show Code Block Line Numbers",
   "ageratum.configuration.show_code_block_line_numbers.tooltip": "Show line numbers in code blocks",
-  "ageratum.configuration.title": "Ageratum Configuration"
+  "ageratum.configuration.title": "Ageratum Configuration",
+  "commands.ageratum.preview.disable": "Preview is not enabled"
 }
