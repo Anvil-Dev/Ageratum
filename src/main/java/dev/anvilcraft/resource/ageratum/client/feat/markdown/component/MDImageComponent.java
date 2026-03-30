@@ -13,9 +13,9 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -136,13 +136,13 @@ public class MDImageComponent extends MDComponent {
      */
     @Override
     public void render(
-        MDRenderContext context,
-        Minecraft minecraft,
-        int maxX,
-        int maxY,
-        float mouseX,
-        float mouseY
+        MDRenderContext context
     ) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
         GuiGraphics guiGraphics = context.graphics();
         Size size = this.resolveSize(minecraft);
         Size renderSize = this.computeRenderSize(size, maxX, maxY);

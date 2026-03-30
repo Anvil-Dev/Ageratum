@@ -68,14 +68,10 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(
-        MDRenderContext context,
-        Minecraft minecraft,
-        int maxX,
-        int maxY,
-        float mouseX,
-        float mouseY
-    ) {
+    public void render(MDRenderContext context) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
         GuiGraphics guiGraphics = context.graphics();
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
         PoseStack pose = guiGraphics.pose();

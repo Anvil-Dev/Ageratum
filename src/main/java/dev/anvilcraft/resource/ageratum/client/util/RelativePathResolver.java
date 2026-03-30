@@ -3,11 +3,20 @@ package dev.anvilcraft.resource.ageratum.client.util;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PathUtil {
+/**
+ * 在逻辑基目录下解析用户提供的相对路径工具。
+ */
+public class RelativePathResolver {
+    private RelativePathResolver() {
+    }
+
     /**
-     * 将相对路径规范化到给定基目录下，支持 ./ 与 ../，并阻止越过根目录。
+     * 将目标路径相对基目录进行规范化。
+     *
+     * <p>支持 {@code .} 与 {@code ..} 片段；若尝试越过根目录，则会被钳制在根目录，
+     * 不会生成父级前缀。</p>
      */
-    public static String normalizePathAgainstBase(String baseDir, String target) {
+    public static String resolveWithinBase(String baseDir, String target) {
         String source = target;
         while (source.startsWith("/")) {
             source = source.substring(1);
@@ -29,3 +38,4 @@ public class PathUtil {
         return String.join("/", parts);
     }
 }
+

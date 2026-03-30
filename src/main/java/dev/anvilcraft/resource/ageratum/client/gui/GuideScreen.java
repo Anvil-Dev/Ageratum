@@ -8,7 +8,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
-import dev.anvilcraft.resource.ageratum.client.util.PathUtil;
+import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -419,8 +419,7 @@ public class GuideScreen extends Screen {
             Style style = this.getStyleAtContentPosition(mouseX, mouseY);
             if (style != null) {
                 ClickEvent clickEvent = style.getClickEvent();
-                if (clickEvent != null && clickEvent.getAction() == ClickEvent.Action.OPEN_URL
-                    && this.tryOpenLinkedGuide(clickEvent.getValue())) {
+                if (clickEvent != null && clickEvent.getAction() == ClickEvent.Action.OPEN_URL && this.tryOpenLinkedGuide(clickEvent.getValue())) {
                     return true;
                 }
                 if (clickEvent != null && this.handleComponentClicked(style)) {
@@ -449,9 +448,7 @@ public class GuideScreen extends Screen {
 
         HoverEvent hoverEvent = style.getHoverEvent();
         if (hoverEvent != null && hoverEvent.getAction() == HoverEvent.Action.SHOW_TEXT) {
-            Component hoverComponent = hoverEvent.getValue(
-                HoverEvent.Action.SHOW_TEXT
-            );
+            Component hoverComponent = hoverEvent.getValue(HoverEvent.Action.SHOW_TEXT);
             if (hoverComponent != null) {
                 guiGraphics.renderTooltip(this.minecraft.font, hoverComponent, mouseX, mouseY);
             }
@@ -473,14 +470,13 @@ public class GuideScreen extends Screen {
 
         double relX = mouseX - (this.leftPos + this.getContentStartX());
         double relY = mouseY - (this.topPos + this.getContentStartY());
-        double mdX = relX;
         double mdY = relY + this.contentScroll;
 
         double currentY = 0;
         for (MDComponent component : this.parsedComponents) {
             int componentHeight = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE);
             if (mdY >= currentY && mdY <= currentY + componentHeight) {
-                return this.getStyleAtComponentPosition(component, this.minecraft, mdX, mdY - currentY);
+                return this.getStyleAtComponentPosition(component, this.minecraft, relX, mdY - currentY);
             }
             currentY += componentHeight + CONTENT_ROWS_MARGIN;
         }
@@ -605,7 +601,7 @@ public class GuideScreen extends Screen {
                 false
             );
         }
-        // Close Button
+        // 关闭按钮
         int originX = this.getCloseButtonX();
         int originY = this.getCloseButtonY();
         boolean isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
@@ -623,7 +619,7 @@ public class GuideScreen extends Screen {
             BUTTON_IMAGE_SIZE,
             BUTTON_IMAGE_SIZE
         );
-        // Return Button
+        // 返回按钮
         if (this.hasReturnButton()) {
             originY = this.getReturnButtonY();
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
@@ -684,8 +680,14 @@ public class GuideScreen extends Screen {
             return false;
         }
         int returnButtonY = this.getReturnButtonY();
-        return this.mouseInRange(closeButtonX, returnButtonY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)
-               && this.tryReturnToPreviousGuide();
+        return this.mouseInRange(
+            closeButtonX,
+            returnButtonY,
+            this.labelWidth,
+            this.labelHeight,
+            relMouseX,
+            relMouseY
+        ) && this.tryReturnToPreviousGuide();
     }
 
     private boolean tryReturnToPreviousGuide() {
@@ -908,13 +910,7 @@ public class GuideScreen extends Screen {
         if (directory.indexDocument != null) {
             target.add(this.toPreviewLabel(directory.indexDocument, 1));
         } else {
-            target.add(new LabelEntry(
-                null,
-                null,
-                1,
-                Component.literal(this.previewDirectoryTitle(directory.name)),
-                false
-            ));
+            target.add(new LabelEntry(null, null, 1, Component.literal(this.previewDirectoryTitle(directory.name)), false));
         }
 
         directory.documents.sort(Comparator.comparing(PreviewDocument::fileArgument));
@@ -930,13 +926,7 @@ public class GuideScreen extends Screen {
     }
 
     private LabelEntry toPreviewLabel(PreviewDocument document, int level) {
-        return new LabelEntry(
-            document.fileArgument,
-            document.location,
-            level,
-            Component.literal(document.title),
-            true
-        );
+        return new LabelEntry(document.fileArgument, document.location, level, Component.literal(document.title), true);
     }
 
     private String previewTitleFor(String fileArgument) {
@@ -987,20 +977,14 @@ public class GuideScreen extends Screen {
         } else {
             String name = directory.name();
             MutableComponent component = Component.translatableWithFallback(
-                directory.namespace() + "ageratum.directory" + name.toLowerCase(Locale.ROOT) + ".label",
-                name.toUpperCase(Locale.ROOT)
+                directory.namespace() + "ageratum.directory" + name.toLowerCase(
+                    Locale.ROOT) + ".label", name.toUpperCase(Locale.ROOT)
             );
             target.add(new LabelEntry(null, null, 1, component, false));
         }
 
         for (GuideDocumentCache.NavigationDocument document : directory.documents()) {
-            target.add(new LabelEntry(
-                document.fileArgument(),
-                document.location(),
-                2,
-                Component.literal(document.title()),
-                true
-            ));
+            target.add(new LabelEntry(document.fileArgument(), document.location(), 2, Component.literal(document.title()), true));
         }
 
         // 仅展开到二级：子目录只在其含 index.md 时显示为二级可点击项。
@@ -1102,22 +1086,22 @@ public class GuideScreen extends Screen {
             if (AgeratumClient.isPreviewLocation(parsed)) {
                 resolved = this.resolvePreviewLocation(parsed.getPath(), false);
             } else {
-            // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
-            if (parsed.getPath().startsWith("ageratum/") && parsed.getPath().endsWith(".md")) {
-                List<ResourceLocation> breadCrumbs = this.breadCrumbs;
-                if (!parsed.equals(this.documentLocation)) {
-                    breadCrumbs = new ArrayList<>(this.breadCrumbs);
-                    breadCrumbs.add(this.documentLocation);
-                    breadCrumbs = List.copyOf(breadCrumbs);
+                // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
+                if (parsed.getPath().startsWith("ageratum/") && parsed.getPath().endsWith(".md")) {
+                    List<ResourceLocation> breadCrumbs = this.breadCrumbs;
+                    if (!parsed.equals(this.documentLocation)) {
+                        breadCrumbs = new ArrayList<>(this.breadCrumbs);
+                        breadCrumbs.add(this.documentLocation);
+                        breadCrumbs = List.copyOf(breadCrumbs);
+                    }
+                    return AgeratumClient.openGuideOnClient(parsed, anchor, breadCrumbs);
                 }
-                return AgeratumClient.openGuideOnClient(parsed, anchor, breadCrumbs);
-            }
-            resolved = GuideDocumentLoader.resolveExistingLocation(
-                resourceManager,
-                parsed.getNamespace(),
-                this.currentLanguageCode,
-                parsed.getPath()
-            );
+                resolved = GuideDocumentLoader.resolveExistingLocation(
+                    resourceManager,
+                    parsed.getNamespace(),
+                    this.currentLanguageCode,
+                    parsed.getPath()
+                );
             }
         } else {
             resolved = this.resolveLocationWithoutNamespace(resourceManager, target);
@@ -1240,7 +1224,7 @@ public class GuideScreen extends Screen {
         }
 
         String currentDir = this.getCurrentDirectoryPath();
-        String inCurrentDir = PathUtil.normalizePathAgainstBase(currentDir, normalizedTarget);
+        String inCurrentDir = RelativePathResolver.resolveWithinBase(currentDir, normalizedTarget);
         Optional<ResourceLocation> currentDirResolved = GuideDocumentLoader.resolveExistingLocation(
             resourceManager,
             this.documentLocation.getNamespace(),
@@ -1251,7 +1235,7 @@ public class GuideScreen extends Screen {
             return currentDirResolved;
         }
 
-        String inNamespaceRoot = PathUtil.normalizePathAgainstBase("", normalizedTarget);
+        String inNamespaceRoot = RelativePathResolver.resolveWithinBase("", normalizedTarget);
         Optional<ResourceLocation> namespaceRootResolved = GuideDocumentLoader.resolveExistingLocation(
             resourceManager,
             this.documentLocation.getNamespace(),
@@ -1262,12 +1246,7 @@ public class GuideScreen extends Screen {
             return namespaceRootResolved;
         }
 
-        return GuideDocumentLoader.resolveExistingLocation(
-            resourceManager,
-            Ageratum.MOD_ID,
-            this.currentLanguageCode,
-            inNamespaceRoot
-        );
+        return GuideDocumentLoader.resolveExistingLocation(resourceManager, Ageratum.MOD_ID, this.currentLanguageCode, inNamespaceRoot);
     }
 
     private Optional<ResourceLocation> resolvePreviewLocation(String rawTarget, boolean resolveRelative) {
@@ -1278,14 +1257,14 @@ public class GuideScreen extends Screen {
 
         if (resolveRelative) {
             String currentDir = this.getCurrentDirectoryPath();
-            String inCurrentDir = PathUtil.normalizePathAgainstBase(currentDir, normalizedTarget);
+            String inCurrentDir = RelativePathResolver.resolveWithinBase(currentDir, normalizedTarget);
             Optional<ResourceLocation> inCurrentDirLocation = this.tryResolvePreviewDocument(inCurrentDir);
             if (inCurrentDirLocation.isPresent()) {
                 return inCurrentDirLocation;
             }
         }
 
-        String inRoot = PathUtil.normalizePathAgainstBase("", normalizedTarget);
+        String inRoot = RelativePathResolver.resolveWithinBase("", normalizedTarget);
         return this.tryResolvePreviewDocument(inRoot);
     }
 
@@ -1369,28 +1348,47 @@ public class GuideScreen extends Screen {
         float translatedMouseX = mouseX - this.getContentStartX();
         float translatedMouseY = mouseY - (this.getContentStartY() - this.contentScroll);
         // 逐个渲染 Markdown 组件，每个组件渲染后向下平移其高度加间距
-        MDRenderContext context = new MDRenderContext(guiGraphics, new ArrayList<>());
+        int totalOffsetY = this.getContentStartY();
+        MDRenderContext rootContext = new MDRenderContext(
+            null,
+            this.minecraft,
+            guiGraphics,
+            new ArrayList<>(),
+            this.width,
+            this.height,
+            this.width,
+            Integer.MAX_VALUE,
+            mouseX,
+            mouseY,
+            this.getContentStartX(),
+            Math.round(totalOffsetY - this.contentScroll),
+            1.0f,
+            this.leftPos,
+            this.topPos,
+            new ArrayList<>()
+        );
         for (MDComponent component : this.parsedComponents) {
             pose.pushPose();
-            component.render(
-                context,
-                this.minecraft,
+            component.render(rootContext.child(
                 this.getContentWidth(),
                 Integer.MAX_VALUE,
                 translatedMouseX,
-                translatedMouseY
-            );
+                translatedMouseY,
+                this.getContentStartX(),
+                Math.round(totalOffsetY - this.contentScroll),
+                1.0f
+            ));
             pose.popPose();
             int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
             pose.translate(0, offsetY, 0);
+            totalOffsetY += offsetY;
             translatedMouseY = translatedMouseY - offsetY;
         }
 
         pose.popPose();
         guiGraphics.disableScissor();
-        for (MDRenderContext.Tooltip tooltip : context.tooltips()) {
-            guiGraphics.renderTooltip(this.minecraft.font, tooltip.tooltipLines(), tooltip.visualTooltipComponent(), mouseX, mouseY);
-        }
+        rootContext.renderTooltip();
+        rootContext.onEnd(this);
     }
 
     public float getBgImageScale() {
@@ -1503,18 +1501,12 @@ public class GuideScreen extends Screen {
      * @return 命中的文本样式；若未命中则返回 {@code null}
      */
     @Nullable
-    private Style getStyleAtComponentPosition(
-        MDComponent component, Minecraft minecraft, double mouseX, double mouseY
-    ) {
+    private Style getStyleAtComponentPosition(MDComponent component, Minecraft minecraft, double mouseX, double mouseY) {
         return component.getStyleAtPosition(minecraft, mouseX, mouseY, this.getContentWidth());
     }
 
     protected record LabelEntry(
-        @Nullable String fileArgument,
-        @Nullable ResourceLocation location,
-        int level,
-        Component title,
-        boolean clickable
+        @Nullable String fileArgument, @Nullable ResourceLocation location, int level, Component title, boolean clickable
     ) {
     }
 

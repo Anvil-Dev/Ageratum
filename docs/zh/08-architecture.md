@@ -197,6 +197,8 @@ MDComponent.textFormat(rawText)
 
 ## 设计原则
 
+> 结构 NBT 预览渲染的专项说明见：[结构预览渲染](10-structure-preview-rendering.md)
+
 ### 1. 分离关注点（SoC）
 
 每个类职责单一：

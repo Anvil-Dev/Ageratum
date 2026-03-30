@@ -32,13 +32,11 @@ public abstract class MDBlockComponent<E> extends MDComponent {
 
     @Override
     public final void render(
-        MDRenderContext context,
-        Minecraft minecraft,
-        int maxX,
-        int maxY,
-        float mouseX,
-        float mouseY
+        MDRenderContext context
     ) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
         GuiGraphics guiGraphics = context.graphics();
         int y = 0;
         for (CachedItem<E> cachedItem : this.cachedItems) {

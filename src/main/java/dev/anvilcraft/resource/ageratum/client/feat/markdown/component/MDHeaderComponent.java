@@ -79,25 +79,26 @@ public class MDHeaderComponent extends MDComponent {
      */
     @Override
     public void render(
-        MDRenderContext context,
-        Minecraft minecraft,
-        int maxX,
-        int maxY,
-        float mouseX,
-        float mouseY
+        MDRenderContext context
     ) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
         GuiGraphics guiGraphics = context.graphics();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         float scale = this.getScale();
         pose.scale(scale, scale, scale);
         super.render(
-            context,
-            minecraft,
-            this.unscale(maxX),
-            this.unscale(maxY),
-            mouseX / scale,
-            mouseY / scale
+            context.child(
+                this.unscale(maxX),
+                this.unscale(maxY),
+                mouseX / scale,
+                mouseY / scale,
+                scale
+            )
         );
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;

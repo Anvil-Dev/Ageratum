@@ -160,21 +160,15 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
 
         @Override
-        public void render(
-            MDRenderContext context,
-            Minecraft minecraft,
-            int maxX,
-            int maxY,
-            float mouseX,
-            float mouseY
-        ) {
+        public void render(MDRenderContext context) {
+            Minecraft minecraft = context.minecraft();
             if (component != null) {
-                this.component.render(context, minecraft, maxX, maxY, mouseX, mouseY);
+                this.component.render(context.child());
                 return;
             }
             ClientLevel level = minecraft.level;
             if (level == null) {
-                emptyComponent.render(context, minecraft, maxX, maxY, mouseX, mouseY);
+                emptyComponent.render(context.child());
                 return;
             }
             RecipeManager manager = level.getRecipeManager();
@@ -184,7 +178,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                     return;
                 }
             }
-            emptyComponent.render(context, minecraft, maxX, maxY, mouseX, mouseY);
+            emptyComponent.render(context.child());
         }
 
         /**
@@ -221,14 +215,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
     }
 
-    protected void renderTooltip(
-        MDRenderContext context,
-        ItemStack stack,
-        int startX,
-        int startY,
-        float mouseX,
-        float mouseY
-    ) {
+    protected void renderTooltip(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
         }

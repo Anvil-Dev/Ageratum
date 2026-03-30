@@ -5,8 +5,15 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
-import dev.anvilcraft.resource.ageratum.client.util.PathUtil;
+import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
+import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
+import dev.anvilcraft.resource.ageratum.client.util.level.DelegatingServerLevelAccessor;
+import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
+import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
@@ -14,6 +21,8 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.SingleThreadedRandomSource;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
 import java.io.IOException;
@@ -29,9 +38,10 @@ import javax.annotation.Nullable;
  * <p>该组件由扩展标签 {@code <structure id="namespace:path"/>} 创建，
  * 用于在文档中渲染结构文件摘要与 NBT 树状视图。</p>
  */
+@Slf4j
 public final class MDNBTStructureComponent extends MDComponent {
     private final StructureTarget target;
-    private @Nullable StructureTemplate template = null;
+    private @Nullable SandboxRenderLevel previewLevel = null;
 
     private MDNBTStructureComponent(StructureTarget target) {
         super("[结构未加载]");
@@ -56,32 +66,68 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     @Override
-    public void render(MDRenderContext context, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
-        if (this.template == null) {
-            this.template = MDNBTStructureComponent.prepare(minecraft.level, this.target);
+    public void render(MDRenderContext context) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        GuiGraphics graphics = context.graphics();
+        if (this.previewLevel == null) {
+            this.previewLevel = MDNBTStructureComponent.prepare(minecraft.level, this.target);
         }
-        if (this.template == null) {
-            super.render(context, minecraft, maxX, maxY, mouseX, mouseY);
+        if (this.previewLevel == null) {
+            super.render(context.child());
         }
+        graphics.renderOutline(0, 0, maxX, this.scale(maxX, 150), 0xAA000000);
+        graphics.fill(0, 0, maxX, this.scale(maxX, 150), 0x55000000);
+        context.enableScissor(1, 1, maxX - 1, this.scale(maxX, 150) - 1);
+        ViewportCameraRig cameraRig = new ViewportCameraRig();
+        cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
+        cameraRig.setOffsetY(-graphics.pose().last().pose().m31());
+        StructurePreviewRenderer.getInstance().render(this.previewLevel, cameraRig, graphics.bufferSource());
+        context.disableScissor();
     }
 
-    private static @Nullable StructureTemplate prepare(@Nullable Level level, StructureTarget target) {
-        if (level == null) return null;
-        try (InputStream inputStream = openStructureStream(target)) {
+    public int scale(int maxX, int value) {
+        float scale = 330.f / maxX;
+        return Math.round(value * scale);
+    }
+
+    @Override
+    public int getHeight(Minecraft minecraft, int maxX, int maxY) {
+        return this.scale(maxX, 150);
+    }
+
+    /**
+     * 加载 NBT 结构模板并将其放入沙盒关卡，供后续渲染使用。
+     */
+    private static @Nullable SandboxRenderLevel prepare(@Nullable Level clientLevel, StructureTarget target) {
+        if (clientLevel == null) return null;
+        try (InputStream inputStream = MDNBTStructureComponent.openStructureStream(target)) {
             if (inputStream == null) {
                 return null;
             }
 
             var template = new StructureTemplate();
-            var blocks = level.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
+            var blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
             CompoundTag root = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
             template.load(blocks, root);
-            return template;
+            var random = new SingleThreadedRandomSource(0L);
+            var settings = new StructurePlaceSettings();
+            settings.setIgnoreEntities(true);
+            SandboxRenderLevel level = new SandboxRenderLevel();
+            var fakeServerLevel = new DelegatingServerLevelAccessor(level);
+            if (!template.placeInWorld(fakeServerLevel, BlockPos.ZERO, BlockPos.ZERO, settings, random, 0)) {
+                log.debug("Failed to place structure.");
+            }
+            return level;
         } catch (Exception exception) {
             return null;
         }
     }
 
+    /**
+     * 按优先级打开结构输入流：先尝试 preview 工作区，再尝试资源管理器，
+     * 最后回退到 classpath 路径。
+     */
     private static @Nullable InputStream openStructureStream(StructureTarget target) throws IOException {
         if (AgeratumClient.isPreviewLocation(target.location())) {
             for (String candidate : target.previewCandidatePaths()) {
@@ -106,6 +152,9 @@ public final class MDNBTStructureComponent extends MDComponent {
         return null;
     }
 
+    /**
+     * 生成结构文件在 classpath 中的回退搜索路径。
+     */
     private static List<String> candidateResourcePaths(ResourceLocation location) {
         String normalizedPath = normalizeStructurePath(location.getPath());
         return List.of(
@@ -139,17 +188,20 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     public record StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths) {
+        /**
+         * 基于 markdown 源文档位置解析显式或相对的结构引用。
+         */
         public static StructureTarget resolve(ResourceLocation sourceLocation, String rawTarget) {
             String trimmed = rawTarget.trim();
             if (trimmed.contains(":")) {
                 ResourceLocation location = ResourceLocation.parse(trimmed);
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
-                                            ? List.of(ensureNbtExtension(PathUtil.normalizePathAgainstBase("", location.getPath())))
+                                            ? List.of(ensureNbtExtension(RelativePathResolver.resolveWithinBase("", location.getPath())))
                                             : List.of();
                 return new StructureTarget(location, trimmed, previewPaths);
             }
 
-            String resolvedPath = PathUtil.normalizePathAgainstBase(getCurrentDirectoryPath(sourceLocation), trimmed);
+            String resolvedPath = RelativePathResolver.resolveWithinBase(getCurrentDirectoryPath(sourceLocation), trimmed);
             ResourceLocation location = ResourceLocation.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
             List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
                                         ? List.of(ensureNbtExtension(resolvedPath))

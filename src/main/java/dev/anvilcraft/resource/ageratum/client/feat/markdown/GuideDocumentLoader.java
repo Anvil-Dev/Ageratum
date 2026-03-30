@@ -25,13 +25,19 @@ import javax.annotation.Nullable;
  */
 public final class GuideDocumentLoader {
 
-    /** Markdown 文档在各命名空间内的根目录名称。 */
+    /**
+     * Markdown 文档在各命名空间内的根目录名称。
+     */
     private static final String GUIDE_ROOT = "ageratum";
 
-    /** 默认语言目录。 */
+    /**
+     * 默认语言目录。
+     */
     public static final String DEFAULT_LANGUAGE_CODE = "en_us";
 
-    /** 工具类，禁止实例化。 */
+    /**
+     * 工具类，禁止实例化。
+     */
     private GuideDocumentLoader() {
     }
 
@@ -54,7 +60,7 @@ public final class GuideDocumentLoader {
      * @param languageCode 语言代码（如 {@code en_us}、{@code zh_cn}）
      * @param fileArgument 文件名参数（可为 {@code null} 或空字符串）
      * @return 指向该文档的资源位置，格式为
-     *         {@code namespace:ageratum/<languageCode>/<normalizedFile>.md}
+     * {@code namespace:ageratum/<languageCode>/<normalizedFile>.md}
      */
     public static ResourceLocation toDocumentLocation(String namespace, String languageCode, @Nullable String fileArgument) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
@@ -172,8 +178,8 @@ public final class GuideDocumentLoader {
         Map<ResourceLocation, Resource> files = resourceManager.listResources(
             rootDirectory,
             location -> location.getNamespace().equals(namespace)
-                && location.getPath().startsWith(rootPrefix)
-                && location.getPath().endsWith(".md")
+                        && location.getPath().startsWith(rootPrefix)
+                        && location.getPath().endsWith(".md")
         );
         List<String> result = new ArrayList<>();
         for (ResourceLocation location : files.keySet()) {
