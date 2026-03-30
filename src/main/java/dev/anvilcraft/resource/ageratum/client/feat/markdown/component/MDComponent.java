@@ -101,6 +101,50 @@ public abstract class MDComponent {
     }
 
     /**
+     * 处理组件内部鼠标滚轮事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部鼠标按下事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部鼠标拖拽事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseDragged(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int button,
+        double dragX,
+        double dragY,
+        int maxX
+    ) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部鼠标释放事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseReleased(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
+        return false;
+    }
+
+    /**
      * 根据格式化文本在指定宽度下的换行结果获取命中的文本样式。
      */
     @Nullable

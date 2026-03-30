@@ -163,6 +163,8 @@ public class GuideScreen extends Screen {
      * 当前内容滚动偏移量（Markdown 坐标系像素，向下为正）。
      */
     protected float contentScroll;
+    protected @Nullable MDComponent activeMouseComponent;
+    protected int activeMouseButton = -1;
     /**
      * 内容最大可滚动距离（等于内容总高度减去可见高度，最小为 0）。
      */
@@ -387,6 +389,14 @@ public class GuideScreen extends Screen {
         if (!this.mouseInContentRange(mouseX, mouseY)) {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
+
+        if (this.minecraft != null) {
+            ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
+            if (hit != null && hit.component().mouseScrolled(this.minecraft, hit.mouseX(), hit.mouseY(), scrollY, this.getContentWidth())) {
+                return true;
+            }
+        }
+
         // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
         this.scrollBy((float) -scrollY * SCROLL_STEP);
         return true;
@@ -414,6 +424,15 @@ public class GuideScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
+        if (this.minecraft != null) {
+            ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
+            if (hit != null && hit.component().mouseClicked(this.minecraft, hit.mouseX(), hit.mouseY(), button, this.getContentWidth())) {
+                this.activeMouseComponent = hit.component();
+                this.activeMouseButton = button;
+                return true;
+            }
+        }
+
         // 左键点击时尝试触发 ClickEvent
         if (button == 0 && this.minecraft != null) {
             Style style = this.getStyleAtContentPosition(mouseX, mouseY);
@@ -429,6 +448,53 @@ public class GuideScreen extends Screen {
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (this.activeMouseComponent != null && this.minecraft != null && button == this.activeMouseButton) {
+            ComponentMouseHit hit = this.getComponentMousePosition(this.activeMouseComponent, mouseX, mouseY);
+            double componentX = hit != null ? hit.mouseX() : 0.0d;
+            double componentY = hit != null ? hit.mouseY() : 0.0d;
+            if (this.activeMouseComponent.mouseDragged(
+                this.minecraft,
+                componentX,
+                componentY,
+                button,
+                dragX,
+                dragY,
+                this.getContentWidth()
+            )) {
+                return true;
+            }
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (this.activeMouseComponent != null && this.minecraft != null) {
+            ComponentMouseHit hit = this.getComponentMousePosition(this.activeMouseComponent, mouseX, mouseY);
+            double componentX = hit != null ? hit.mouseX() : 0.0d;
+            double componentY = hit != null ? hit.mouseY() : 0.0d;
+            boolean consumed = this.activeMouseComponent.mouseReleased(
+                this.minecraft,
+                componentX,
+                componentY,
+                button,
+                this.getContentWidth()
+            );
+
+            if (button == this.activeMouseButton) {
+                this.activeMouseComponent = null;
+                this.activeMouseButton = -1;
+            }
+
+            if (consumed) {
+                return true;
+            }
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     /**
@@ -468,6 +534,42 @@ public class GuideScreen extends Screen {
             return null;
         }
 
+        ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
+        if (hit != null) {
+            return this.getStyleAtComponentPosition(hit.component(), this.minecraft, hit.mouseX(), hit.mouseY());
+        }
+        return null;
+    }
+
+    private @Nullable ComponentMouseHit getComponentHitAtContentPosition(double mouseX, double mouseY) {
+        if (this.minecraft == null) {
+            return null;
+        }
+
+        double relX = mouseX - (this.leftPos + this.getContentStartX());
+        double relY = mouseY - (this.topPos + this.getContentStartY());
+        double mdY = relY + this.contentScroll;
+
+        if (relX < 0 || relX > this.getContentWidth()) {
+            return null;
+        }
+
+        double currentY = 0;
+        for (MDComponent component : this.parsedComponents) {
+            int componentHeight = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE);
+            if (mdY >= currentY && mdY <= currentY + componentHeight) {
+                return new ComponentMouseHit(component, relX, mdY - currentY);
+            }
+            currentY += componentHeight + CONTENT_ROWS_MARGIN;
+        }
+        return null;
+    }
+
+    private @Nullable ComponentMouseHit getComponentMousePosition(MDComponent target, double mouseX, double mouseY) {
+        if (this.minecraft == null) {
+            return null;
+        }
+
         double relX = mouseX - (this.leftPos + this.getContentStartX());
         double relY = mouseY - (this.topPos + this.getContentStartY());
         double mdY = relY + this.contentScroll;
@@ -475,12 +577,11 @@ public class GuideScreen extends Screen {
         double currentY = 0;
         for (MDComponent component : this.parsedComponents) {
             int componentHeight = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE);
-            if (mdY >= currentY && mdY <= currentY + componentHeight) {
-                return this.getStyleAtComponentPosition(component, this.minecraft, relX, mdY - currentY);
+            if (component == target) {
+                return new ComponentMouseHit(component, relX, mdY - currentY);
             }
             currentY += componentHeight + CONTENT_ROWS_MARGIN;
         }
-
         return null;
     }
 
@@ -1508,6 +1609,9 @@ public class GuideScreen extends Screen {
     protected record LabelEntry(
         @Nullable String fileArgument, @Nullable ResourceLocation location, int level, Component title, boolean clickable
     ) {
+    }
+
+    private record ComponentMouseHit(MDComponent component, double mouseX, double mouseY) {
     }
 
     private static final class PreviewDirectoryNode {

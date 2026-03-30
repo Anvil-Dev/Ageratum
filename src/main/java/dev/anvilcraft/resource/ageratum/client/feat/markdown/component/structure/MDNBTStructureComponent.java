@@ -13,6 +13,7 @@ import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRender
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -40,8 +41,18 @@ import javax.annotation.Nullable;
  */
 @Slf4j
 public final class MDNBTStructureComponent extends MDComponent {
+    private static final float MIN_ZOOM = 0.2f;
+    private static final float MAX_ZOOM = 8.0f;
+    private static final float ROTATE_YAW_SENSITIVITY = 0.8f;
+    private static final float ROTATE_PITCH_SENSITIVITY = 0.6f;
+    private static final float PAN_SENSITIVITY = 1.0f;
+
     private final StructureTarget target;
+    private final ViewportCameraRig cameraRig = new ViewportCameraRig();
     private @Nullable SandboxRenderLevel previewLevel = null;
+    private float panOffsetX;
+    private float panOffsetY;
+    private int dragButton = -1;
 
     private MDNBTStructureComponent(StructureTarget target) {
         super("[结构未加载]");
@@ -79,11 +90,74 @@ public final class MDNBTStructureComponent extends MDComponent {
         graphics.renderOutline(0, 0, maxX, this.scale(maxX, 150), 0xAA000000);
         graphics.fill(0, 0, maxX, this.scale(maxX, 150), 0x55000000);
         context.enableScissor(1, 1, maxX - 1, this.scale(maxX, 150) - 1);
-        ViewportCameraRig cameraRig = new ViewportCameraRig();
-        cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
-        cameraRig.setOffsetY(-graphics.pose().last().pose().m31());
-        StructurePreviewRenderer.getInstance().render(this.previewLevel, cameraRig, graphics.bufferSource());
+        this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
+        this.cameraRig.setOffsetX(this.panOffsetX);
+        this.cameraRig.setOffsetY(-graphics.pose().last().pose().m31() + this.panOffsetY);
+        StructurePreviewRenderer.getInstance().render(this.previewLevel, this.cameraRig, graphics.bufferSource());
         context.disableScissor();
+    }
+
+    @Override
+    public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
+        if (!Screen.hasControlDown() || scrollY == 0.0d) {
+            return false;
+        }
+
+        float nextZoom = this.cameraRig.getZoom() * (float) Math.pow(1.1d, scrollY);
+        this.cameraRig.setZoom(clamp(nextZoom, MIN_ZOOM, MAX_ZOOM));
+        return true;
+    }
+
+    @Override
+    public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
+        if (button != 0 && button != 1) {
+            return false;
+        }
+        this.dragButton = button;
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int button,
+        double dragX,
+        double dragY,
+        int maxX
+    ) {
+        if (button != this.dragButton) {
+            return false;
+        }
+
+        if (button == 0) {
+            this.panOffsetX += (float) (dragX * PAN_SENSITIVITY);
+            this.panOffsetY -= (float) (dragY * PAN_SENSITIVITY);
+            return true;
+        }
+
+        if (button == 1) {
+            this.cameraRig.setRotationY(this.cameraRig.getRotationY() + (float) (dragX * ROTATE_YAW_SENSITIVITY));
+            float nextPitch = this.cameraRig.getRotationX() - (float) (dragY * ROTATE_PITCH_SENSITIVITY);
+            this.cameraRig.setRotationX(clamp(nextPitch, -89.9f, 89.9f));
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean mouseReleased(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
+        if (button != this.dragButton) {
+            return false;
+        }
+        this.dragButton = -1;
+        return true;
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     public int scale(int maxX, int value) {
