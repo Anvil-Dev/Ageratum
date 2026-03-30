@@ -330,6 +330,16 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 渲染为随机字符的"乱码"效果。
 
+### 翻译标签
+
+```markdown
+<translate key="item.minecraft.diamond"/>
+<translate key="ageratum.guide.missing" fallback="Missing translation"/>
+```
+
+- `key`：**必填**，语言键
+- `fallback`：可选，语言键不存在时显示的后备文本
+
 ### 悬停事件
 
 ```markdown

@@ -330,6 +330,16 @@ Parameters:
 
 Renders as randomly-changing "scrambled" characters.
 
+### Translate Tag
+
+```markdown
+<translate key="item.minecraft.diamond"/>
+<translate key="ageratum.guide.missing" fallback="Missing translation"/>
+```
+
+- `key`: **Required** translation key
+- `fallback`: Optional fallback text when the key has no translation
+
 ### Hover Events
 
 ```markdown

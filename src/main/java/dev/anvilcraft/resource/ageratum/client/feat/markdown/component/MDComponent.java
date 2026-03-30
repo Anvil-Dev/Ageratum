@@ -8,7 +8,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -37,6 +39,8 @@ public abstract class MDComponent {
     private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])_([^_\\n]+)_(?![A-Za-z0-9_])");
     private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
     private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
+    private static final Pattern TRANSLATE_TAG_PATTERN = Pattern.compile("<translate\\b([^>]*?)\\s*/>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TAG_ATTRIBUTE_PATTERN = Pattern.compile("([a-zA-Z_:][-a-zA-Z0-9_:.]*)\\s*=\\s*\"([^\"]*)\"");
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
@@ -445,6 +449,17 @@ public abstract class MDComponent {
         while (pos < text.length()) {
             // 查找最近的标签
             ParserMatch nextTag = findNextTag(text, pos);
+            InlineComponentMatch nextInlineComponent = findNextInlineComponent(text, pos, parentStyle);
+
+            if (nextInlineComponent != null && (nextTag == null || nextInlineComponent.start() < nextTag.start())) {
+                if (nextInlineComponent.start() > pos) {
+                    String plainText = text.substring(pos, nextInlineComponent.start());
+                    parts.add(FormattedText.of(plainText, parentStyle));
+                }
+                parts.add(nextInlineComponent.text());
+                pos = nextInlineComponent.end();
+                continue;
+            }
 
             if (nextTag != null) {
                 int tagStart = nextTag.start();
@@ -548,6 +563,9 @@ public abstract class MDComponent {
         }
     }
 
+    private record InlineComponentMatch(int start, int end, FormattedText text) {
+    }
+
     private enum MarkdownTokenType {
         IMAGE,
         LINK,
@@ -594,6 +612,34 @@ public abstract class MDComponent {
             }
         }
         return earliest;
+    }
+
+    private static @Nullable InlineComponentMatch findNextInlineComponent(String text, int pos, Style parentStyle) {
+        Matcher matcher = TRANSLATE_TAG_PATTERN.matcher(text);
+        while (matcher.find(pos)) {
+            String attributes = matcher.group(1);
+            String key = getTagAttribute(attributes, "key");
+            if (key == null || key.isBlank()) {
+                continue;
+            }
+
+            String fallback = getTagAttribute(attributes, "fallback");
+            MutableComponent translated = fallback == null
+                ? Component.translatable(key)
+                : Component.translatableWithFallback(key, fallback);
+            return new InlineComponentMatch(matcher.start(), matcher.end(), translated.withStyle(parentStyle));
+        }
+        return null;
+    }
+
+    private static @Nullable String getTagAttribute(String rawAttributes, String attributeName) {
+        Matcher matcher = TAG_ATTRIBUTE_PATTERN.matcher(rawAttributes);
+        while (matcher.find()) {
+            if (attributeName.equalsIgnoreCase(matcher.group(1))) {
+                return matcher.group(2);
+            }
+        }
+        return null;
     }
 
     private static int compareInlineStyleParser(ResourceLocation parserId, int priority, ParserMatch current) {
