@@ -314,6 +314,16 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 ## 内置行内标签
 
+行内组件使用自闭合标签语法：
+
+```markdown
+<namespace:id key="value"/>
+```
+
+- `namespace` 可省略，默认 `ageratum`
+- 参数使用 `key="value"` 或 `key=value` 格式
+- 标签会按 `namespace:id` 分发到对应的行内组件实现进行渲染
+
 ### 颜色标签
 
 ```markdown

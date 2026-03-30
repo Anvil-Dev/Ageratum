@@ -12,6 +12,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineComponents;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineStyleParsers;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinRecipeComponentFactories;
 import net.minecraft.client.Minecraft;
@@ -65,6 +66,8 @@ public class AgeratumClient {
         BuiltinExtensionComponents.init();
         // 触发内置行内样式解析器注册项的类加载
         BuiltinInlineStyleParsers.init();
+        // 触发内置行内组件注册项的类加载
+        BuiltinInlineComponents.init();
         // 触发内置配方组件解析器注册项的类加载
         BuiltinRecipeComponentFactories.init();
     }

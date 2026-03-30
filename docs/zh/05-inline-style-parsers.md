@@ -2,6 +2,9 @@
 
 本文档介绍如何注册自定义行内样式解析器，使 Ageratum 的 Markdown 渲染器能够识别并应用你模组专属的行内标签。
 
+> 提示：`<namespace:id .../>` 这类自闭合标签属于"行内组件"体系，需注册 `MDInlineComponentFactory`；
+> 本文档的 `MDInlineStyleParser` 主要用于 `<tag>...</tag>` 这类成对样式标签。
+
 ---
 
 ## 概念介绍

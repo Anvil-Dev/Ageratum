@@ -107,6 +107,17 @@ public final class AgeratumRegistries {
     public static final Registry<MDExtensionComponentFactory>
         EXTENSION_COMPONENT_FACTORY_REGISTRY;
 
+    // ── 行内组件工厂注册表 ────────────────────────────────────────────────
+
+    public static final ResourceKey<Registry<MDInlineComponentFactory>>
+        INLINE_COMPONENT_FACTORY_REGISTRY_KEY;
+
+    public static final DeferredRegister<MDInlineComponentFactory>
+        INLINE_COMPONENT_FACTORIES;
+
+    public static final Registry<MDInlineComponentFactory>
+        INLINE_COMPONENT_FACTORY_REGISTRY;
+
     // ── 行内样式解析器注册表 ────────────────────────────────────────────────
 
     public static final ResourceKey<Registry<MDInlineStyleParser>>
@@ -216,6 +227,34 @@ public interface MDInlineStyleParser {
         BiFunction<Style, Matcher, Style> styleFactory
     );
 }
+```
+
+---
+
+## `MDInlineComponentFactory`
+
+行内组件工厂接口，注册到 `INLINE_COMPONENT_FACTORY_REGISTRY_KEY`。
+
+```java
+@FunctionalInterface
+public interface MDInlineComponentFactory {
+    FormattedText create(MDInlineComponentContext context);
+}
+```
+
+---
+
+## `MDInlineComponentContext`
+
+行内组件接收的上下文对象。
+
+```java
+public record MDInlineComponentContext(
+    ResourceLocation id,          // 行内组件 ID（如 mymod:badge）
+    String rawParams,             // 原始参数字符串
+    Map<String, String> params,   // 解析后的键值对
+    Style baseStyle               // 当前继承样式
+) {}
 ```
 
 ---

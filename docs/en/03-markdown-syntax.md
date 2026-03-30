@@ -314,6 +314,16 @@ Parameters:
 
 ## Built-in Inline Tags
 
+Inline components use self-closing tag syntax:
+
+```markdown
+<namespace:id key="value"/>
+```
+
+- `namespace` is optional and defaults to `ageratum`
+- Parameters use `key="value"` or `key=value`
+- Tags are dispatched by `namespace:id` to the corresponding inline component implementation
+
 ### Color Tag
 
 ```markdown

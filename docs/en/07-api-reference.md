@@ -105,6 +105,17 @@ public final class AgeratumRegistries {
     public static final Registry<MDExtensionComponentFactory>
         EXTENSION_COMPONENT_FACTORY_REGISTRY;         // Runtime access
 
+    // ── Inline Component Factory Registry ───────────────────────────────────
+
+    public static final ResourceKey<Registry<MDInlineComponentFactory>>
+        INLINE_COMPONENT_FACTORY_REGISTRY_KEY;
+
+    public static final DeferredRegister<MDInlineComponentFactory>
+        INLINE_COMPONENT_FACTORIES;
+
+    public static final Registry<MDInlineComponentFactory>
+        INLINE_COMPONENT_FACTORY_REGISTRY;
+
     // ── Inline Style Parser Registry ──────────────────────────────────────────
 
     public static final ResourceKey<Registry<MDInlineStyleParser>>
@@ -209,6 +220,34 @@ public interface MDInlineStyleParser {
         BiFunction<Style, Matcher, Style> styleFactory
     );
 }
+```
+
+---
+
+## `MDInlineComponentFactory`
+
+Inline component factory interface. Register instances into `INLINE_COMPONENT_FACTORY_REGISTRY_KEY`.
+
+```java
+@FunctionalInterface
+public interface MDInlineComponentFactory {
+    FormattedText create(MDInlineComponentContext context);
+}
+```
+
+---
+
+## `MDInlineComponentContext`
+
+Context object received by an inline component factory.
+
+```java
+public record MDInlineComponentContext(
+    ResourceLocation id,          // Inline component id, e.g. mymod:badge
+    String rawParams,             // Raw params string
+    Map<String, String> params,   // Parsed key-value pairs
+    Style baseStyle               // Current inherited style
+) {}
 ```
 
 ---

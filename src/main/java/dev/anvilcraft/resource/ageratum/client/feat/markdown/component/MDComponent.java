@@ -1,6 +1,9 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
@@ -8,15 +11,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,8 +41,10 @@ public abstract class MDComponent {
     private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])_([^_\\n]+)_(?![A-Za-z0-9_])");
     private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
     private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
-    private static final Pattern TRANSLATE_TAG_PATTERN = Pattern.compile("<translate\\b([^>]*?)\\s*/>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TAG_ATTRIBUTE_PATTERN = Pattern.compile("([a-zA-Z_:][-a-zA-Z0-9_:.]*)\\s*=\\s*\"([^\"]*)\"");
+    private static final Pattern INLINE_COMPONENT_TAG_PATTERN = Pattern.compile(
+        "<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*/>",
+        Pattern.CASE_INSENSITIVE
+    );
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
@@ -615,31 +619,36 @@ public abstract class MDComponent {
     }
 
     private static @Nullable InlineComponentMatch findNextInlineComponent(String text, int pos, Style parentStyle) {
-        Matcher matcher = TRANSLATE_TAG_PATTERN.matcher(text);
+        Matcher matcher = INLINE_COMPONENT_TAG_PATTERN.matcher(text);
         while (matcher.find(pos)) {
-            String attributes = matcher.group(1);
-            String key = getTagAttribute(attributes, "key");
-            if (key == null || key.isBlank()) {
+            ResourceLocation id = parseInlineComponentId(matcher.group(1));
+            if (id == null) {
+                pos = matcher.start() + 1;
                 continue;
             }
 
-            String fallback = getTagAttribute(attributes, "fallback");
-            MutableComponent translated = fallback == null
-                ? Component.translatable(key)
-                : Component.translatableWithFallback(key, fallback);
-            return new InlineComponentMatch(matcher.start(), matcher.end(), translated.withStyle(parentStyle));
+            Registry<MDInlineComponentFactory> registry = AgeratumRegistries.INLINE_COMPONENT_FACTORY_REGISTRY;
+            MDInlineComponentFactory factory = registry.getOptional(id).orElse(null);
+            if (factory == null) {
+                pos = matcher.start() + 1;
+                continue;
+            }
+
+            String rawParams = matcher.group(2) == null ? "" : matcher.group(2).trim();
+            Map<String, String> params = ExtensionParamParser.parse(rawParams);
+            FormattedText componentText = factory.create(new MDInlineComponentContext(id, rawParams, params, parentStyle));
+            return new InlineComponentMatch(matcher.start(), matcher.end(), componentText);
         }
         return null;
     }
 
-    private static @Nullable String getTagAttribute(String rawAttributes, String attributeName) {
-        Matcher matcher = TAG_ATTRIBUTE_PATTERN.matcher(rawAttributes);
-        while (matcher.find()) {
-            if (attributeName.equalsIgnoreCase(matcher.group(1))) {
-                return matcher.group(2);
-            }
+    private static @Nullable ResourceLocation parseInlineComponentId(String idText) {
+        String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
+        try {
+            return ResourceLocation.parse(normalized);
+        } catch (RuntimeException exception) {
+            return null;
         }
-        return null;
     }
 
     private static int compareInlineStyleParser(ResourceLocation parserId, int priority, ParserMatch current) {

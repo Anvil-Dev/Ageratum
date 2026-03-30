@@ -619,10 +619,20 @@ public class MarkdownParser {
      */
     private static boolean isReservedInlineTag(String idText) {
         String simpleId = idText.contains(":") ? idText.substring(idText.indexOf(':') + 1) : idText;
-        return "hover".equalsIgnoreCase(simpleId)
+        if ("hover".equalsIgnoreCase(simpleId)
                || "click".equalsIgnoreCase(simpleId)
                || "color".equalsIgnoreCase(simpleId)
-               || "o".equalsIgnoreCase(simpleId);
+               || "o".equalsIgnoreCase(simpleId)) {
+            return true;
+        }
+
+        ResourceLocation inlineComponentId = parseExtensionId(idText);
+        if (inlineComponentId == null) {
+            return false;
+        }
+
+        Registry<MDInlineComponentFactory> inlineRegistry = AgeratumRegistries.INLINE_COMPONENT_FACTORY_REGISTRY;
+        return inlineRegistry.getOptional(inlineComponentId).isPresent();
     }
 
     // ── 缓冲区刷新辅助方法 ──────────────────────────────────────────────
