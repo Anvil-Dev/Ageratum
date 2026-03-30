@@ -20,9 +20,17 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.core.Direction;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import org.joml.Matrix4f;
@@ -78,6 +86,19 @@ public class StructurePreviewRenderer {
         ViewportCameraRig cameraRig,
         MultiBufferSource.BufferSource buffers
     ) {
+        this.render(level, cameraRig, buffers, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    }
+
+    /**
+     * 使用调用方提供的缓冲源渲染指定可见层范围内的关卡内容。
+     */
+    public void render(
+        SandboxRenderLevel level,
+        ViewportCameraRig cameraRig,
+        MultiBufferSource.BufferSource buffers,
+        int visibleMinY,
+        int visibleMaxYExclusive
+    ) {
         lightmap.update(level);
 
         // 先清空待处理光照任务，确保本帧光照采样稳定。
@@ -111,7 +132,7 @@ public class StructurePreviewRenderer {
 
         Lighting.setupLevel();
 
-        renderContent(level, buffers);
+        renderContent(level, buffers, visibleMinY, visibleMaxYExclusive);
 
         modelViewStack.popMatrix();
         RenderSystem.applyModelViewMatrix();
@@ -125,12 +146,25 @@ public class StructurePreviewRenderer {
      */
     @SuppressWarnings("deprecation")
     public void renderContent(SandboxRenderLevel level, MultiBufferSource.BufferSource buffers) {
+        this.renderContent(level, buffers, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    }
+
+    /**
+     * 按接近原版关卡渲染的顺序执行各个绘制阶段，并限制可见层范围。
+     */
+    @SuppressWarnings("deprecation")
+    public void renderContent(
+        SandboxRenderLevel level,
+        MultiBufferSource.BufferSource buffers,
+        int visibleMinY,
+        int visibleMaxYExclusive
+    ) {
         //noinspection deprecation
         RenderSystem.runAsFancy(() -> {
             // 第一阶段：先绘制不透明内容与实体系统。
-            renderBlocks(level, buffers, false);
-            renderBlockEntities(level, buffers, level.getPartialTick());
-            renderEntities(level, buffers, level.getPartialTick());
+            renderBlocks(level, buffers, false, visibleMinY, visibleMaxYExclusive);
+            renderBlockEntities(level, buffers, level.getPartialTick(), visibleMinY, visibleMaxYExclusive);
+            renderEntities(level, buffers, level.getPartialTick(), visibleMinY, visibleMaxYExclusive);
 
             // 该顺序参考 LevelRenderer#renderLevel
             buffers.endBatch(RenderType.entitySolid(TextureAtlas.LOCATION_BLOCKS));
@@ -158,17 +192,28 @@ public class StructurePreviewRenderer {
             buffers.endLastBatch();
 
             // 第二阶段：在不透明缓冲全部提交后绘制半透明方块。
-            renderBlocks(level, buffers, true);
+            renderBlocks(level, buffers, true, visibleMinY, visibleMaxYExclusive);
             buffers.endBatch(RenderType.translucent());
         });
     }
 
-    private void renderBlocks(SandboxRenderLevel level, MultiBufferSource buffers, boolean translucent) {
+    private void renderBlocks(
+        SandboxRenderLevel level,
+        MultiBufferSource buffers,
+        boolean translucent,
+        int visibleMinY,
+        int visibleMaxYExclusive
+    ) {
         var randomSource = level.random;
         var blockRenderDispatcher = Minecraft.getInstance().getBlockRenderer();
         var poseStack = new PoseStack();
+        var layerView = new VisibleLayerBlockAndTintGetter(level, visibleMinY, visibleMaxYExclusive);
 
         level.getFilledBlocks().forEach(pos -> {
+            if (!isVisibleLayer(pos.getY(), visibleMinY, visibleMaxYExclusive)) {
+                return;
+            }
+
             var blockState = level.getBlockState(pos);
             var fluidState = blockState.getFluidState();
             if (!fluidState.isEmpty()) {
@@ -178,7 +223,7 @@ public class StructurePreviewRenderer {
 
                     var sectionPos = SectionPos.of(pos);
                     var sectionOffsetWriter = new SectionOffsetVertexConsumer(bufferBuilder, sectionPos);
-                    blockRenderDispatcher.renderLiquid(pos, level, sectionOffsetWriter, blockState, fluidState);
+                    blockRenderDispatcher.renderLiquid(pos, layerView, sectionOffsetWriter, blockState, fluidState);
 
                     markFluidSpritesActive(fluidState);
                 }
@@ -192,7 +237,7 @@ public class StructurePreviewRenderer {
                 }
 
                 var model = blockRenderDispatcher.getBlockModel(blockState);
-                modelData = model.getModelData(level, pos, blockState, modelData);
+                modelData = model.getModelData(layerView, pos, blockState, modelData);
                 var renderTypes = model.getRenderTypes(blockState, randomSource, modelData);
 
                 for (var renderType : renderTypes) {
@@ -204,7 +249,7 @@ public class StructurePreviewRenderer {
                         blockRenderDispatcher.renderBatched(
                             blockState,
                             pos,
-                            level,
+                            layerView,
                             poseStack,
                             bufferBuilder,
                             true,
@@ -219,10 +264,20 @@ public class StructurePreviewRenderer {
         });
     }
 
-    private void renderBlockEntities(SandboxRenderLevel level, MultiBufferSource buffers, float partialTick) {
+    private void renderBlockEntities(
+        SandboxRenderLevel level,
+        MultiBufferSource buffers,
+        float partialTick,
+        int visibleMinY,
+        int visibleMaxYExclusive
+    ) {
         var poseStack = new PoseStack();
 
         level.getFilledBlocks().forEach(pos -> {
+            if (!isVisibleLayer(pos.getY(), visibleMinY, visibleMaxYExclusive)) {
+                return;
+            }
+
             var blockState = level.getBlockState(pos);
             if (blockState.hasBlockEntity()) {
                 var blockEntity = level.getBlockEntity(pos);
@@ -256,11 +311,84 @@ public class StructurePreviewRenderer {
         }
     }
 
-    private void renderEntities(SandboxRenderLevel level, MultiBufferSource.BufferSource buffers, float partialTick) {
+    private void renderEntities(
+        SandboxRenderLevel level,
+        MultiBufferSource.BufferSource buffers,
+        float partialTick,
+        int visibleMinY,
+        int visibleMaxYExclusive
+    ) {
         var poseStack = new PoseStack();
 
         for (var entity : level.getEntitiesForRendering()) {
-            handleEntity(level, poseStack, entity, buffers, partialTick);
+            if (entity.getBoundingBox().maxY > visibleMinY && entity.getBoundingBox().minY < visibleMaxYExclusive) {
+                handleEntity(level, poseStack, entity, buffers, partialTick);
+            }
+        }
+    }
+
+    private static boolean isVisibleLayer(int y, int visibleMinY, int visibleMaxYExclusive) {
+        return y >= visibleMinY && y < visibleMaxYExclusive;
+    }
+
+    private record VisibleLayerBlockAndTintGetter(
+        SandboxRenderLevel delegate,
+        int visibleMinY,
+        int visibleMaxYExclusive
+    ) implements BlockAndTintGetter {
+        private boolean isVisible(BlockPos pos) {
+            return isVisibleLayer(pos.getY(), this.visibleMinY, this.visibleMaxYExclusive);
+        }
+
+        @Override
+        @Nullable
+        public BlockEntity getBlockEntity(BlockPos pos) {
+            return this.isVisible(pos) ? this.delegate.getBlockEntity(pos) : null;
+        }
+
+        @Override
+        public BlockState getBlockState(BlockPos pos) {
+            return this.isVisible(pos) ? this.delegate.getBlockState(pos) : Blocks.AIR.defaultBlockState();
+        }
+
+        @Override
+        public FluidState getFluidState(BlockPos pos) {
+            return this.isVisible(pos) ? this.delegate.getFluidState(pos) : Fluids.EMPTY.defaultFluidState();
+        }
+
+        @Override
+        public float getShade(Direction direction, boolean shade) {
+            return this.delegate.getShade(direction, shade);
+        }
+
+        @Override
+        public LevelLightEngine getLightEngine() {
+            return this.delegate.getLightEngine();
+        }
+
+        @Override
+        public int getBlockTint(BlockPos blockPos, ColorResolver colorResolver) {
+            return this.delegate.getBlockTint(blockPos, colorResolver);
+        }
+
+        @Override
+        public int getBrightness(LightLayer lightLayer, BlockPos blockPos) {
+            return this.delegate.getBrightness(lightLayer, blockPos);
+        }
+
+        @Override
+        public int getRawBrightness(BlockPos blockPos, int amount) {
+            return this.delegate.getRawBrightness(blockPos, amount);
+        }
+
+        @Override
+        public int getHeight() {
+            return this.delegate.getHeight();
+        }
+
+        @Override
+        public int getMinBuildHeight() {
+            return this.delegate.getMinBuildHeight();
         }
     }
 

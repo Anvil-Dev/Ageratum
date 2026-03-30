@@ -21,10 +21,12 @@ import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.SingleThreadedRandomSource;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +55,10 @@ public final class MDNBTStructureComponent extends MDComponent {
     private float panOffsetX;
     private float panOffsetY;
     private int dragButton = -1;
+    private int visibleMinY;
+    private int totalLayerCount = 1;
+    private int visibleLayerCount = 1;
+    private boolean layerPreviewInitialized;
 
     private MDNBTStructureComponent(StructureTarget target) {
         super("[结构未加载]");
@@ -83,18 +89,71 @@ public final class MDNBTStructureComponent extends MDComponent {
         GuiGraphics graphics = context.graphics();
         if (this.previewLevel == null) {
             this.previewLevel = MDNBTStructureComponent.prepare(minecraft.level, this.target);
+            this.resetLayerPreview();
         }
         if (this.previewLevel == null) {
             super.render(context.child());
+            return;
         }
+
+        this.ensureLayerPreviewInitialized();
+
         graphics.renderOutline(0, 0, maxX, this.scale(maxX, 150), 0xAA000000);
         graphics.fill(0, 0, maxX, this.scale(maxX, 150), 0x55000000);
         context.enableScissor(1, 1, maxX - 1, this.scale(maxX, 150) - 1);
         this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
         this.cameraRig.setOffsetX(this.panOffsetX);
         this.cameraRig.setOffsetY(-graphics.pose().last().pose().m31() + this.panOffsetY);
-        StructurePreviewRenderer.getInstance().render(this.previewLevel, this.cameraRig, graphics.bufferSource());
+        StructurePreviewRenderer.getInstance().render(
+            this.previewLevel,
+            this.cameraRig,
+            graphics.bufferSource(),
+            this.visibleMinY,
+            this.visibleMinY + this.visibleLayerCount
+        );
+        this.renderLayerIndicator(context, graphics);
         context.disableScissor();
+    }
+
+    @Override
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        if (this.previewLevel == null) {
+            return false;
+        }
+
+        this.ensureLayerPreviewInitialized();
+        if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN) {
+            this.visibleLayerCount = Math.max(1, this.visibleLayerCount - 1);
+            return true;
+        }
+
+        if (keyCode == GLFW.GLFW_KEY_PAGE_UP) {
+            this.visibleLayerCount = Math.min(this.totalLayerCount, this.visibleLayerCount + 1);
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean blocksParentKeyHandling(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        return this.previewLevel != null && (keyCode == GLFW.GLFW_KEY_PAGE_UP || keyCode == GLFW.GLFW_KEY_PAGE_DOWN);
     }
 
     @Override
@@ -156,8 +215,49 @@ public final class MDNBTStructureComponent extends MDComponent {
         return true;
     }
 
+    private void ensureLayerPreviewInitialized() {
+        if (this.previewLevel == null) {
+            return;
+        }
+
+        var bounds = this.previewLevel.getBounds();
+        int minY = bounds.min().getY();
+        int maxYExclusive = Math.max(minY + 1, bounds.max().getY());
+        int fullLayerCount = Math.max(1, maxYExclusive - minY);
+
+        if (!this.layerPreviewInitialized || this.visibleMinY != minY || this.totalLayerCount != fullLayerCount) {
+            this.visibleMinY = minY;
+            this.totalLayerCount = fullLayerCount;
+            if (!this.layerPreviewInitialized) {
+                this.visibleLayerCount = this.totalLayerCount;
+                this.layerPreviewInitialized = true;
+            } else {
+                this.visibleLayerCount = Mth.clamp(this.visibleLayerCount, 1, this.totalLayerCount);
+            }
+        }
+    }
+
+    private void resetLayerPreview() {
+        this.visibleMinY = 0;
+        this.totalLayerCount = 1;
+        this.visibleLayerCount = 1;
+        this.layerPreviewInitialized = false;
+    }
+
+    private void renderLayerIndicator(MDRenderContext context, GuiGraphics graphics) {
+        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
+        int padding = 3;
+        int x = 4;
+        int y = 4;
+        int width = context.minecraft().font.width(layerLabel) + padding * 2;
+        int height = context.minecraft().font.lineHeight + padding * 2;
+
+        graphics.fill(x, y, x + width, y + height, 0x88000000);
+        graphics.drawString(context.minecraft().font, layerLabel, x + padding, y + padding, 0xFFFFFF, false);
+    }
+
     private static float clamp(float value, float min, float max) {
-        return Math.max(min, Math.min(max, value));
+        return Mth.clamp(value, min, max);
     }
 
     public int scale(int maxX, int value) {

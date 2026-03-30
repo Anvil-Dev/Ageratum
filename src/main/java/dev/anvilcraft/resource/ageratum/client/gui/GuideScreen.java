@@ -163,6 +163,8 @@ public class GuideScreen extends Screen {
      * 当前内容滚动偏移量（Markdown 坐标系像素，向下为正）。
      */
     protected float contentScroll;
+    protected double lastMouseX;
+    protected double lastMouseY;
     protected @Nullable MDComponent activeMouseComponent;
     protected int activeMouseButton = -1;
     /**
@@ -346,6 +348,9 @@ public class GuideScreen extends Screen {
      */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.lastMouseX = mouseX;
+        this.lastMouseY = mouseY;
+
         // 绘制半透明背景遮罩
         this.renderTransparentBackground(guiGraphics);
         int i = this.leftPos;
@@ -592,6 +597,35 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.minecraft != null && this.mouseInContentRange(this.lastMouseX, this.lastMouseY)) {
+            ComponentMouseHit hit = this.getComponentHitAtContentPosition(this.lastMouseX, this.lastMouseY);
+            if (hit != null) {
+                if (hit.component().keyPressed(
+                    this.minecraft,
+                    hit.mouseX(),
+                    hit.mouseY(),
+                    keyCode,
+                    scanCode,
+                    modifiers,
+                    this.getContentWidth()
+                )) {
+                    return true;
+                }
+
+                if (hit.component().blocksParentKeyHandling(
+                    this.minecraft,
+                    hit.mouseX(),
+                    hit.mouseY(),
+                    keyCode,
+                    scanCode,
+                    modifiers,
+                    this.getContentWidth()
+                )) {
+                    return true;
+                }
+            }
+        }
+
         float pageStep = this.getContentHeight() / 2.0f;
         if (keyCode == GLFW.GLFW_KEY_UP) {
             this.scrollBy(-SCROLL_STEP);

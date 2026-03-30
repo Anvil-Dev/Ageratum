@@ -145,6 +145,40 @@ public abstract class MDComponent {
     }
 
     /**
+     * 处理组件内部键盘事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        return false;
+    }
+
+    /**
+     * 指示组件是否需要阻止父级继续处理当前按键。
+     *
+     * <p>适用于组件希望独占某些导航按键，但当前按下后内部状态没有发生变化的情况。</p>
+     */
+    public boolean blocksParentKeyHandling(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        return false;
+    }
+
+    /**
      * 根据格式化文本在指定宽度下的换行结果获取命中的文本样式。
      */
     @Nullable
