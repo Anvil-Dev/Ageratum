@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client;
 
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.lib.v2.config.ConfigManager;
@@ -17,8 +16,6 @@ import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineStylePars
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinRecipeComponentFactories;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -29,7 +26,6 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
@@ -77,82 +73,13 @@ public class AgeratumClient {
      *
      * <p>若无法读取语言管理器，回退到 {@code en_us}。</p>
      */
-    private static String getClientLanguageCode(Minecraft minecraft) {
+    public static String getClientLanguageCode(Minecraft minecraft) {
         try {
             return minecraft.getLanguageManager().getSelected();
         } catch (RuntimeException exception) {
             LOGGER.warn("Failed to read client language code, fallback to en_us", exception);
             return GuideDocumentLoader.DEFAULT_LANGUAGE_CODE;
         }
-    }
-
-    /**
-     * 注册客户端命令 {@code /ageratum}。
-     *
-     * <p>命令格式：</p>
-     * <pre>
-     *   /ageratum &lt;namespace&gt;               — 打开该命名空间的 index.md
-     *   /ageratum &lt;namespace&gt; &lt;file&gt;        — 打开指定文件（不需要 .md 后缀）
-     * </pre>
-     * <p>两个参数均支持 Tab 补全，仅显示资源包中实际存在的值。</p>
-     *
-     * @param event 命令注册事件
-     */
-    @SubscribeEvent
-    public static void onCommandRegister(RegisterClientCommandsEvent event) {
-        event.getDispatcher().register(
-            Commands.literal("ageratum")
-                .then(
-                    Commands.literal("preview").executes(context -> {
-                        CommandSourceStack source = context.getSource();
-                        if (!AgeratumClient.CONFIG.enablePreview) {
-                            source.sendFailure(Component.translatable("commands.ageratum.preview.disable"));
-                            return 0;
-                        }
-                        ResourceLocation previewLocation = toPreviewLocation("index");
-                        if (!openGuideOnClient(previewLocation, List.of())) {
-                            source.sendFailure(Component.literal("Preview index.md not found: " + resolvePreviewDocumentPath(previewLocation)));
-                            return 0;
-                        }
-                        return 1;
-                    })
-                )
-                .then(
-                    // ── 第一个参数：命名空间 ──────────────────────────
-                    Commands.argument("namespace", StringArgumentType.word())
-                        .suggests((context, builder) -> {
-                            Minecraft minecraft = Minecraft.getInstance();
-                            // 枚举资源包中所有含有 ageratum/*.md 的命名空间
-                            return SharedSuggestionProvider.suggest(
-                                GuideDocumentLoader.listNamespaces(minecraft.getResourceManager(), getClientLanguageCode(minecraft)),
-                                builder
-                            );
-                        })
-                        // 仅提供 namespace，file 缺省为 index.md
-                        .executes(context -> openGuide(context, StringArgumentType.getString(context, "namespace"), null))
-                        .then(
-                            // ── 第二个参数（可选）：文件名 ──────────────
-                            Commands.argument("file", StringArgumentType.word())
-                                .suggests((context, builder) -> {
-                                    Minecraft minecraft = Minecraft.getInstance();
-                                    String namespace = StringArgumentType.getString(context, "namespace");
-                                    // 枚举该命名空间下的所有 .md 文件（返回不含扩展名的相对路径）
-                                    return SharedSuggestionProvider.suggest(
-                                        GuideDocumentLoader.listFiles(
-                                            minecraft.getResourceManager(),
-                                            namespace,
-                                            getClientLanguageCode(minecraft)
-                                        ),
-                                        builder
-                                    );
-                                })
-                                .executes(context -> openGuide(
-                                    context,
-                                    StringArgumentType.getString(context, "namespace"),
-                                    StringArgumentType.getString(context, "file")
-                                ))
-                        )
-                ));
     }
 
     /**
@@ -173,7 +100,12 @@ public class AgeratumClient {
      * @param fileArgument 文件名参数（可为 {@code null}，此时使用 index.md）
      * @return 命令执行结果码：1 表示成功，0 表示失败
      */
-    private static int openGuide(CommandContext<CommandSourceStack> context, String namespace, @Nullable String fileArgument) {
+    public static int openGuide(
+        CommandContext<CommandSourceStack> context,
+        String namespace,
+        @Nullable String fileArgument,
+        @Nullable String anchor
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
 
         String languageCode = getClientLanguageCode(minecraft);
@@ -198,7 +130,7 @@ public class AgeratumClient {
             context.getSource().sendFailure(Component.literal("Invalid guide path."));
             return 0;
         }
-        if (!openGuideOnClient(documentLocation, List.of())) {
+        if (!openGuideOnClient(documentLocation, anchor, List.of())) {
             context.getSource().sendFailure(
                 Component.literal(
                     "Guide file not found: assets/" + documentLocation.getNamespace() + "/" + documentLocation.getPath()
