@@ -1,0 +1,174 @@
+package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
+import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import javax.annotation.Nullable;
+
+/**
+ * 方块渲染组件。
+ *
+ * <p>外观与 item 组件保持一致，使用槽位背景 + 16x16 方块预览。</p>
+ */
+public class MDBlockComponent extends MDImageComponent {
+    private static final int SLOT_SIZE = 32;
+    private static final float CAMERA_Y_OFFSET = 217.5f;
+
+    private final ResourceLocation blockLoc;
+    private final Map<String, String> stateProps;
+    private final ViewportCameraRig cameraRig = new ViewportCameraRig();
+    private @Nullable BlockState blockState;
+    private @Nullable SandboxRenderLevel sandboxRenderLevel;
+
+    public MDBlockComponent(ResourceLocation blockLoc, Map<String, String> stateProps) {
+        super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
+        this.blockLoc = blockLoc;
+        this.stateProps = stateProps;
+        this.cameraRig.setOffsetX(5.5f);
+    }
+
+    private @Nullable SandboxRenderLevel getSandboxRenderLevel(BlockState state) {
+        if (this.sandboxRenderLevel != null) return this.sandboxRenderLevel;
+        if (Minecraft.getInstance().level == null) return null;
+        this.sandboxRenderLevel = new SandboxRenderLevel();
+        this.sandboxRenderLevel.setBlock(BlockPos.ZERO, state, Block.UPDATE_ALL);
+        return this.sandboxRenderLevel;
+    }
+
+    @Override
+    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphics graphics = context.graphics();
+        this.innerBlit(graphics, this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
+        this.renderBlock(context, mouseX, mouseY);
+    }
+
+    private void renderBlock(MDRenderContext context, float mouseX, float mouseY) {
+        BlockState state = this.getBlockState();
+        if (state == null) return;
+
+        GuiGraphics graphics = context.graphics();
+        Font font = context.minecraft().font;
+
+
+        SandboxRenderLevel level = this.getSandboxRenderLevel(state);
+        if (level != null) {
+            PoseStack pose = graphics.pose();
+            pose.pushPose();
+
+            this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
+            this.cameraRig.setOffsetY(-context.offsetY() + MDBlockComponent.CAMERA_Y_OFFSET);
+            StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
+
+            pose.popPose();
+            graphics.flush();
+        }
+
+        ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();
+        if (!tooltipStack.isEmpty()) {
+            this.renderTooltip(context, tooltipStack, 8, 8, mouseX, mouseY);
+        }
+
+        Component hoverName = state.getBlock().getName();
+        int width = font.width(hoverName);
+        graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+    }
+
+    protected @Nullable BlockState getBlockState() {
+        if (this.blockState != null) return this.blockState;
+
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return null;
+
+        Optional<HolderLookup.RegistryLookup<Block>> lookup = level.registryAccess().lookup(Registries.BLOCK);
+        if (lookup.isEmpty()) return null;
+
+        Optional<Holder.Reference<Block>> blockReference = lookup.get().get(ResourceKey.create(Registries.BLOCK, this.blockLoc));
+        if (blockReference.isEmpty()) return null;
+
+        Block block = blockReference.get().value();
+        this.blockState = resolveBlockState(block, this.stateProps);
+        return this.blockState;
+    }
+
+    private static BlockState resolveBlockState(Block block, Map<String, String> stateProps) {
+        BlockState state = block.defaultBlockState();
+        if (stateProps.isEmpty()) return state;
+        for (Property<?> property : state.getProperties()) {
+            String rawValue = stateProps.get(property.getName());
+            if (rawValue != null) {
+                state = applyProperty(state, property, rawValue);
+            }
+        }
+        return state;
+    }
+
+    private static <T extends Comparable<T>> BlockState applyProperty(
+        BlockState state, Property<T> property, String rawValue
+    ) {
+        return property.getValue(rawValue)
+            .map(v -> state.setValue(property, v))
+            .orElse(state);
+    }
+
+    @Override
+    public int getHeight(Minecraft minecraft, int maxX, int maxY) {
+        Size size = new Size(SLOT_SIZE, SLOT_SIZE + minecraft.font.lineHeight, 1.0f);
+        return this.computeRenderSize(size, maxX, maxY).height();
+    }
+
+    private static Map<String, String> parseStateProps(@Nullable String rawState) {
+        Map<String, String> props = new HashMap<>();
+        if (rawState == null || rawState.isBlank()) return props;
+        for (String entry : rawState.split(",")) {
+            String trimmed = entry.trim();
+            int eq = trimmed.indexOf('=');
+            if (eq > 0) {
+                props.put(trimmed.substring(0, eq).trim(), trimmed.substring(eq + 1).trim());
+            }
+        }
+        return props;
+    }
+
+    public static MDComponent parse(MDExtensionContext context) {
+        String rawId = context.params().get("id");
+        if (rawId == null || rawId.isBlank()) {
+            return new MDTextComponent("[错误：block 需要 id 参数]");
+        }
+
+        ResourceLocation id;
+        try {
+            id = ResourceLocation.parse(rawId);
+        } catch (Exception e) {
+            return new MDTextComponent("[错误：block 的 id 参数格式无效]");
+        }
+
+        Map<String, String> stateProps = parseStateProps(context.params().get("state"));
+        return new MDBlockComponent(id, stateProps);
+    }
+}
+

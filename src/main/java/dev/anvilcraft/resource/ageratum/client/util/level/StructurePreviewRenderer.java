@@ -289,7 +289,7 @@ public class StructurePreviewRenderer {
     }
 
     @SuppressWarnings("deprecation")
-    private static void markFluidSpritesActive(FluidState fluidState) {
+    public static void markFluidSpritesActive(FluidState fluidState) {
         var props = IClientFluidTypeExtensions.of(fluidState);
         var sprite1 = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(props.getStillTexture());
         SodiumSpriteBridge.pingSpriteUsage(sprite1);

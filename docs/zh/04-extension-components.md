@@ -331,6 +331,67 @@ public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionCompo
 
 ---
 
+## 内置扩展组件
+
+Ageratum 自带若干内置扩展组件，可在任意文档中直接使用。
+
+### 提示框
+
+```markdown
+:::ageratum:info
+这是一个信息框（蓝色）。
+:::
+
+:::ageratum:tip
+这是一个提示框（绿色）。
+:::
+
+:::ageratum:warning
+这是一个警告框（橙色）。
+:::
+
+:::ageratum:danger
+这是一个危险框（红色）。
+:::
+```
+
+### 物品展示 — `<item>`
+
+在物品格纹理中渲染一个 Minecraft 物品，支持悬停提示。
+
+```markdown
+<item id="minecraft:diamond"/>
+<item id="minecraft:oak_log" count="3"/>
+<item id="minecraft:potion" components='{"minecraft:potion_contents":{"potion":"minecraft:healing"}}'/>
+```
+
+| 参数           | 类型    | 必填 | 默认值 | 说明                              |
+|--------------|---------|------|-------|----------------------------------|
+| `id`         | 字符串  | ✓    | —     | 物品注册表 ID（如 `minecraft:apple`）  |
+| `count`      | 整数    | ✗    | `1`   | 物品格中显示的堆叠数量                |
+| `components` | JSON    | ✗    | `{}`  | 数据组件映射（NBT 风格 JSON）         |
+
+### 方块展示 — `<block>`
+
+以方块的物品形式（即背包中看到的图标）渲染一个 Minecraft 方块。
+没有对应物品的纯技术性方块不会渲染。
+
+```markdown
+<block id="minecraft:grass_block"/>
+<block id="minecraft:oak_log" count="4"/>
+<block id="minecraft:stone_bricks"/>
+```
+
+| 参数      | 类型    | 必填 | 默认值 | 说明                               |
+|---------|---------|------|-------|-----------------------------------|
+| `id`    | 字符串  | ✓    | —     | 方块注册表 ID（如 `minecraft:stone`）  |
+| `count` | 整数    | ✗    | `1`   | 物品格中显示的堆叠数量               |
+
+> **注意：** 与 `<item>` 不同，`<block>` 查询的是**方块**注册表，自动匹配对应的方块物品。
+> 你不需要知道方块物品的独立 ID。
+
+---
+
 ## 参见
 
 - [行内样式解析器开发](05-inline-style-parsers.md)

@@ -8,6 +8,32 @@ navigation:
 
 本文档介绍 Ageratum 的高级功能。
 
+## 内置扩展组件
+
+Ageratum 内置了若干扩展组件，可直接在任意文档中使用：
+
+### 物品展示
+
+在物品格纹理中渲染 Minecraft 物品（支持悬停提示）：
+
+```
+<item id="minecraft:diamond"/>
+<item id="minecraft:oak_log" count="3"/>
+```
+
+### 方块展示
+
+以方块的物品图标形式渲染 Minecraft 方块：
+
+```
+<block id="minecraft:grass_block"/>
+<block id="minecraft:stone_bricks" count="2"/>
+```
+
+没有对应物品的纯技术性方块不会渲染。
+
+---
+
 ## 自定义扩展
 
 ### 注册自定义组件

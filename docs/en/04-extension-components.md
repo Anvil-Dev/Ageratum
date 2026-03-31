@@ -329,6 +329,67 @@ This is an orange warning box with a custom icon.
 
 ---
 
+## Built-in Extension Components
+
+Ageratum ships with several built-in extension components that you can use in any document.
+
+### Notice Boxes
+
+```markdown
+:::ageratum:info
+This is an info box (blue).
+:::
+
+:::ageratum:tip
+This is a tip box (green).
+:::
+
+:::ageratum:warning
+This is a warning box (orange).
+:::
+
+:::ageratum:danger
+This is a danger box (red).
+:::
+```
+
+### Item Display — `<item>`
+
+Renders a Minecraft item in a slot frame with tooltip support.
+
+```markdown
+<item id="minecraft:diamond"/>
+<item id="minecraft:oak_log" count="3"/>
+<item id="minecraft:potion" components='{"minecraft:potion_contents":{"potion":"minecraft:healing"}}'/>
+```
+
+| Parameter    | Type    | Required | Default | Description                              |
+|--------------|---------|----------|---------|------------------------------------------|
+| `id`         | string  | ✓        | —       | Item registry ID (e.g. `minecraft:apple`) |
+| `count`      | integer | ✗        | `1`     | Stack size shown in the slot             |
+| `components` | JSON    | ✗        | `{}`    | Data component map (NBT-style JSON)      |
+
+### Block Display — `<block>`
+
+Renders a Minecraft block using its item form (the same icon you see in your inventory).
+Blocks without a corresponding item (technical blocks) will not render.
+
+```markdown
+<block id="minecraft:grass_block"/>
+<block id="minecraft:oak_log" count="4"/>
+<block id="minecraft:stone_bricks"/>
+```
+
+| Parameter | Type    | Required | Default | Description                               |
+|-----------|---------|----------|---------|-------------------------------------------|
+| `id`      | string  | ✓        | —       | Block registry ID (e.g. `minecraft:stone`) |
+| `count`   | integer | ✗        | `1`     | Stack size shown in the slot              |
+
+> **Note:** Unlike `<item>`, `<block>` looks up the **block** registry and automatically finds the
+> matching block item. You do not need to know the block item's ID separately.
+
+---
+
 ## See Also
 
 - [Inline Style Parsers](05-inline-style-parsers.md)

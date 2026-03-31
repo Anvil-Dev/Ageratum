@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDItemComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNoticeBoxComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
@@ -73,14 +74,27 @@ public final class BuiltinExtensionComponents {
         );
 
     /**
-     * 结构 NBT 扩展组件注册项。
+     * 物品扩展组件注册项。
      *
-     * <p>对应 Markdown 扩展标签：{@code <structure id="namespace:path"/>}。</p>
+     * <p>对应 Markdown 扩展标签：{@code <item id="namespace:path"/>}。</p>
      */
     public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> ITEM =
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "item",
             () -> MDItemComponent::parse
+        );
+
+    /**
+     * 方块扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <block id="namespace:path"/>}。</p>
+     * <p>渲染方块对应的物品形式（即背包中看到的方块物品图标）。
+     * 若方块没有对应物品（如技术性方块），则不渲染。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> BLOCK =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "block",
+            () -> MDBlockComponent::parse
         );
 
 
