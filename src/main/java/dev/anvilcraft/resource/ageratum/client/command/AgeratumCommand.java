@@ -18,6 +18,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -84,14 +85,15 @@ public class AgeratumCommand {
         Minecraft minecraft = Minecraft.getInstance();
         String namespace = StringArgumentType.getString(context, "namespace");
         // 枚举该命名空间下的所有 .md 文件（返回不含扩展名的相对路径）
-        return SharedSuggestionProvider.suggest(
-            GuideDocumentLoader.listFiles(
-                minecraft.getResourceManager(),
-                namespace,
-                AgeratumClient.getClientLanguageCode(minecraft)
-            ),
-            builder
-        );
+        List<String> files = new ArrayList<>();
+        for (String file : GuideDocumentLoader.listFiles(
+            minecraft.getResourceManager(),
+            namespace,
+            AgeratumClient.getClientLanguageCode(minecraft)
+        )) {
+            files.add("\"%s\"".formatted(file));
+        }
+        return SharedSuggestionProvider.suggest(files, builder);
     }
 
     private static CompletableFuture<Suggestions> getNamespaceSuggestions(
@@ -100,13 +102,14 @@ public class AgeratumCommand {
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         // 枚举资源包中所有含有 ageratum/*.md 的命名空间
-        return SharedSuggestionProvider.suggest(
-            GuideDocumentLoader.listNamespaces(
-                minecraft.getResourceManager(),
-                AgeratumClient.getClientLanguageCode(minecraft)
-            ),
-            builder
-        );
+        List<String> namespaces = new ArrayList<>();
+        for (String namespace : GuideDocumentLoader.listNamespaces(
+            minecraft.getResourceManager(),
+            AgeratumClient.getClientLanguageCode(minecraft)
+        )) {
+            namespaces.add("\"%s\"".formatted(namespace));
+        }
+        return SharedSuggestionProvider.suggest(namespaces, builder);
     }
 
     private static int openGuide(CommandContext<CommandSourceStack> context) {
