@@ -1,7 +1,8 @@
-package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;

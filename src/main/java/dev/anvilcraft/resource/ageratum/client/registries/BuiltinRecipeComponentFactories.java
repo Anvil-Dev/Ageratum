@@ -1,10 +1,10 @@
 package dev.anvilcraft.resource.ageratum.client.registries;
 
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDCraftingTableRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDFurnaceRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDSmithingTableRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDStonecutterRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDCraftingTableRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDFurnaceRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDSmithingTableRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDStonecutterRecipeComponent;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 

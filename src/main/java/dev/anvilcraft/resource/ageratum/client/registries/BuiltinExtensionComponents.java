@@ -1,9 +1,9 @@
 package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDNoticeBoxComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.structure.MDNBTStructureComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNoticeBoxComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.structure.MDNBTStructureComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
