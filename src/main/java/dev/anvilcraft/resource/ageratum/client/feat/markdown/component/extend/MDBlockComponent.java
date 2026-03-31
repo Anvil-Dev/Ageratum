@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -37,7 +36,6 @@ import javax.annotation.Nullable;
  */
 public class MDBlockComponent extends MDImageComponent {
     private static final int SLOT_SIZE = 32;
-    private static final float CAMERA_Y_OFFSET = 217.5f;
 
     private final ResourceLocation blockLoc;
     private final Map<String, String> stateProps;
@@ -49,7 +47,6 @@ public class MDBlockComponent extends MDImageComponent {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.blockLoc = blockLoc;
         this.stateProps = stateProps;
-        this.cameraRig.setOffsetX(5.5f);
     }
 
     private @Nullable SandboxRenderLevel getSandboxRenderLevel(BlockState state) {
@@ -74,18 +71,12 @@ public class MDBlockComponent extends MDImageComponent {
         GuiGraphics graphics = context.graphics();
         Font font = context.minecraft().font;
 
-
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
-            PoseStack pose = graphics.pose();
-            pose.pushPose();
-
             this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
-            this.cameraRig.setOffsetY(-context.offsetY() + MDBlockComponent.CAMERA_Y_OFFSET);
+            this.cameraRig.setOffsetX(5.5F);
+            this.cameraRig.setOffsetY(context.screenHeight() / 2F - context.offsetY() - 30.25F);
             StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
-
-            pose.popPose();
-            graphics.flush();
         }
 
         ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();
