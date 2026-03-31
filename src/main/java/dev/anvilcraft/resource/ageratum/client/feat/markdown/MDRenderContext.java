@@ -73,10 +73,10 @@ public record MDRenderContext(
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
-        minX = Math.round((minX / this.scale()) + this.offsetX() + this.leftPos());
-        maxX = Math.round((maxX / this.scale()) + this.offsetX() + this.leftPos());
-        minY = Math.round((minY / this.scale()) + this.offsetY() + this.topPos());
-        maxY = Math.round((maxY / this.scale()) + this.offsetY() + this.topPos());
+        minX = Math.round((minX + this.offsetX() + this.leftPos()) / this.scale());
+        maxX = Math.round((maxX + this.offsetX() + this.leftPos()) / this.scale());
+        minY = Math.round((minY + this.offsetY() + this.topPos()) / this.scale());
+        maxY = Math.round((maxY + this.offsetY() + this.topPos()) / this.scale());
         this.graphics().enableScissor(minX, minY, maxX, maxY);
     }
 

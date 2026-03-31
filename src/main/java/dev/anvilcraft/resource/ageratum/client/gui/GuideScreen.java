@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.gui;
 
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
@@ -85,6 +86,7 @@ public class GuideScreen extends Screen {
      * 侧边标签高度（原始像素）。
      */
     protected static final int BUTTON_IMAGE_HEIGHT = 16;
+    protected static final int CLOSE_BUTTON_X_OFFSET = -5;
 
     protected static final int MIN_HORIZONTAL_MARGIN = 32;
 
@@ -202,6 +204,8 @@ public class GuideScreen extends Screen {
      */
     protected @Nullable String pendingAnchor;
     protected List<ResourceLocation> breadCrumbs;
+    protected double scale = 1.0f;
+    protected double scaleCountDown = 1.0f;
 
     /**
      * 使用预解析组件创建界面，避免重复解析 Markdown 文本。
@@ -313,20 +317,42 @@ public class GuideScreen extends Screen {
      */
     @Override
     protected void init() {
-        // 使界面在屏幕上水平/垂直居中
-        float imageRatio = (float) GUIDE_IMAGE_WIDTH / GUIDE_IMAGE_HEIGHT;
-        float windowRatio = (float) this.width / this.height;
-        if (windowRatio > imageRatio) {
-            // 窗口较宽，限制高度以保持比例
-            this.imageHeight = Math.min(this.height - 2 * MIN_VERTICAL_MARGIN, GUIDE_IMAGE_HEIGHT);
-            this.imageWidth = (int) (this.imageHeight * imageRatio);
-        } else {
-            // 窗口较高，限制宽度以保持比例
-            this.imageWidth = Math.min(this.width - 2 * MIN_HORIZONTAL_MARGIN, GUIDE_IMAGE_WIDTH);
-            this.imageHeight = (int) (this.imageWidth / imageRatio);
+        if (this.minecraft != null) {
+            Window window = this.minecraft.getWindow();
+            int calculateScale = window.calculateScale(1, true);
+            this.width = window.getWidth() / calculateScale;
+            this.height = window.getHeight() / calculateScale;
+            this.scale = window.getGuiScale() / calculateScale;
+            this.scaleCountDown = 1.0d / this.scale;
         }
-        this.leftPos = (this.width - this.imageWidth) / 2;
-        this.topPos = (this.height - this.imageHeight) / 2;
+
+        int maxBgWidth = Math.max(1, this.width - 2 * MIN_HORIZONTAL_MARGIN);
+        int maxBgHeight = Math.max(1, this.height - 2 * MIN_VERTICAL_MARGIN);
+
+        // 先尽可能放大背景，再通过 leftPos 约束保证侧栏与按钮可见。
+        float imageRatio = (float) GUIDE_IMAGE_WIDTH / GUIDE_IMAGE_HEIGHT;
+        float usableRatio = (float) maxBgWidth / maxBgHeight;
+        if (usableRatio > imageRatio) {
+            this.imageHeight = maxBgHeight;
+            this.imageWidth = Math.round(this.imageHeight * imageRatio);
+        } else {
+            this.imageWidth = maxBgWidth;
+            this.imageHeight = Math.round(this.imageWidth / imageRatio);
+        }
+        this.imageWidth = Mth.clamp(this.imageWidth, 1, maxBgWidth);
+        this.imageHeight = Mth.clamp(this.imageHeight, 1, maxBgHeight);
+
+        int centeredLeftPos = (this.width - this.imageWidth) / 2;
+        int minLeftPos = this.getLabelLeftBound();
+        int maxLeftPos = this.getRightButtonBound();
+        int clampMin = Math.min(minLeftPos, maxLeftPos);
+        int clampMax = Math.max(minLeftPos, maxLeftPos);
+        this.leftPos = Mth.clamp(centeredLeftPos, clampMin, clampMax);
+
+        int minTopPos = MIN_VERTICAL_MARGIN;
+        int maxTopPos = this.height - MIN_VERTICAL_MARGIN - this.imageHeight;
+        int centeredTopPos = (this.height - this.imageHeight) / 2;
+        this.topPos = Mth.clamp(centeredTopPos, Math.min(minTopPos, maxTopPos), Math.max(minTopPos, maxTopPos));
         if (this.minecraft != null) {
             this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
             this.rebuildLabelEntries(this.minecraft.getResourceManager());
@@ -336,6 +362,15 @@ public class GuideScreen extends Screen {
         // 防止窗口缩小后滚动量超出边界
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+    }
+
+    private int getLabelLeftBound() {
+        return -(this.getLabelBaseX() - LABEL_HOVER_SHIFT);
+    }
+
+    private int getRightButtonBound() {
+        int buttonRenderWidth = Math.max(1, Math.round(BUTTON_IMAGE_WIDTH * this.getLabelImageScale()));
+        return this.width - (this.imageWidth + CLOSE_BUTTON_X_OFFSET + buttonRenderWidth);
     }
 
     /**
@@ -348,6 +383,11 @@ public class GuideScreen extends Screen {
      */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1.0f);
+        mouseX = (int) Math.round(mouseX * this.scale);
+        mouseY = (int) Math.round(mouseY * this.scale);
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
 
@@ -355,7 +395,6 @@ public class GuideScreen extends Screen {
         this.renderTransparentBackground(guiGraphics);
         int i = this.leftPos;
         int j = this.topPos;
-        PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         // 将坐标系移动到界面左上角，方便后续使用相对坐标
         pose.translate(i, j, 0);
@@ -368,6 +407,12 @@ public class GuideScreen extends Screen {
         if (this.mouseInContentRange(mouseX, mouseY)) {
             this.renderHoverTooltip(guiGraphics, mouseX, mouseY);
         }
+        pose.popPose();
+    }
+
+    @Override
+    public void renderTransparentBackground(GuiGraphics guiGraphics) {
+        guiGraphics.fillGradient(0, 0, this.width + 10, this.height + 10, -1072689136, -804253680);
     }
 
     /**
@@ -381,6 +426,8 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        mouseX = mouseX * this.scale;
+        mouseY = mouseY * this.scale;
         if (scrollY == 0.0D) {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
@@ -417,6 +464,8 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        mouseX = mouseX * this.scale;
+        mouseY = mouseY * this.scale;
         if (button == 0 && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
             return true;
         }
@@ -457,6 +506,10 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        mouseX = mouseX * this.scale;
+        mouseY = mouseY * this.scale;
+        dragX = dragX * this.scale;
+        dragY = dragY * this.scale;
         if (this.activeMouseComponent != null && this.minecraft != null && button == this.activeMouseButton) {
             ComponentMouseHit hit = this.getComponentMousePosition(this.activeMouseComponent, mouseX, mouseY);
             double componentX = hit != null ? hit.mouseX() : 0.0d;
@@ -478,6 +531,8 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        mouseX = mouseX * this.scale;
+        mouseY = mouseY * this.scale;
         if (this.activeMouseComponent != null && this.minecraft != null) {
             ComponentMouseHit hit = this.getComponentMousePosition(this.activeMouseComponent, mouseX, mouseY);
             double componentX = hit != null ? hit.mouseX() : 0.0d;
@@ -776,11 +831,11 @@ public class GuideScreen extends Screen {
     }
 
     private int getCloseButtonX() {
-        return this.imageWidth - 5;
+        return this.imageWidth + CLOSE_BUTTON_X_OFFSET;
     }
 
     public int getLabelBaseX() {
-        return -40;
+        return -30;
     }
 
     private int getLabelStartY() {
@@ -807,7 +862,7 @@ public class GuideScreen extends Screen {
         int relMouseY = (int) Math.floor(mouseY - this.topPos);
         int closeButtonX = this.getCloseButtonX();
         int closeButtonY = this.getCloseButtonY();
-        if (this.mouseInRange(closeButtonX, closeButtonY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
+        if (this.mouseInRange(closeButtonX, closeButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
             this.onClose();
             return true;
         }
@@ -818,8 +873,8 @@ public class GuideScreen extends Screen {
         return this.mouseInRange(
             closeButtonX,
             returnButtonY,
-            this.labelWidth,
-            this.labelHeight,
+            BUTTON_IMAGE_WIDTH,
+            BUTTON_IMAGE_HEIGHT,
             relMouseX,
             relMouseY
         ) && this.tryReturnToPreviousGuide();
@@ -1473,8 +1528,12 @@ public class GuideScreen extends Screen {
         int scissorY1 = this.topPos + this.getContentStartY();
         int scissorX2 = scissorX1 + this.getContentWidth();
         int scissorY2 = scissorY1 + this.getContentHeight();
-        guiGraphics.enableScissor(scissorX1, scissorY1, scissorX2, scissorY2);
-
+        guiGraphics.enableScissor(
+            (int) (scissorX1 / this.scale),
+            (int) (scissorY1 / this.scale),
+            (int) (scissorX2 / this.scale),
+            (int) (scissorY2 / this.scale)
+        );
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         // 移至内容区左上角，并向上平移以实现滚动（不再额外缩放）
@@ -1505,13 +1564,13 @@ public class GuideScreen extends Screen {
         for (MDComponent component : this.parsedComponents) {
             pose.pushPose();
             component.render(rootContext.child(
-                this.getContentWidth(),
+                this.getContentWidth() - 2,
                 Integer.MAX_VALUE,
                 translatedMouseX,
                 translatedMouseY,
                 this.getContentStartX(),
                 Math.round(totalOffsetY - this.contentScroll),
-                1.0f
+                (float) this.scale
             ));
             pose.popPose();
             int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
@@ -1535,11 +1594,13 @@ public class GuideScreen extends Screen {
     }
 
     public int getLabelVisibleRows() {
-        return (int) Math.floor((double) (this.getContentHeight() + MIN_LABEL_ROW_MARGIN) / (this.labelHeight + MIN_LABEL_ROW_MARGIN));
+        int rows = (int) Math.floor((double) (this.getContentHeight() + MIN_LABEL_ROW_MARGIN) / (this.labelHeight + MIN_LABEL_ROW_MARGIN));
+        return Math.max(1, rows);
     }
 
     public int getLabelRowSpacing() {
-        return (int) Math.floor(((double) this.getContentHeight() / this.getLabelVisibleRows()) - this.labelHeight);
+        int spacing = (int) Math.floor(((double) this.getContentHeight() / this.getLabelVisibleRows()) - this.labelHeight);
+        return Math.max(0, spacing);
     }
 
     public int getLabelRowOffset() {

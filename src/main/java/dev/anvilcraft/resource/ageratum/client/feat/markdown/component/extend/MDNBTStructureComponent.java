@@ -98,12 +98,14 @@ public final class MDNBTStructureComponent extends MDComponent {
 
         this.ensureLayerPreviewInitialized();
 
-        graphics.renderOutline(0, 0, maxX, this.scale(maxX, 150), 0xAA000000);
-        graphics.fill(0, 0, maxX, this.scale(maxX, 150), 0x55000000);
-        context.enableScissor(1, 1, maxX - 1, this.scale(maxX, 150) - 1);
+        int height = this.getHeight(minecraft, maxX, context.maxY()); // 确保 scale 计算正确
+        graphics.renderOutline(0, 0, maxX, height, 0xAA000000);
+        graphics.fill(0, 0, maxX, height, 0x55000000);
+        context.enableScissor(1, 1, maxX - 1, height - 1);
         this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
+        this.cameraRig.setZoom(2.0f);
         this.cameraRig.setOffsetX(this.panOffsetX);
-        this.cameraRig.setOffsetY(-graphics.pose().last().pose().m31() + this.panOffsetY);
+        this.cameraRig.setOffsetY(-context.offsetY() + this.panOffsetY + 64);
         StructurePreviewRenderer.getInstance().render(
             this.previewLevel,
             this.cameraRig,
@@ -267,7 +269,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        return this.scale(maxX, 150);
+        return this.scale(maxX, 450);
     }
 
     /**
