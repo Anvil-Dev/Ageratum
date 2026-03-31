@@ -175,7 +175,7 @@ public class AgeratumClient {
         // 优先使用预解析缓存，缺失时回退为即时解析
         Optional<MDDocument> cachedDocument = GuideDocumentCache.getParsedDocument(location);
         if (cachedDocument.isPresent()) {
-            GuideScreen screen = new GuideScreen(location, cachedDocument.get().components(), breadCrumbs);
+            GuideScreen screen = new GuideScreen(location, cachedDocument.get().components(), breadCrumbs, false);
             screen.setAnchor(anchor);
             screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
             minecraft.setScreen(screen);
@@ -190,7 +190,8 @@ public class AgeratumClient {
             minecraft,
             inheritedLabelScrollRows,
             inheritedLabelScrollRemainder,
-            content
+            content,
+            false
         );
     }
 
@@ -227,7 +228,8 @@ public class AgeratumClient {
             minecraft,
             inheritedLabelScrollRows,
             inheritedLabelScrollRemainder,
-            content
+            content,
+            true
         );
     }
 
@@ -238,10 +240,11 @@ public class AgeratumClient {
         Minecraft minecraft,
         int inheritedLabelScrollRows,
         double inheritedLabelScrollRemainder,
-        String content
+        String content,
+        boolean preview
     ) {
         MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
-        GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs);
+        GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs, preview);
         screen.setAnchor(anchor);
         screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
         minecraft.setScreen(screen);

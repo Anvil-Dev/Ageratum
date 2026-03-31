@@ -25,4 +25,7 @@ public class AgeratumClientConfig {
 
     @Comment("Preview mode path")
     public String previewPath = "ageratum_preview";
+
+    @Comment("Share your guide only with player from the same team")
+    public boolean shareGuideOnlyInTeam = false;
 }

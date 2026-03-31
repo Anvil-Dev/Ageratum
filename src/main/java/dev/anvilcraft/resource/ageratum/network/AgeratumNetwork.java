@@ -31,10 +31,15 @@ public final class AgeratumNetwork {
             OpenGuidePayload.STREAM_CODEC,
             ClientPayloadHandler::handleOpenGuide
         );
+        registrar.playToServer(
+            ShareGuidePayload.TYPE,
+            ShareGuidePayload.STREAM_CODEC,
+            ServerPayloadHandler::handleShareGuide
+        );
     }
 
     /**
-     * 向所有客户端发送打开文档请求。
+     * 向客户端发送打开文档请求。
      */
     public static void sendOpenGuide(ServerPlayer serverPlayer, ResourceLocation location) {
         PacketDistributor.sendToPlayer(serverPlayer, new OpenGuidePayload(location));

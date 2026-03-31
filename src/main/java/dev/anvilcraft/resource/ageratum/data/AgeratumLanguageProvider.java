@@ -15,5 +15,7 @@ public class AgeratumLanguageProvider extends LanguageProvider {
     protected void addTranslations() {
         ConfigData.readConfigClass(this, AgeratumClientConfig.class);
         this.add("commands.ageratum.preview.disable", "Preview is not enabled");
+        this.add("system.ageratum.share.tip", "Player %s has shared a guide with you:");
+        this.add("system.ageratum.share.button", "[CLICK TO OPEN]");
     }
 }

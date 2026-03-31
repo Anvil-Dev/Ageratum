@@ -12,5 +12,9 @@
   "ageratum.configuration.enable_preview.tooltip": "是否启用预览模式（启用该模式后，可以实时查看指定路径下文档的更改情况）",
   "ageratum.configuration.preview_path": "预览路径",
   "ageratum.configuration.preview_path.tooltip": "用于设置预览模式的路径",
-  "commands.ageratum.preview.disable": "预览功能未启用"
+  "commands.ageratum.preview.disable": "预览功能未启用",
+  "ageratum.configuration.share_guide_only_in_team": "仅在队伍内分享指南",
+  "ageratum.configuration.share_guide_only_in_team.tooltip": "仅与同一队伍的玩家分享你的指南",
+  "system.ageratum.share.button": "[点击打开]",
+  "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南："
 }

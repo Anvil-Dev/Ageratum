@@ -19,7 +19,7 @@ public record OpenGuidePayload(ResourceLocation location) implements CustomPacke
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+        return OpenGuidePayload.TYPE;
     }
 }
 

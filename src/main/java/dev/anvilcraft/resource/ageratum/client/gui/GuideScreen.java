@@ -11,6 +11,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
+import dev.anvilcraft.resource.ageratum.network.ShareGuidePayload;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -24,6 +25,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
 import java.net.URLDecoder;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -78,6 +81,7 @@ public class GuideScreen extends Screen {
     protected static final ResourceLocation BUTTON_DOWN_LOCATION = Ageratum.location("textures/gui/guide/button_down.png");
     protected static final ResourceLocation BUTTON_UP_LOCATION = Ageratum.location("textures/gui/guide/button_up.png");
     protected static final ResourceLocation BUTTON_CLOSE_LOCATION = Ageratum.location("textures/gui/guide/button_close.png");
+    protected static final ResourceLocation BUTTON_SHARE_LOCATION = Ageratum.location("textures/gui/guide/button_share.png");
     protected static final ResourceLocation BUTTON_RETURN_LOCATION = Ageratum.location("textures/gui/guide/button_back.png");
     protected static final int BUTTON_IMAGE_SIZE = 32;
     /**
@@ -209,14 +213,21 @@ public class GuideScreen extends Screen {
     protected List<ResourceLocation> breadCrumbs;
     protected double scale = 1.0f;
     protected double scaleCountDown = 1.0f;
+    protected final boolean preview;
 
     /**
      * 使用预解析组件创建界面，避免重复解析 Markdown 文本。
      *
      * @param documentLocation 文档资源位置，用于构造界面标题
      * @param parsedComponents 预解析后的组件列表
+     * @param preview          是否为预览
      */
-    public GuideScreen(ResourceLocation documentLocation, List<MDComponent> parsedComponents, List<ResourceLocation> breadCrumbs) {
+    public GuideScreen(
+        ResourceLocation documentLocation,
+        List<MDComponent> parsedComponents,
+        List<ResourceLocation> breadCrumbs,
+        boolean preview
+    ) {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
@@ -231,6 +242,7 @@ public class GuideScreen extends Screen {
             this.previewDocumentLastSize = -1L;
         }
         this.nextPreviewRefreshTime = 0L;
+        this.preview = preview;
     }
 
     @Override
@@ -812,6 +824,22 @@ public class GuideScreen extends Screen {
             BUTTON_IMAGE_SIZE,
             BUTTON_IMAGE_SIZE
         );
+        if (!this.preview) {
+            originY += BUTTON_IMAGE_HEIGHT + 10;
+            isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
+            guiGraphics.blit(
+                BUTTON_SHARE_LOCATION,
+                originX * this.getLabelScaleCountDown(),
+                originY * this.getLabelScaleCountDown(),
+                0,
+                0,
+                isHover ? BUTTON_IMAGE_HEIGHT : 0,
+                BUTTON_IMAGE_WIDTH,
+                BUTTON_IMAGE_HEIGHT,
+                BUTTON_IMAGE_SIZE,
+                BUTTON_IMAGE_SIZE
+            );
+        }
         // 返回按钮
         if (this.hasReturnButton()) {
             originY = this.getReturnButtonY();
@@ -868,6 +896,13 @@ public class GuideScreen extends Screen {
         if (this.mouseInRange(closeButtonX, closeButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
             this.onClose();
             return true;
+        }
+        if (!this.preview) {
+            int shareButtonY = closeButtonY + BUTTON_IMAGE_HEIGHT + 10;
+            if (this.mouseInRange(closeButtonX, shareButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
+                this.onShare();
+                return true;
+            }
         }
         if (!this.hasReturnButton()) {
             return false;
@@ -1340,7 +1375,7 @@ public class GuideScreen extends Screen {
 
         float offsetY = 0.0f;
         for (MDComponent component : this.parsedComponents) {
-            if (component instanceof dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent header) {
+            if (component instanceof MDHeaderComponent header) {
                 String headingText = header.getText().getString();
                 if (this.matchesAnchor(normalizedAnchor, headingText)) {
                     this.updateScrollBounds();
@@ -1463,11 +1498,11 @@ public class GuideScreen extends Screen {
 
     private Optional<ResourceLocation> tryResolvePreviewDocument(String candidate) {
         ResourceLocation direct = AgeratumClient.toPreviewLocation(candidate);
-        if (java.nio.file.Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(direct))) {
+        if (Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(direct))) {
             return Optional.of(direct);
         }
         ResourceLocation index = AgeratumClient.toPreviewLocation(candidate + "/index");
-        if (java.nio.file.Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(index))) {
+        if (Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(index))) {
             return Optional.of(index);
         }
         return Optional.empty();
@@ -1567,9 +1602,11 @@ public class GuideScreen extends Screen {
         String nearestAnchor = null;
         int nearestAnchorOffsetY = Integer.MAX_VALUE;
         for (MDComponent component : this.parsedComponents) {
-            if (component instanceof MDHeaderComponent headerComponent && totalOffsetY < nearestAnchorOffsetY) {
+            int absOffsetY = Math.abs(Math.round(totalOffsetY - this.contentScroll));
+            if (component instanceof MDHeaderComponent headerComponent && absOffsetY < nearestAnchorOffsetY) {
                 FormattedText text = headerComponent.getText();
-                nearestAnchorOffsetY = totalOffsetY;
+                nearestAnchorOffsetY = absOffsetY;
+                nearestAnchor = text.getString();
             }
             pose.pushPose();
             component.render(rootContext.child(
@@ -1592,6 +1629,23 @@ public class GuideScreen extends Screen {
         guiGraphics.disableScissor();
         rootContext.renderTooltip();
         rootContext.onEnd(this);
+    }
+
+    public void onShare() {
+        StringBuilder path = new StringBuilder();
+        String[] split = this.documentLocation.getPath().split("/");
+        for (int i = 2; i < split.length; i++) {
+            if (i != 2) {
+                path.append("/");
+            }
+            path.append(split[i]);
+        }
+        ResourceLocation location = ResourceLocation.fromNamespaceAndPath(this.documentLocation.getNamespace(), path.toString());
+        PacketDistributor.sendToServer(new ShareGuidePayload(
+            location,
+            Objects.requireNonNullElse(this.theNearestAnchor, ""),
+            AgeratumClient.CONFIG.shareGuideOnlyInTeam
+        ));
     }
 
     public float getBgImageScale() {

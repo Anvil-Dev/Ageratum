@@ -45,17 +45,17 @@ public class AgeratumCommand {
                 )
                 .then(
                     // ── 第一个参数：命名空间 ──────────────────────────
-                    Commands.argument("namespace", StringArgumentType.word())
+                    Commands.argument("namespace", StringArgumentType.string())
                         .suggests(AgeratumCommand::getNamespaceSuggestions)
                         .executes(AgeratumCommand::openGuide)
                         .then(
                             // ── 第二个参数（可选）：文件名 ──────────────
-                            Commands.argument("file", StringArgumentType.word())
+                            Commands.argument("file", StringArgumentType.string())
                                 .suggests(AgeratumCommand::getFileSuggestions)
                                 .executes(AgeratumCommand::openGuide)
                                 .then(
                                     // ── 第二个参数（可选）：文件名 ──────────────
-                                    Commands.argument("anchor", StringArgumentType.word())
+                                    Commands.argument("anchor", StringArgumentType.string())
                                         .executes(AgeratumCommand::openGuide)
                                 )
                         )
