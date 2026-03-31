@@ -9,6 +9,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -203,6 +205,7 @@ public class GuideScreen extends Screen {
      * 待定位的锚点（从其他页面链接过来时设置）。
      */
     protected @Nullable String pendingAnchor;
+    protected @Nullable String theNearestAnchor;
     protected List<ResourceLocation> breadCrumbs;
     protected double scale = 1.0f;
     protected double scaleCountDown = 1.0f;
@@ -1561,7 +1564,13 @@ public class GuideScreen extends Screen {
             this.topPos,
             new ArrayList<>()
         );
+        String nearestAnchor = null;
+        int nearestAnchorOffsetY = Integer.MAX_VALUE;
         for (MDComponent component : this.parsedComponents) {
+            if (component instanceof MDHeaderComponent headerComponent && totalOffsetY < nearestAnchorOffsetY) {
+                FormattedText text = headerComponent.getText();
+                nearestAnchorOffsetY = totalOffsetY;
+            }
             pose.pushPose();
             component.render(rootContext.child(
                 this.getContentWidth() - 2,
@@ -1578,7 +1587,7 @@ public class GuideScreen extends Screen {
             totalOffsetY += offsetY;
             translatedMouseY = translatedMouseY - offsetY;
         }
-
+        this.theNearestAnchor = nearestAnchor;
         pose.popPose();
         guiGraphics.disableScissor();
         rootContext.renderTooltip();
