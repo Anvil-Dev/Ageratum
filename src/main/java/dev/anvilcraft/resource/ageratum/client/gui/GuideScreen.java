@@ -211,6 +211,7 @@ public class GuideScreen extends Screen {
     protected @Nullable String pendingAnchor;
     protected @Nullable String theNearestAnchor;
     protected List<ResourceLocation> breadCrumbs;
+    @Getter
     protected double scale = 1.0f;
     protected double scaleCountDown = 1.0f;
     protected final boolean preview;
