@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.r
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.mixin.accessor.SmithingTransformRecipeAccessor;
 import dev.anvilcraft.resource.ageratum.mixin.accessor.SmithingTrimRecipeAccessor;
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;

@@ -1,4 +1,4 @@
-package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
@@ -204,20 +204,6 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                 return this.emptyComponent.getHeight(minecraft, maxX, maxY);
             }
             return this.component.getHeight(minecraft, maxX, maxY);
-        }
-    }
-
-    public boolean isHoverItem(int startX, int startY, float mouseX, float mouseY) {
-        return this.isHover(startX, startY, 16, 16, mouseX, mouseY);
-    }
-
-    public boolean isHover(int startX, int startY, int width, int height, float mouseX, float mouseY) {
-        return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
-    }
-
-    protected void renderTooltip(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
-        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
-            context.addTooltip(stack);
         }
     }
 }

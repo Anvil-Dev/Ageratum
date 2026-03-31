@@ -70,7 +70,7 @@ src/main/resources/
 ```java
 package com.example.mymod.client.markdown.recipe;
 
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
@@ -128,7 +128,7 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
 package com.example.mymod.client;
 
 import com.example.mymod.client.markdown.recipe.MDFurnaceRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.registries.DeferredHolder;

@@ -15,6 +15,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -691,5 +692,19 @@ public abstract class MDComponent {
         }
 
         return -1;
+    }
+
+    public boolean isHoverItem(int startX, int startY, float mouseX, float mouseY) {
+        return this.isHover(startX, startY, 16, 16, mouseX, mouseY);
+    }
+
+    public boolean isHover(int startX, int startY, int width, int height, float mouseX, float mouseY) {
+        return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
+    }
+
+    protected void renderTooltip(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+        }
     }
 }

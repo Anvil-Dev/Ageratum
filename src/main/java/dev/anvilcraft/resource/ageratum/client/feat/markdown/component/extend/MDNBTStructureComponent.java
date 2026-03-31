@@ -1,4 +1,4 @@
-package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.structure;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
