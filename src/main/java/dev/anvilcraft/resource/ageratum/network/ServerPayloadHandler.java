@@ -34,7 +34,7 @@ public class ServerPayloadHandler {
                     payload.location().getPath()
                 );
                 MutableComponent hover = Component.empty();
-                hover.append(Component.literal(payload.location().toString()).withStyle(ChatFormatting.DARK_BLUE));
+                hover.append(Component.literal(payload.location().toString()).withStyle(ChatFormatting.BLUE));
                 String anchor = payload.anchor().trim();
                 if (!anchor.isBlank()) {
                     command += " \"" + anchor + "\"";
