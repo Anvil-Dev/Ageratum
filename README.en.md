@@ -9,9 +9,9 @@
 
 </div>
 
-# Ageratum - In-Game Handbook Framework
+# Ageratum - In-Game Guidebook Framework
 
-A handbook-focused mod for Minecraft NeoForge, designed to provide in-game guides for other mods. Ageratum offers rich Markdown
+A guidebook mod for Minecraft NeoForge, designed to provide in-game guides for other mods. Ageratum offers rich Markdown
 rendering, i18n localization, and an extensible custom syntax/component system.
 
 ## [Documentation](https://anvil-dev.github.io/en/posts/docs/ageratum/)
