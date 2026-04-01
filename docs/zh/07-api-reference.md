@@ -46,6 +46,7 @@ dev.anvilcraft.resource.ageratum
             ├── MDImageComponent                # 图片
             ├── MDHorizontalRuleComponent       # 水平线
             ├── MDNoticeBoxComponent            # 提示框
+            ├── MDEntityComponent               # 实体展示组件
             ├── MDInlineStyleParser             # 行内解析器接口
             └── recipe/
                 ├── MDRecipeComponent           # 配方组件基类
@@ -193,6 +194,27 @@ public record MDExtensionContext(
     String rawContent                     // 块内容原始文本
 ) {}
 ```
+
+---
+
+## `MDEntityComponent`
+
+内置实体展示扩展组件，对应标签 `<entity .../>`，由 `BuiltinExtensionComponents.ENTITY` 注册。
+
+```java
+public final class MDEntityComponent extends MDComponent {
+    /**
+     * 参数：id（必填）
+     */
+    public static MDComponent parse(MDExtensionContext context);
+}
+```
+
+行为说明：
+
+- 使用 `InventoryScreen.renderEntityInInventoryFollowsMouse(...)` 渲染实体预览。
+- 仅支持可实例化为 `LivingEntity` 的实体类型。
+- 参数非法时返回 `MDTextComponent` 错误提示，而不是抛出异常导致文档中断。
 
 ---
 

@@ -388,6 +388,25 @@ Blocks without a corresponding item (technical blocks) will not render.
 > **Note:** Unlike `<item>`, `<block>` looks up the **block** registry and automatically finds the
 > matching block item. You do not need to know the block item's ID separately.
 
+### Entity Display — `<entity>`
+
+Renders an entity preview with `InventoryScreen.renderEntityInInventoryFollowsMouse`.
+The entity rotates to follow the cursor.
+
+```markdown
+<entity id="minecraft:zombie"/>
+<entity id="minecraft:villager"/>
+<entity id="minecraft:wolf"/>
+```
+
+| Parameter | Type  | Required | Default | Description                                                                                                                     |
+|-----------|-------|----------|---------|---------------------------------------------------------------------------------------------------------------------------------|
+| `id`      | string | ✓        | —       | Entity registry ID (e.g. `minecraft:zombie`)                                                                                    |
+| `nbt` | string | ✗  | '{}' | Entity NBT (e.g. `{Item:{id:"minecraft:diamond"}}`, External quotation marks and internal quotation marks need to be different) |
+
+> **Note:** Only entity types that can be rendered as `LivingEntity` are supported.
+> Non-living entities will show a load-failed placeholder.
+
 ---
 
 ## See Also

@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDBlockComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDEntityComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDItemComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNoticeBoxComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
@@ -13,6 +14,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
  *
  * <p>提供 info、tip、warning、danger 四种提示框类型。</p>
  */
+@SuppressWarnings("unused")
 public final class BuiltinExtensionComponents {
     /**
      * info 提示框组件工厂注册项。
@@ -95,6 +97,17 @@ public final class BuiltinExtensionComponents {
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "block",
             () -> MDBlockComponent::parse
+        );
+
+    /**
+     * 实体扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <entity id="namespace:path"/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> ENTITY =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "entity",
+            () -> MDEntityComponent::parse
         );
 
 

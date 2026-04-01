@@ -46,6 +46,7 @@ dev.anvilcraft.resource.ageratum
             ├── MDImageComponent                # Images
             ├── MDHorizontalRuleComponent       # Horizontal rules
             ├── MDNoticeBoxComponent            # Notice boxes
+            ├── MDEntityComponent               # Entity preview component
             ├── MDInlineStyleParser             # Inline parser interface
             └── recipe/
                 ├── MDRecipeComponent           # Recipe component base class
@@ -186,6 +187,27 @@ public record MDExtensionContext(
     String rawContent                      // Raw block content text
 ) {}
 ```
+
+---
+
+## `MDEntityComponent`
+
+Built-in entity preview extension component for `<entity .../>`, registered by `BuiltinExtensionComponents.ENTITY`.
+
+```java
+public final class MDEntityComponent extends MDComponent {
+    /**
+     * Params: id (required)
+     */
+    public static MDComponent parse(MDExtensionContext context);
+}
+```
+
+Behavior notes:
+
+- Renders the preview using `InventoryScreen.renderEntityInInventoryFollowsMouse(...)`.
+- Supports entity types that can be instantiated as `LivingEntity`.
+- Invalid params return an `MDTextComponent` error placeholder instead of breaking the full document render.
 
 ---
 

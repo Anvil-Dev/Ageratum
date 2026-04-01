@@ -390,6 +390,23 @@ Ageratum 自带若干内置扩展组件，可在任意文档中直接使用。
 > **注意：** 与 `<item>` 不同，`<block>` 查询的是**方块**注册表，自动匹配对应的方块物品。
 > 你不需要知道方块物品的独立 ID。
 
+### 实体展示 — `<entity>`
+
+使用 `InventoryScreen.renderEntityInInventoryFollowsMouse` 渲染一个实体预览，实体会随鼠标移动而转向。
+
+```markdown
+<entity id="minecraft:zombie"/>
+<entity id="minecraft:villager"/>
+<entity id="minecraft:wolf"/>
+```
+
+| 参数    | 类型  | 必填 | 默认值  | 说明                                                      |
+|-------|-----|----|------|---------------------------------------------------------|
+| `id`  | 字符串 | ✓  | —    | 实体注册表 ID（如 `minecraft:zombie`）                          |
+| `nbt` | 字符串 | ✗  | '{}' | 实体NBT（如 `{Item:{id:"minecraft:diamond"}}`，外部引号与内部引号需不同） |
+
+> **注意：** 仅支持可渲染为 `LivingEntity` 的实体类型；非生物实体会显示加载失败提示。
+
 ---
 
 ## 参见
