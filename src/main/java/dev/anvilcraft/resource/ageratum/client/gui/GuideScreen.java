@@ -4,8 +4,10 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -53,7 +55,6 @@ import javax.annotation.Nullable;
  */
 @SuppressWarnings("unused")
 public class GuideScreen extends Screen {
-
     /**
      * 背景纹理资源位置。
      */
@@ -83,6 +84,8 @@ public class GuideScreen extends Screen {
     protected static final ResourceLocation BUTTON_CLOSE_LOCATION = Ageratum.location("textures/gui/guide/button_close.png");
     protected static final ResourceLocation BUTTON_SHARE_LOCATION = Ageratum.location("textures/gui/guide/button_share.png");
     protected static final ResourceLocation BUTTON_RETURN_LOCATION = Ageratum.location("textures/gui/guide/button_back.png");
+    protected static final ResourceLocation BUTTON_ADD_LOCATION = Ageratum.location("textures/gui/guide/button_add.png");
+    protected static final ResourceLocation LABEL_BOOKMARK_LOCATION = Ageratum.location("textures/gui/guide/label_bookmark.png");
     protected static final int BUTTON_IMAGE_SIZE = 32;
     /**
      * 侧边标签宽度（原始像素）。
@@ -93,6 +96,10 @@ public class GuideScreen extends Screen {
      */
     protected static final int BUTTON_IMAGE_HEIGHT = 16;
     protected static final int CLOSE_BUTTON_X_OFFSET = -5;
+    /**
+     * 书签悬停时向右滑出的距离（屏幕像素）。
+     */
+    protected static final int BOOKMARK_HOVER_SHIFT = 5;
 
     protected static final int MIN_HORIZONTAL_MARGIN = 32;
 
@@ -202,6 +209,22 @@ public class GuideScreen extends Screen {
      */
     protected List<LabelEntry> labelEntries = List.of();
     /**
+     * 全局书签列表（在会话期间跨页面保持）。
+     */
+    protected static final List<GuideBookmarkStore.BookmarkEntry> BOOKMARKS = new ArrayList<>();
+    /**
+     * 书签列表当前滚动行索引。
+     */
+    protected int bookmarkScrollRows = 0;
+    /**
+     * 书签列表触控板滚动小数累积。
+     */
+    protected double bookmarkScrollRemainder = 0.0;
+    /**
+     * 书签列表最大可滚动行数。
+     */
+    protected int maxBookmarkScrollRows = 0;
+    /**
      * 当前语言代码（用于文档定位回退）。
      */
     protected String currentLanguageCode = GuideDocumentLoader.DEFAULT_LANGUAGE_CODE;
@@ -215,24 +238,26 @@ public class GuideScreen extends Screen {
     protected double scale = 1.0f;
     protected double scaleCountDown = 1.0f;
     protected final boolean preview;
+    protected final MDDocument document;
 
     /**
      * 使用预解析组件创建界面，避免重复解析 Markdown 文本。
      *
      * @param documentLocation 文档资源位置，用于构造界面标题
-     * @param parsedComponents 预解析后的组件列表
+     * @param document         预解析后的文档
      * @param preview          是否为预览
      */
     public GuideScreen(
         ResourceLocation documentLocation,
-        List<MDComponent> parsedComponents,
+        MDDocument document,
         List<ResourceLocation> breadCrumbs,
         boolean preview
     ) {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
-        this.parsedComponents = new ArrayList<>(parsedComponents);
+        this.document = document;
+        this.parsedComponents = new ArrayList<>(document.components());
         this.breadCrumbs = breadCrumbs;
         if (AgeratumClient.isPreviewLocation(documentLocation)) {
             this.previewDocumentPath = AgeratumClient.resolvePreviewDocumentPath(documentLocation);
@@ -375,9 +400,11 @@ public class GuideScreen extends Screen {
             this.updateScrollBounds();
             this.tryScrollToPendingAnchor();
         }
+        this.ensureBookmarksLoaded();
         // 防止窗口缩小后滚动量超出边界
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.refreshBookmarkScrollState();
     }
 
     private int getLabelLeftBound() {
@@ -385,8 +412,11 @@ public class GuideScreen extends Screen {
     }
 
     private int getRightButtonBound() {
-        int buttonRenderWidth = Math.max(1, Math.round(BUTTON_IMAGE_WIDTH * this.getLabelImageScale()));
-        return this.width - (this.imageWidth + CLOSE_BUTTON_X_OFFSET + buttonRenderWidth);
+        int bookmarkRenderWidth = Math.max(
+            1,
+            Math.round((this.labelWidth / 2.0f + this.labelWidth + BOOKMARK_HOVER_SHIFT) * this.getLabelImageScale())
+        );
+        return this.width - (this.imageWidth + bookmarkRenderWidth - this.labelWidth);
     }
 
     /**
@@ -415,6 +445,7 @@ public class GuideScreen extends Screen {
         // 将坐标系移动到界面左上角，方便后续使用相对坐标
         pose.translate(i, j, 0);
         this.renderLabel(guiGraphics, partialTick, mouseX - i, mouseY - j);
+        this.renderBookmarks(guiGraphics, partialTick, mouseX - i, mouseY - j);
         this.renderBg(guiGraphics, partialTick, mouseX - i, mouseY - j);
         this.renderContent(guiGraphics, partialTick, mouseX - i, mouseY - j);
         pose.popPose();
@@ -454,6 +485,15 @@ public class GuideScreen extends Screen {
             }
             return true;
         }
+        if (this.mouseInBookmarkRange(mouseX, mouseY)) {
+            this.bookmarkScrollRemainder -= scrollY;
+            int rowDelta = (int) Math.copySign(Math.floor(Math.abs(this.bookmarkScrollRemainder) + 0.5d), this.bookmarkScrollRemainder);
+            if (rowDelta != 0) {
+                this.bookmarkScrollRemainder -= rowDelta;
+                this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows + rowDelta, 0, this.maxBookmarkScrollRows);
+            }
+            return true;
+        }
         if (!this.mouseInContentRange(mouseX, mouseY)) {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
@@ -487,6 +527,16 @@ public class GuideScreen extends Screen {
         }
         if (button == 0 && this.mouseInLabelRange(mouseX, mouseY)) {
             if (this.tryOpenLabelAt(mouseX, mouseY)) {
+                return true;
+            }
+        }
+        if (button == 0 && this.mouseInBookmarkRange(mouseX, mouseY)) {
+            if (this.tryOpenBookmarkAt(mouseX, mouseY)) {
+                return true;
+            }
+        }
+        if (button == 1 && hasControlDown() && this.mouseInBookmarkRange(mouseX, mouseY)) {
+            if (this.tryRemoveBookmarkAt(mouseX, mouseY)) {
                 return true;
             }
         }
@@ -905,6 +955,12 @@ public class GuideScreen extends Screen {
                 return true;
             }
         }
+        int addButtonX = this.getAddButtonX();
+        int addButtonY = this.getAddButtonY();
+        if (this.mouseInRange(addButtonX, addButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
+            this.addCurrentPageToBookmarks();
+            return true;
+        }
         if (!this.hasReturnButton()) {
             return false;
         }
@@ -995,6 +1051,242 @@ public class GuideScreen extends Screen {
 
     private int getLabelViewportHeight() {
         return (this.getLabelVisibleRows() - 2) * this.getLabelRowOffset() + this.labelHeight;
+    }
+
+    // ── 书签相关方法 ────────────────────────────────────────────────────────────
+
+    private int getBookmarkBaseX() {
+        // 镜像左侧标签：从书页右边缘往左 30px 开始，使书签 tab 向右伸出
+        return this.imageWidth - this.labelWidth / 2;
+    }
+
+    private int getBookmarkStartY() {
+        return this.getBookmarkViewportTopY();
+    }
+
+    private int getBookmarkViewportTopY() {
+        return this.getAddButtonY() + (BUTTON_IMAGE_HEIGHT + 10) * 2;
+    }
+
+    private int getBookmarkViewportBottomY() {
+        int bottom = this.hasReturnButton() ? this.getReturnButtonY() - 10 : this.getContentStartY() + this.getContentHeight();
+        return Math.max(this.getBookmarkViewportTopY() + this.labelHeight, bottom - (BUTTON_IMAGE_HEIGHT + 10));
+    }
+
+    private int getAddButtonX() {
+        return this.getCloseButtonX(); // imageWidth - 5，与关闭/分享按钮同列
+    }
+
+    private int getAddButtonY() {
+        int y = this.getCloseButtonY() + BUTTON_IMAGE_HEIGHT + 10; // 关闭按钮之后
+        if (!this.preview) {
+            y += BUTTON_IMAGE_HEIGHT + 10; // 分享按钮之后
+        }
+        return y;
+    }
+
+    private int getBookmarkVisibleRows() {
+        int availableHeight = Math.max(this.labelHeight, this.getBookmarkViewportBottomY() - this.getBookmarkViewportTopY());
+        return Math.max(1, (availableHeight - this.labelHeight) / this.getLabelRowOffset() + 1);
+    }
+
+    private void ensureBookmarksLoaded() {
+        GuideBookmarkStore.ensureLoaded(BOOKMARKS);
+    }
+
+    private void updateBookmarkScrollBounds() {
+        this.maxBookmarkScrollRows = Math.max(0, BOOKMARKS.size() - this.getBookmarkVisibleRows());
+    }
+
+    private void refreshBookmarkScrollState() {
+        this.updateBookmarkScrollBounds();
+        this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows, 0, this.maxBookmarkScrollRows);
+        if (this.maxBookmarkScrollRows == 0) {
+            this.bookmarkScrollRemainder = 0.0d;
+        }
+    }
+
+    /**
+     * 渲染右侧书签列表和"添加书签"按钮。
+     * 须在 renderBg 之前调用，使书签 tab 的嵌入部分被书页背景覆盖。
+     */
+    private void renderBookmarks(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        PoseStack pose = guiGraphics.pose();
+        float labelScale = this.getLabelImageScale();
+
+        // ── 渲染 Add 按钮 ──────────────────────────────────────────────────────
+        int addX = this.getAddButtonX();
+        int addY = this.getAddButtonY();
+        boolean addHover = this.mouseInRange(addX, addY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
+        pose.pushPose();
+        pose.scale(labelScale, labelScale, labelScale);
+        guiGraphics.blit(
+            BUTTON_ADD_LOCATION,
+            addX * this.getLabelScaleCountDown(),
+            addY * this.getLabelScaleCountDown(),
+            0, 0,
+            addHover ? BUTTON_IMAGE_HEIGHT : 0,
+            BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT,
+            BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE
+        );
+        pose.popPose();
+
+        // ── 渲染书签列表 ───────────────────────────────────────────────────────
+        if (BOOKMARKS.isEmpty()) {
+            return;
+        }
+        int start = this.bookmarkScrollRows;
+        int end = Math.min(BOOKMARKS.size(), start + this.getBookmarkVisibleRows());
+        for (int index = start; index < end; index++) {
+            int row = index - start;
+            GuideBookmarkStore.BookmarkEntry entry = BOOKMARKS.get(index);
+            int originX = this.getBookmarkBaseX();
+            int originY = this.getBookmarkStartY() + row * this.getLabelRowOffset();
+            boolean isHover = this.mouseInRange(originX, originY, this.labelWidth + BOOKMARK_HOVER_SHIFT, this.labelHeight, mouseX, mouseY);
+            int renderX = isHover ? originX + BOOKMARK_HOVER_SHIFT : originX;
+            pose.pushPose();
+            pose.scale(labelScale, labelScale, labelScale);
+            guiGraphics.blit(
+                LABEL_BOOKMARK_LOCATION,
+                renderX * this.getLabelScaleCountDown(),
+                originY * this.getLabelScaleCountDown(),
+                0, 0, 0,
+                LABEL_IMAGE_WIDTH, LABEL_IMAGE_HEIGHT,
+                LABEL_IMAGE_SIZE, LABEL_IMAGE_SIZE
+            );
+            pose.popPose();
+            int textColor = 0x5D4630;
+            int width = this.font.width(this.fitLabelTitle(entry.title()));
+            guiGraphics.drawString(
+                this.font,
+                this.fitLabelTitle(entry.title()),
+                renderX + 50 - width,
+                originY + 4,
+                textColor,
+                false
+            );
+        }
+
+        // ── 渲染书签滚动提示箭头 ───────────────────────────────────────────────
+        if (this.maxBookmarkScrollRows > 0) {
+            int arrowX = this.getAddButtonX();
+            int arrowUpY = this.getBookmarkViewportTopY() - (BUTTON_IMAGE_HEIGHT + 10);
+            int arrowDownY = this.getBookmarkViewportBottomY();
+            pose.pushPose();
+            pose.scale(labelScale, labelScale, labelScale);
+            if (this.bookmarkScrollRows > 0) {
+                float alpha = this.computeArrowAlpha(this.bookmarkScrollRows);
+                guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
+                guiGraphics.blit(
+                    BUTTON_UP_LOCATION,
+                    arrowX * this.getLabelScaleCountDown(),
+                    arrowUpY * this.getLabelScaleCountDown(),
+                    0, 0, 0,
+                    BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT,
+                    BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE
+                );
+                guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+            int rowsToBottom = this.maxBookmarkScrollRows - this.bookmarkScrollRows;
+            if (rowsToBottom > 0) {
+                float alpha = this.computeArrowAlpha(rowsToBottom);
+                guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
+                guiGraphics.blit(
+                    BUTTON_DOWN_LOCATION,
+                    arrowX * this.getLabelScaleCountDown(),
+                    arrowDownY * this.getLabelScaleCountDown(),
+                    0, 0, 0,
+                    BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT,
+                    BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE
+                );
+                guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+            pose.popPose();
+        }
+    }
+
+    /**
+     * 判断鼠标是否位于书签列表可交互区域。
+     */
+    private boolean mouseInBookmarkRange(double mouseX, double mouseY) {
+        if (BOOKMARKS.isEmpty()) {
+            return false;
+        }
+        int bLeft = this.leftPos + this.getBookmarkBaseX();
+        int bRight = this.leftPos + this.getBookmarkBaseX() + this.labelWidth + BOOKMARK_HOVER_SHIFT;
+        int bTop = this.topPos + this.getBookmarkViewportTopY();
+        int bBottom = this.topPos + this.getBookmarkViewportBottomY();
+        return mouseX >= bLeft && mouseX <= bRight && mouseY >= bTop && mouseY <= bBottom;
+    }
+
+    /**
+     * 尝试点击书签，若命中则导航到对应页面。
+     */
+    private boolean tryOpenBookmarkAt(double mouseX, double mouseY) {
+        if (this.minecraft == null || BOOKMARKS.isEmpty()) {
+            return false;
+        }
+        int bookmarkIndex = this.getBookmarkIndexAt(mouseX, mouseY);
+        return bookmarkIndex >= 0 && AgeratumClient.openGuideOnClient(BOOKMARKS.get(bookmarkIndex).location(), List.of());
+    }
+
+    private boolean tryRemoveBookmarkAt(double mouseX, double mouseY) {
+        int bookmarkIndex = this.getBookmarkIndexAt(mouseX, mouseY);
+        if (bookmarkIndex < 0) {
+            return false;
+        }
+        BOOKMARKS.remove(bookmarkIndex);
+        GuideBookmarkStore.save(BOOKMARKS);
+        this.refreshBookmarkScrollState();
+        return true;
+    }
+
+    private int getBookmarkIndexAt(double mouseX, double mouseY) {
+        int relMouseX = (int) Math.floor(mouseX - this.leftPos);
+        int relMouseY = (int) Math.floor(mouseY - this.topPos);
+        int start = this.bookmarkScrollRows;
+        int end = Math.min(BOOKMARKS.size(), start + this.getBookmarkVisibleRows());
+        for (int index = start; index < end; index++) {
+            int row = index - start;
+            int originX = this.getBookmarkBaseX();
+            int originY = this.getBookmarkStartY() + row * this.getLabelRowOffset();
+            if (this.mouseInRange(originX, originY, this.labelWidth + BOOKMARK_HOVER_SHIFT, this.labelHeight, relMouseX, relMouseY)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 将当前页面添加到书签（已存在则忽略）。
+     */
+    private void addCurrentPageToBookmarks() {
+        for (GuideBookmarkStore.BookmarkEntry existing : BOOKMARKS) {
+            if (existing.location().equals(this.documentLocation)) {
+                return;
+            }
+        }
+        BOOKMARKS.add(new GuideBookmarkStore.BookmarkEntry(this.getPageTitle(), this.documentLocation));
+        GuideBookmarkStore.save(BOOKMARKS);
+        this.refreshBookmarkScrollState();
+        this.bookmarkScrollRows = this.maxBookmarkScrollRows;
+    }
+
+    /**
+     * 获取当前文档的标题（取第一个标题组件文本，否则用路径末段）。
+     */
+    private Component getPageTitle() {
+        String path = this.documentLocation.getPath();
+        int slash = path.lastIndexOf('/');
+        String pathTitle = slash >= 0 ? path.substring(slash + 1) : path;
+        String title = this.document.getTitle(pathTitle);
+        if (!title.isEmpty()) {
+            return Component.literal(title);
+        }
+        return Component.translatableWithFallback(
+            "ageratum.directory.%s.label".formatted(pathTitle.toLowerCase(Locale.ROOT)),
+            pathTitle.toUpperCase(Locale.ROOT)
+        );
     }
 
     private int consumeLabelScrollRows(double scrollY) {
