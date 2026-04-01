@@ -55,7 +55,7 @@ public class ViewportCameraRig {
      * 创建默认等距视角预设的相机。
      */
     public ViewportCameraRig() {
-        this.applyPreset(PerspectivePreset.ISOMETRIC_NORTH_EAST);
+        this.applyPreset(PerspectivePreset.ISOMETRIC_NORTH_WEST);
     }
 
     /**

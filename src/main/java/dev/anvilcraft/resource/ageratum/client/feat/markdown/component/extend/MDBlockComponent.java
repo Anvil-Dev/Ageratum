@@ -74,8 +74,8 @@ public class MDBlockComponent extends MDImageComponent {
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
             this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
-            this.cameraRig.setOffsetX(5.5F);
-            this.cameraRig.setOffsetY(context.screenHeight() / 2F - context.offsetY() - 30.25F);
+            this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - context.offsetY() - context.topPos() - 24.25f);
+            this.cameraRig.setOffsetX(-context.screenWidth() / 2.0f + context.leftPos() + context.offsetX() + context.maxX() / 2.0f);
             StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
         }
 

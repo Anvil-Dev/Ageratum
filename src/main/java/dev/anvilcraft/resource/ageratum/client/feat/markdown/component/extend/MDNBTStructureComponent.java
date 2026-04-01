@@ -15,6 +15,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
@@ -23,6 +25,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.SingleThreadedRandomSource;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -59,6 +62,8 @@ public final class MDNBTStructureComponent extends MDComponent {
     private int totalLayerCount = 1;
     private int visibleLayerCount = 1;
     private boolean layerPreviewInitialized;
+    private int contentHeight = 220;
+    private int bottomHeight = 220;
 
     private MDNBTStructureComponent(StructureTarget target) {
         super("[结构未加载]");
@@ -88,7 +93,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         int maxX = context.maxX();
         GuiGraphics graphics = context.graphics();
         if (this.previewLevel == null) {
-            this.previewLevel = MDNBTStructureComponent.prepare(minecraft.level, this.target);
+            this.previewLevel = this.prepare(minecraft.level, this.target);
             this.resetLayerPreview();
         }
         if (this.previewLevel == null) {
@@ -105,7 +110,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
         this.cameraRig.setZoom(2.0f);
         this.cameraRig.setOffsetX(this.panOffsetX);
-        this.cameraRig.setOffsetY(-context.offsetY() + this.panOffsetY + 64);
+        this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
         StructurePreviewRenderer.getInstance().render(
             this.previewLevel,
             this.cameraRig,
@@ -269,29 +274,35 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        return this.scale(maxX, 450);
+        return this.contentHeight;
     }
 
     /**
      * 加载 NBT 结构模板并将其放入沙盒关卡，供后续渲染使用。
      */
-    private static @Nullable SandboxRenderLevel prepare(@Nullable Level clientLevel, StructureTarget target) {
+    private @Nullable SandboxRenderLevel prepare(@Nullable Level clientLevel, StructureTarget target) {
         if (clientLevel == null) return null;
         try (InputStream inputStream = MDNBTStructureComponent.openStructureStream(target)) {
             if (inputStream == null) {
                 return null;
             }
 
-            var template = new StructureTemplate();
-            var blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
+            StructureTemplate template = new StructureTemplate();
+            HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
             CompoundTag root = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
             template.load(blocks, root);
-            var random = new SingleThreadedRandomSource(0L);
-            var settings = new StructurePlaceSettings();
+            SingleThreadedRandomSource random = new SingleThreadedRandomSource(0L);
+            StructurePlaceSettings settings = new StructurePlaceSettings();
             settings.setIgnoreEntities(true);
             SandboxRenderLevel level = new SandboxRenderLevel();
-            var fakeServerLevel = new DelegatingServerLevelAccessor(level);
-            if (!template.placeInWorld(fakeServerLevel, BlockPos.ZERO, BlockPos.ZERO, settings, random, 0)) {
+            DelegatingServerLevelAccessor fakeServerLevel = new DelegatingServerLevelAccessor(level);
+            Vec3i size = template.getSize();
+            int x = (int) Math.ceil(size.getX() / 2.0f);
+            int z = (int) Math.ceil(size.getZ() / 2.0f);
+            BlockPos pos = new BlockPos(-x, 0, -z);
+            this.contentHeight = (int) (20d * Math.sqrt(BlockPos.ZERO.distSqr(size)));
+            this.bottomHeight = (int) (18d * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
+            if (!template.placeInWorld(fakeServerLevel, pos, pos, settings, random, 0)) {
                 log.debug("Failed to place structure.");
             }
             return level;
