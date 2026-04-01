@@ -8,6 +8,7 @@
     "accessor.SmithingTrimRecipeAccessor"
   ],
   "client": [
+    "GlDebugMixin",
     "GuiGraphicsMixin"
   ],
   "injectors": {
