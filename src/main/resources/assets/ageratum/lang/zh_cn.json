@@ -16,5 +16,8 @@
   "ageratum.configuration.share_guide_only_in_team": "仅在队伍内分享指南",
   "ageratum.configuration.share_guide_only_in_team.tooltip": "仅与同一队伍的玩家分享你的指南",
   "system.ageratum.share.button": "[点击打开]",
-  "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南："
+  "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南：",
+  "tooltip.ageratum.bind_item_hold": "按住 %s 寻思",
+  "key.ageratum.more_info": "获取更多信息",
+  "key.categories.ageratum": "藿香"
 }
