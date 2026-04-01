@@ -22,7 +22,9 @@ import org.slf4j.Logger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class GuideBookmarkStore {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -32,31 +34,31 @@ public final class GuideBookmarkStore {
         .resolve("config")
         .resolve(Ageratum.MOD_ID)
         .resolve("bookmarks");
-    private static final Path BOOKMARK_FILE = BOOKMARK_DIRECTORY.resolve("bookmarks.json");
 
-    private static boolean loaded;
+    private static final Set<String> LOADED_NAMESPACES = new HashSet<>();
 
     private GuideBookmarkStore() {
     }
 
-    public static void ensureLoaded(List<BookmarkEntry> target) {
-        if (loaded) {
+    public static void ensureLoaded(String namespace, List<BookmarkEntry> target) {
+        if (LOADED_NAMESPACES.contains(namespace)) {
             return;
         }
-        reload(target);
+        reload(namespace, target);
     }
 
-    public static void reload(List<BookmarkEntry> target) {
+    public static void reload(String namespace, List<BookmarkEntry> target) {
         target.clear();
-        loaded = true;
-        if (!Files.isRegularFile(BOOKMARK_FILE)) {
+        LOADED_NAMESPACES.add(namespace);
+        Path bookmarkFile = getBookmarkFile(namespace);
+        if (!Files.isRegularFile(bookmarkFile)) {
             return;
         }
 
         try {
-            JsonElement rootElement = JsonParser.parseString(Files.readString(BOOKMARK_FILE, StandardCharsets.UTF_8));
+            JsonElement rootElement = JsonParser.parseString(Files.readString(bookmarkFile, StandardCharsets.UTF_8));
             if (!rootElement.isJsonObject()) {
-                LOGGER.warn("Bookmark file is not a JSON object: {}", BOOKMARK_FILE);
+                LOGGER.warn("Bookmark file is not a JSON object: {}", bookmarkFile);
                 return;
             }
 
@@ -78,13 +80,14 @@ public final class GuideBookmarkStore {
                 }
             }
         } catch (Exception exception) {
-            LOGGER.warn("Failed to load bookmarks from {}", BOOKMARK_FILE, exception);
+            LOGGER.warn("Failed to load bookmarks from {}", bookmarkFile, exception);
         }
     }
 
-    public static void save(List<BookmarkEntry> source) {
+    public static void save(String namespace, List<BookmarkEntry> source) {
         try {
             Files.createDirectories(BOOKMARK_DIRECTORY);
+            Path bookmarkFile = getBookmarkFile(namespace);
             JsonObject root = new JsonObject();
             root.addProperty("version", FILE_VERSION);
             JsonArray entries = new JsonArray();
@@ -95,11 +98,15 @@ public final class GuideBookmarkStore {
                 }
             }
             root.add("entries", entries);
-            Files.writeString(BOOKMARK_FILE, GSON.toJson(root), StandardCharsets.UTF_8);
-            loaded = true;
+            Files.writeString(bookmarkFile, GSON.toJson(root), StandardCharsets.UTF_8);
+            LOADED_NAMESPACES.add(namespace);
         } catch (Exception exception) {
-            LOGGER.warn("Failed to save bookmarks to {}", BOOKMARK_FILE, exception);
+            LOGGER.warn("Failed to save bookmarks for namespace {}", namespace, exception);
         }
+    }
+
+    private static Path getBookmarkFile(String namespace) {
+        return BOOKMARK_DIRECTORY.resolve(namespace + ".json");
     }
 
     public record BookmarkEntry(Component title, ResourceLocation location) {

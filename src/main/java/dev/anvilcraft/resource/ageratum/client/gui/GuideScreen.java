@@ -37,8 +37,10 @@ import java.nio.file.Path;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -211,7 +213,7 @@ public class GuideScreen extends Screen {
     /**
      * 全局书签列表（在会话期间跨页面保持）。
      */
-    protected static final List<GuideBookmarkStore.BookmarkEntry> BOOKMARKS = new ArrayList<>();
+    protected static final Map<String, List<GuideBookmarkStore.BookmarkEntry>> BOOKMARKS_BY_NAMESPACE = new HashMap<>();
     /**
      * 书签列表当前滚动行索引。
      */
@@ -412,6 +414,10 @@ public class GuideScreen extends Screen {
     }
 
     private int getRightButtonBound() {
+        if (!this.isBookmarkEnabled()) {
+            int buttonRenderWidth = Math.max(1, Math.round(BUTTON_IMAGE_WIDTH * this.getLabelImageScale()));
+            return this.width - (this.imageWidth + CLOSE_BUTTON_X_OFFSET + buttonRenderWidth);
+        }
         int bookmarkRenderWidth = Math.max(
             1,
             Math.round((this.labelWidth / 2.0f + this.labelWidth + BOOKMARK_HOVER_SHIFT) * this.getLabelImageScale())
@@ -955,11 +961,13 @@ public class GuideScreen extends Screen {
                 return true;
             }
         }
-        int addButtonX = this.getAddButtonX();
-        int addButtonY = this.getAddButtonY();
-        if (this.mouseInRange(addButtonX, addButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
-            this.addCurrentPageToBookmarks();
-            return true;
+        if (this.isBookmarkEnabled()) {
+            int addButtonX = this.getAddButtonX();
+            int addButtonY = this.getAddButtonY();
+            if (this.mouseInRange(addButtonX, addButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
+                this.addCurrentPageToBookmarks();
+                return true;
+            }
         }
         if (!this.hasReturnButton()) {
             return false;
@@ -1090,18 +1098,40 @@ public class GuideScreen extends Screen {
         return Math.max(1, (availableHeight - this.labelHeight) / this.getLabelRowOffset() + 1);
     }
 
+    private boolean isBookmarkEnabled() {
+        return !this.preview;
+    }
+
+    private String getBookmarkNamespace() {
+        return this.documentLocation.getNamespace();
+    }
+
+    private List<GuideBookmarkStore.BookmarkEntry> getBookmarks() {
+        if (!this.isBookmarkEnabled()) {
+            return List.of();
+        }
+        return BOOKMARKS_BY_NAMESPACE.computeIfAbsent(this.getBookmarkNamespace(), key -> new ArrayList<>());
+    }
+
     private void ensureBookmarksLoaded() {
-        GuideBookmarkStore.ensureLoaded(BOOKMARKS);
+        if (!this.isBookmarkEnabled()) {
+            return;
+        }
+        GuideBookmarkStore.ensureLoaded(this.getBookmarkNamespace(), this.getBookmarks());
     }
 
     private void updateBookmarkScrollBounds() {
-        this.maxBookmarkScrollRows = Math.max(0, BOOKMARKS.size() - this.getBookmarkVisibleRows());
+        if (!this.isBookmarkEnabled()) {
+            this.maxBookmarkScrollRows = 0;
+            return;
+        }
+        this.maxBookmarkScrollRows = Math.max(0, this.getBookmarks().size() - this.getBookmarkVisibleRows());
     }
 
     private void refreshBookmarkScrollState() {
         this.updateBookmarkScrollBounds();
         this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows, 0, this.maxBookmarkScrollRows);
-        if (this.maxBookmarkScrollRows == 0) {
+        if (!this.isBookmarkEnabled() || this.maxBookmarkScrollRows == 0) {
             this.bookmarkScrollRemainder = 0.0d;
         }
     }
@@ -1111,8 +1141,12 @@ public class GuideScreen extends Screen {
      * 须在 renderBg 之前调用，使书签 tab 的嵌入部分被书页背景覆盖。
      */
     private void renderBookmarks(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        if (!this.isBookmarkEnabled()) {
+            return;
+        }
         PoseStack pose = guiGraphics.pose();
         float labelScale = this.getLabelImageScale();
+        List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
 
         // ── 渲染 Add 按钮 ──────────────────────────────────────────────────────
         int addX = this.getAddButtonX();
@@ -1132,14 +1166,14 @@ public class GuideScreen extends Screen {
         pose.popPose();
 
         // ── 渲染书签列表 ───────────────────────────────────────────────────────
-        if (BOOKMARKS.isEmpty()) {
+        if (bookmarks.isEmpty()) {
             return;
         }
         int start = this.bookmarkScrollRows;
-        int end = Math.min(BOOKMARKS.size(), start + this.getBookmarkVisibleRows());
+        int end = Math.min(bookmarks.size(), start + this.getBookmarkVisibleRows());
         for (int index = start; index < end; index++) {
             int row = index - start;
-            GuideBookmarkStore.BookmarkEntry entry = BOOKMARKS.get(index);
+            GuideBookmarkStore.BookmarkEntry entry = bookmarks.get(index);
             int originX = this.getBookmarkBaseX();
             int originY = this.getBookmarkStartY() + row * this.getLabelRowOffset();
             boolean isHover = this.mouseInRange(originX, originY, this.labelWidth + BOOKMARK_HOVER_SHIFT, this.labelHeight, mouseX, mouseY);
@@ -1209,7 +1243,7 @@ public class GuideScreen extends Screen {
      * 判断鼠标是否位于书签列表可交互区域。
      */
     private boolean mouseInBookmarkRange(double mouseX, double mouseY) {
-        if (BOOKMARKS.isEmpty()) {
+        if (!this.isBookmarkEnabled() || this.getBookmarks().isEmpty()) {
             return false;
         }
         int bLeft = this.leftPos + this.getBookmarkBaseX();
@@ -1223,29 +1257,35 @@ public class GuideScreen extends Screen {
      * 尝试点击书签，若命中则导航到对应页面。
      */
     private boolean tryOpenBookmarkAt(double mouseX, double mouseY) {
-        if (this.minecraft == null || BOOKMARKS.isEmpty()) {
+        List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
+        if (this.minecraft == null || bookmarks.isEmpty()) {
             return false;
         }
         int bookmarkIndex = this.getBookmarkIndexAt(mouseX, mouseY);
-        return bookmarkIndex >= 0 && AgeratumClient.openGuideOnClient(BOOKMARKS.get(bookmarkIndex).location(), List.of());
+        return bookmarkIndex >= 0 && AgeratumClient.openGuideOnClient(bookmarks.get(bookmarkIndex).location(), List.of());
     }
 
     private boolean tryRemoveBookmarkAt(double mouseX, double mouseY) {
+        if (!this.isBookmarkEnabled()) {
+            return false;
+        }
+        List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
         int bookmarkIndex = this.getBookmarkIndexAt(mouseX, mouseY);
         if (bookmarkIndex < 0) {
             return false;
         }
-        BOOKMARKS.remove(bookmarkIndex);
-        GuideBookmarkStore.save(BOOKMARKS);
+        bookmarks.remove(bookmarkIndex);
+        GuideBookmarkStore.save(this.getBookmarkNamespace(), bookmarks);
         this.refreshBookmarkScrollState();
         return true;
     }
 
     private int getBookmarkIndexAt(double mouseX, double mouseY) {
+        List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
         int relMouseX = (int) Math.floor(mouseX - this.leftPos);
         int relMouseY = (int) Math.floor(mouseY - this.topPos);
         int start = this.bookmarkScrollRows;
-        int end = Math.min(BOOKMARKS.size(), start + this.getBookmarkVisibleRows());
+        int end = Math.min(bookmarks.size(), start + this.getBookmarkVisibleRows());
         for (int index = start; index < end; index++) {
             int row = index - start;
             int originX = this.getBookmarkBaseX();
@@ -1261,13 +1301,17 @@ public class GuideScreen extends Screen {
      * 将当前页面添加到书签（已存在则忽略）。
      */
     private void addCurrentPageToBookmarks() {
-        for (GuideBookmarkStore.BookmarkEntry existing : BOOKMARKS) {
+        if (!this.isBookmarkEnabled()) {
+            return;
+        }
+        List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
+        for (GuideBookmarkStore.BookmarkEntry existing : bookmarks) {
             if (existing.location().equals(this.documentLocation)) {
                 return;
             }
         }
-        BOOKMARKS.add(new GuideBookmarkStore.BookmarkEntry(this.getPageTitle(), this.documentLocation));
-        GuideBookmarkStore.save(BOOKMARKS);
+        bookmarks.add(new GuideBookmarkStore.BookmarkEntry(this.getPageTitle(), this.documentLocation));
+        GuideBookmarkStore.save(this.getBookmarkNamespace(), bookmarks);
         this.refreshBookmarkScrollState();
         this.bookmarkScrollRows = this.maxBookmarkScrollRows;
     }
