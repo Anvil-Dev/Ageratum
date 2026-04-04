@@ -2,17 +2,27 @@ package dev.anvilcraft.resource.ageratum.client.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -20,20 +30,32 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public class AgeratumCommand {
+    /**
+     * 在客户端资源包中已知的结构模板列表（由 {@link AgeratumStructureTemplateManager} 扫描）。
+     */
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_TEMPLATES =
+        (context, builder) -> SharedSuggestionProvider.suggestResource(
+            AgeratumStructureTemplateManager.listAll(), builder
+        );
+
+    private static final DynamicCommandExceptionType ERROR_TEMPLATE_INVALID = new DynamicCommandExceptionType(
+        template -> Component.translatableEscape("commands.place.template.invalid", template)
+    );
 
     /**
      * 注册客户端命令 {@code /ageratum}。
      *
      * <p>命令格式：</p>
      * <pre>
-     *   /ageratum &lt;namespace&gt;               — 打开该命名空间的 index.md
-     *   /ageratum &lt;namespace&gt; &lt;file&gt;        — 打开指定文件（不需要 .md 后缀）
+     *   /ageratum &lt;namespace&gt;                          — 打开该命名空间的 index.md
+     *   /ageratum &lt;namespace&gt; &lt;file&gt;                   — 打开指定文件（不需要 .md 后缀）
+     *   /ageratum structure &lt;template&gt; &lt;x&gt; &lt;y&gt; &lt;z&gt;   — 在指定位置显示结构投影
      * </pre>
-     * <p>两个参数均支持 Tab 补全，仅显示资源包中实际存在的值。</p>
      *
      * @param event 命令注册事件
      */
@@ -45,17 +67,25 @@ public class AgeratumCommand {
                     Commands.literal("preview").executes(AgeratumCommand::preview)
                 )
                 .then(
-                    // ── 第一个参数：命名空间 ──────────────────────────
+                    Commands.literal("structure")
+                        .then(
+                            Commands.argument("template", ResourceLocationArgument.id())
+                                .suggests(SUGGEST_TEMPLATES)
+                                .then(
+                                    Commands.argument("pos", BlockPosArgument.blockPos())
+                                        .executes(AgeratumCommand::structure)
+                                )
+                        )
+                )
+                .then(
                     Commands.argument("namespace", StringArgumentType.string())
                         .suggests(AgeratumCommand::getNamespaceSuggestions)
                         .executes(AgeratumCommand::openGuide)
                         .then(
-                            // ── 第二个参数（可选）：文件名 ──────────────
                             Commands.argument("file", StringArgumentType.string())
                                 .suggests(AgeratumCommand::getFileSuggestions)
                                 .executes(AgeratumCommand::openGuide)
                                 .then(
-                                    // ── 第二个参数（可选）：文件名 ──────────────
                                     Commands.argument("anchor", StringArgumentType.string())
                                         .executes(AgeratumCommand::openGuide)
                                 )
@@ -78,13 +108,28 @@ public class AgeratumCommand {
         return 1;
     }
 
+    /**
+     * 在指定位置显示结构投影（纯客户端，从资源包中读取模板）。
+     */
+    public static int structure(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ResourceLocation templateId = ResourceLocationArgument.getId(context, "template");
+        BlockPos pos = BlockPosArgument.getBlockPos(context, "pos");
+
+        Optional<StructureTemplate> optional = AgeratumStructureTemplateManager.get(templateId);
+        if (optional.isEmpty()) {
+            throw ERROR_TEMPLATE_INVALID.create(templateId);
+        }
+
+        StructureProjectionApi.show(optional.get(), pos, List.of(Items.IRON_INGOT));
+        return 1;
+    }
+
     private static CompletableFuture<Suggestions> getFileSuggestions(
         CommandContext<CommandSourceStack> context,
         SuggestionsBuilder builder
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         String namespace = StringArgumentType.getString(context, "namespace");
-        // 枚举该命名空间下的所有 .md 文件（返回不含扩展名的相对路径）
         List<String> files = new ArrayList<>();
         for (String file : GuideDocumentLoader.listFiles(
             minecraft.getResourceManager(),
@@ -101,7 +146,6 @@ public class AgeratumCommand {
         SuggestionsBuilder builder
     ) {
         Minecraft minecraft = Minecraft.getInstance();
-        // 枚举资源包中所有含有 ageratum/*.md 的命名空间
         List<String> namespaces = new ArrayList<>();
         for (String namespace : GuideDocumentLoader.listNamespaces(
             minecraft.getResourceManager(),
@@ -128,11 +172,6 @@ public class AgeratumCommand {
             anchor = StringArgumentType.getString(context, "anchor");
         } catch (Exception ignore) {
         }
-        return AgeratumClient.openGuide(
-            context,
-            namespace,
-            file,
-            anchor
-        );
+        return AgeratumClient.openGuide(context, namespace, file, anchor);
     }
 }

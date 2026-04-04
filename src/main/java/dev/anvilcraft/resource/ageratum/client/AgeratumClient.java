@@ -6,6 +6,7 @@ import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
@@ -88,6 +89,7 @@ public class AgeratumClient {
     @SubscribeEvent
     public static void onReloadListenerRegister(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(GuideDocumentCache.reloadListener());
+        event.registerReloadListener(AgeratumStructureTemplateManager.reloadListener());
     }
 
     /**
