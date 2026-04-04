@@ -9,8 +9,7 @@
   ],
   "client": [
     "GlDebugMixin",
-    "GuiGraphicsMixin",
-    "MouseHandlerMixin"
+    "GuiGraphicsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -22,6 +22,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
@@ -109,6 +110,17 @@ public final class StructureProjectionManager {
 
         projection.moveAlongView(minecraft.player.getViewVector(1.0f), scrollY > 0.0d ? 1 : -1);
         return true;
+    }
+
+    /**
+     * 拦截鼠标滚轮事件：当 Ctrl 按住且手持指定物品时，消费滚轮并移动投影，
+     * 阻止默认的快捷栏切换行为。
+     */
+    @SubscribeEvent
+    public static void onMouseScrolling(InputEvent.MouseScrollingEvent event) {
+        if (handleMouseScroll(event.getScrollDeltaY())) {
+            event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent
