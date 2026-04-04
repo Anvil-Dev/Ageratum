@@ -8,6 +8,6 @@ import java.util.List;
 
 public class ClientPayloadHandler {
     public static void handleOpenGuide(OpenGuidePayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> AgeratumClient.openGuideOnClient(payload.location(), List.of()));
+        context.enqueueWork(() -> AgeratumClient.openGuideOnClientWithoutLanguageCode(payload.location(), List.of()));
     }
 }

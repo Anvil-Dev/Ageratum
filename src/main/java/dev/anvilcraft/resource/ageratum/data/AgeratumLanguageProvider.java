@@ -23,5 +23,7 @@ public class AgeratumLanguageProvider extends LanguageProvider {
         this.add("key.ageratum.structure_projection.layer_down", "Decrease Projection Layers");
         this.add("key.ageratum.structure_projection.remove", "Remove Structure Projection");
         this.add("key.categories.ageratum", "Ageratum");
+        this.add("itemGroup.ageratum.default", "Ageratum");
+        this.add("item.ageratum.guidebook", "Ageratum Guidebook");
     }
 }

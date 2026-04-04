@@ -3,8 +3,9 @@ package dev.anvilcraft.resource.ageratum.client.feat.structure;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
-import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
+import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -14,7 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.Vec3;
@@ -38,7 +38,7 @@ import java.util.Set;
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public final class StructureProjectionManager {
     private static final float PROJECTION_ALPHA = 0.45f;
-    private static final Set<Item> DEFAULT_SCROLL_ITEMS = Set.of(Items.IRON_INGOT);
+    private static final ReferenceHolder<Set<Item>> DEFAULT_SCROLL_ITEMS = ReferenceHolder.create(() -> Set.of(Ageratum.DEFAULT_GUIDE_ITEM.get()));
 
     public static final KeyMapping LAYER_UP_KEY = new KeyMapping(
         "key.ageratum.structure_projection.layer_up",
@@ -62,18 +62,12 @@ public final class StructureProjectionManager {
     }
 
     /**
-     * 使用默认滚轮控制物品（铁锭）显示结构投影。
-     */
-    public static boolean showProjection(StructureTemplate template, BlockPos origin) {
-        return showProjection(template, origin, DEFAULT_SCROLL_ITEMS);
-    }
-
-    /**
      * 显示结构投影，并指定允许 Ctrl+滚轮移动时手持的物品集合。
      */
     public static boolean showProjection(StructureTemplate template, BlockPos origin, Collection<Item> moveControlItems) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel clientLevel = minecraft.level;
+        if (moveControlItems.isEmpty()) moveControlItems = DEFAULT_SCROLL_ITEMS.get();
         if (clientLevel == null) {
             return false;
         }
@@ -206,7 +200,7 @@ public final class StructureProjectionManager {
             this.level = level;
             this.origin = origin.immutable();
             this.dimension = dimension;
-            this.moveControlItems = moveControlItems.isEmpty() ? DEFAULT_SCROLL_ITEMS : moveControlItems;
+            this.moveControlItems = moveControlItems.isEmpty() ? DEFAULT_SCROLL_ITEMS.get() : moveControlItems;
             this.visibleMinY = visibleMinY;
             this.totalLayerCount = totalLayerCount;
             this.visibleLayerCount = totalLayerCount;

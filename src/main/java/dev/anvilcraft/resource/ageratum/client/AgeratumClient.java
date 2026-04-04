@@ -6,9 +6,9 @@ import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
-import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
@@ -141,6 +141,32 @@ public class AgeratumClient {
             return 0;
         }
         return 1;
+    }
+
+    /**
+     * 客户端本地打开文档；若不存在则返回 false。
+     */
+    public static boolean openGuideOnClientWithoutLanguageCode(ResourceLocation location, List<ResourceLocation> breadCrumbs) {
+        Minecraft minecraft = Minecraft.getInstance();
+        String languageCode = getClientLanguageCode(minecraft);
+        String namespace = location.getNamespace();
+        String fileArgument = location.getPath();
+        ResourceLocation documentLocation;
+        try {
+            Optional<ResourceLocation> resolved = GuideDocumentLoader.resolveExistingLocation(
+                minecraft.getResourceManager(),
+                namespace,
+                languageCode,
+                fileArgument
+            );
+            if (resolved.isEmpty()) {
+                return false;
+            }
+            documentLocation = resolved.get();
+        } catch (RuntimeException exception) {
+            return false;
+        }
+        return openGuideOnClient(documentLocation, breadCrumbs);
     }
 
     /**

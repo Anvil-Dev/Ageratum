@@ -15,6 +15,8 @@
   "ageratum.configuration.show_code_block_line_numbers.tooltip": "Show line numbers in code blocks",
   "ageratum.configuration.title": "Ageratum Configuration",
   "commands.ageratum.preview.disable": "Preview is not enabled",
+  "item.ageratum.guidebook": "Ageratum Guidebook",
+  "itemGroup.ageratum.default": "Ageratum",
   "key.ageratum.more_info": "Get More Info",
   "key.ageratum.structure_projection.layer_down": "Decrease Projection Layers",
   "key.ageratum.structure_projection.layer_up": "Increase Projection Layers",

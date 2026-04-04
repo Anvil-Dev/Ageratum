@@ -1,3 +1,7 @@
+---
+item_id: "ageratum:guidebook"
+---
+
 # Ageratum 文档系统
 
 ![](ageratum:gui/mod_icon.png)

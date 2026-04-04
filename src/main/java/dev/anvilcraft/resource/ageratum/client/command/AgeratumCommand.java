@@ -120,7 +120,7 @@ public class AgeratumCommand {
             throw ERROR_TEMPLATE_INVALID.create(templateId);
         }
 
-        StructureProjectionApi.show(optional.get(), pos, List.of(Items.IRON_INGOT));
+        StructureProjectionApi.show(optional.get(), pos);
         return 1;
     }
 
