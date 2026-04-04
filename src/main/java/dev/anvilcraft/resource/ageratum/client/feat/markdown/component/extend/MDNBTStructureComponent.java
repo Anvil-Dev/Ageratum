@@ -1,15 +1,17 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
-import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -49,10 +51,12 @@ public final class MDNBTStructureComponent extends MDComponent {
     private static final float ROTATE_YAW_SENSITIVITY = 0.8f;
     private static final float ROTATE_PITCH_SENSITIVITY = 0.6f;
     private static final float PAN_SENSITIVITY = 1.0f;
+    private static final ResourceLocation BUTTON_PROJECTION_LOCATION = Ageratum.location("textures/gui/guide/button_projection.png");
 
     private final StructureTarget target;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
     private @Nullable SandboxRenderLevel previewLevel = null;
+    private @Nullable StructureTemplate structureTemplateCache = null;
     private float panOffsetX;
     private float panOffsetY;
     private int dragButton = -1;
@@ -117,7 +121,29 @@ public final class MDNBTStructureComponent extends MDComponent {
             this.visibleMinY + this.visibleLayerCount
         );
         this.renderLayerIndicator(context, graphics);
+        this.renderButton(context);
         context.disableScissor();
+    }
+
+    private boolean isHoverProjectionButton(int maxX, float mouseX, float mouseY) {
+        return isHover(maxX - 21, 5, 16, 16, mouseX, mouseY);
+    }
+
+    private void renderButton(MDRenderContext context) {
+        GuiGraphics graphics = context.graphics();
+        boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
+        graphics.blit(
+            BUTTON_PROJECTION_LOCATION,
+            context.maxX() - 21,
+            5,
+            0,
+            0,
+            isHover ? 16 : 0,
+            16,
+            16,
+            16,
+            32
+        );
     }
 
     @Override
@@ -176,6 +202,16 @@ public final class MDNBTStructureComponent extends MDComponent {
     public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
         if (button != 0 && button != 1) {
             return false;
+        }
+        if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
+            if (this.structureTemplateCache != null && Minecraft.getInstance().cameraEntity != null) {
+                StructureProjectionApi.show(
+                    this.structureTemplateCache,
+                    Minecraft.getInstance().cameraEntity.getOnPos().above()
+                );
+                Minecraft.getInstance().setScreen(null);
+            }
+            return true;
         }
         this.dragButton = button;
         return true;
@@ -293,6 +329,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
             this.contentHeight = (int) (20d * Math.sqrt(BlockPos.ZERO.distSqr(size)));
             this.bottomHeight = (int) (18d * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
+            this.structureTemplateCache = template;
             return StructureSandboxFactory.create(clientLevel, template, pos);
         } catch (Exception exception) {
             return null;
