@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -99,7 +100,7 @@ public final class StructureProjectionManager {
         if (projection == null || scrollY == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
-        if (minecraft.screen != null || !Screen.hasControlDown() || !projection.isInLevel(minecraft.level)) {
+        if (minecraft.screen != null || !Screen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
             return false;
         }
         if (!projection.canMoveWith(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
@@ -129,7 +130,7 @@ public final class StructureProjectionManager {
         if (projection == null) {
             return;
         }
-        if (!projection.isInLevel(minecraft.level)) {
+        if (projection.isNotInLevel(minecraft.level)) {
             activeProjection = null;
             return;
         }
@@ -153,7 +154,7 @@ public final class StructureProjectionManager {
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
-        if (projection == null || minecraft.level == null || !projection.isInLevel(minecraft.level)) {
+        if (projection == null || minecraft.level == null || projection.isNotInLevel(minecraft.level)) {
             return;
         }
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
@@ -212,8 +213,8 @@ public final class StructureProjectionManager {
             return new ActiveProjection(level, origin, dimension, moveControlItems, minY, totalLayerCount);
         }
 
-        private boolean isInLevel(Level level) {
-            return Objects.equals(level.dimension(), this.dimension);
+        private boolean isNotInLevel(Level level) {
+            return !Objects.equals(level.dimension(), this.dimension);
         }
 
         private boolean canMoveWith(ItemStack mainHandItem, ItemStack offhandItem) {
@@ -234,18 +235,18 @@ public final class StructureProjectionManager {
         }
     }
 
-    private record AxisStep(net.minecraft.core.Direction direction) {
+    private record AxisStep(Direction direction) {
         private static AxisStep fromLook(Vec3 look) {
             double absX = Math.abs(look.x());
             double absY = Math.abs(look.y());
             double absZ = Math.abs(look.z());
             if (absY >= absX && absY >= absZ) {
-                return new AxisStep(look.y() >= 0.0d ? net.minecraft.core.Direction.UP : net.minecraft.core.Direction.DOWN);
+                return new AxisStep(look.y() >= 0.0d ? Direction.UP : Direction.DOWN);
             }
             if (absX >= absZ) {
-                return new AxisStep(look.x() >= 0.0d ? net.minecraft.core.Direction.EAST : net.minecraft.core.Direction.WEST);
+                return new AxisStep(look.x() >= 0.0d ? Direction.EAST : Direction.WEST);
             }
-            return new AxisStep(look.z() >= 0.0d ? net.minecraft.core.Direction.SOUTH : net.minecraft.core.Direction.NORTH);
+            return new AxisStep(look.z() >= 0.0d ? Direction.SOUTH : Direction.NORTH);
         }
     }
 }
