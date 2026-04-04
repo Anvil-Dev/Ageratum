@@ -29,6 +29,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.BlockHitResult;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
@@ -204,12 +205,15 @@ public final class MDNBTStructureComponent extends MDComponent {
             return false;
         }
         if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
-            if (this.structureTemplateCache != null && Minecraft.getInstance().cameraEntity != null) {
-                StructureProjectionApi.show(
-                    this.structureTemplateCache,
-                    Minecraft.getInstance().cameraEntity.getOnPos().above()
-                );
-                Minecraft.getInstance().setScreen(null);
+            if (this.structureTemplateCache != null && minecraft.cameraEntity != null) {
+                BlockPos blockPos;
+                if(minecraft.hitResult instanceof BlockHitResult hitResult) {
+                    blockPos = hitResult.getBlockPos().relative(hitResult.getDirection());
+                } else {
+                    blockPos = minecraft.cameraEntity.getOnPos().above();
+                }
+                StructureProjectionApi.show(this.structureTemplateCache, blockPos);
+                minecraft.setScreen(null);
             }
             return true;
         }
