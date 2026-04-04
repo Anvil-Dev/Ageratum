@@ -4,8 +4,29 @@
 
 <img src=".idea/icon.png" style="width: 128px; height: 128px" alt="Ageratum Logo">
 
-[![License](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](./LICENSE)
-[![Asset License](https://img.shields.io/badge/Asset%20License-ARR-green.svg)](./ASSETS_LICENSE)
+![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/built-with/java21_vector.svg)
+![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/neoforge_vector.svg)
+
+![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/unsupported/fabric_vector.svg)
+![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/unsupported/forge_vector.svg)
+
+[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/modrinth_vector.svg)][Modrinth]
+[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/curseforge_vector.svg)][CurseForge]
+
+[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/documentation/readthedocs_vector.svg)][Documentation]
+[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/donate/patreon-plural_vector.svg)][Patreon]
+[![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/social/discord-plural_vector.svg)][Discord]
+
+[![License](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)][License]
+[![Asset License](https://img.shields.io/badge/Asset%20License-ARR-green.svg)][Asset License]
+
+[Patreon]: https://www.patreon.com/gugle2308
+[License]: https://spdx.org/licenses/LGPL-3.0-only.html
+[Asset License]: https://gist.github.com/Gu-ZT/38961ed5c97500cf61b04ab048fa38ad
+[Modrinth]: https://modrinth.com/mod/ageratum
+[CurseForge]: https://www.curseforge.com/minecraft/mc-mods/ageratum
+[Documentation]: https://ageratum.anvilcraft.dev/
+[Discord]: https://discord.gg/4ZsG8m9XcM
 
 </div>
 
