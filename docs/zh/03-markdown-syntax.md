@@ -12,10 +12,15 @@ Ageratum 实现了 CommonMark 的核心子集，并扩展了若干游戏内专�
 
 ```markdown
 # 一级标题
+
 ## 二级标题
+
 ### 三级标题
+
 #### 四级标题
+
 ##### 五级标题
+
 ###### 六级标题
 
 Setext 一级标题
@@ -122,6 +127,7 @@ public class Hello {
 
 ```markdown
 ---
+
 ***
 ___
 ```
@@ -193,7 +199,9 @@ ___
 [shortcut]
 
 [引用ID]: https://example.com
+
 [collapsed]: https://example.com/c
+
 [shortcut]: https://example.com/s
 ```
 
@@ -206,7 +214,8 @@ ___
 
 ### 转义字符
 
-CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`、`)`、`*`、`+`、`,`、`-`、`.`、`/`、`:`、`;`、`<`、`=`、`>`、`?`、`@`、`[`、`\`、`]`、`^`、`_`、`` ` ``、`{`、`|`、`}`、`~`）：
+CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`、`)`、`*`、`+`、`,`、`-`、`.`、`/`、`:`、`;`、`<`、`=`、`>`、`?`、`@`、`[`、`\`、`]`、`^`、`_`、
+`` ` ``、`{`、`|`、`}`、`~`）：
 
 ```markdown
 \*不是斜体\*
@@ -257,17 +266,39 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 - 参数使用 `key="value"` 或 `key=value` 格式
 - 自闭合标签（`/>`）不含块内容
 
+### 结构 NBT 组件
+
+使用 `structure` 扩展，可以在文档中渲染 `data/<namespace>/structure/*.nbt`
+结构文件的摘要、俯视方块预览与 NBT 树状视图：
+
+```markdown
+<structure id="minecraft:village/plains/houses/plains_small_house_1"/>
+
+<structure id="./test.nbt"/>
+
+```
+
+- `id` / `path`：必填，目标结构文件的 `ResourceLocation`
+- `maxDepth`：可选，最大展开深度，默认 `2`
+- `maxEntries`：可选，每层最多显示的键/列表项数量，默认 `12`
+- 支持相对路径：如 `./test.nbt`、`../shared/demo.nbt`，相对于当前文档所在目录解析；可直接指向资源包中与 Markdown 同目录的 `.nbt` 文件
+- 预览模式下，相对路径会从 `run/ageratum_review/` 下的对应位置读取 `.nbt` 文件
+- 渲染内容：结构尺寸、调色板/方块/实体统计、俯视方块预览，以及受限深度的 NBT 树
+- 将鼠标悬停在预览区的方块上时，可查看方块 ID、结构坐标、palette 索引及是否带块实体数据
+- 回退行为：当结构文件不存在或读取失败时，组件会在文档中显示错误信息
+
 ---
 
 ## 内置扩展组件
 
-| 组件 ID | 触发方式 | 外观 |
-|---------|---------|------|
-| `ageratum:info` | `::: info` 或 `<info/>` | 🔵 蓝色信息框 |
-| `ageratum:tip` | `::: tip` 或 `<tip/>` | 🟢 绿色建议框 |
-| `ageratum:warning` | `::: warning` 或 `<warning/>` | 🟠 橙色警告框 |
-| `ageratum:danger` | `::: danger` 或 `<danger/>` | 🔴 红色危险框 |
-| `ageratum:recipe` | `<recipe id="..."/>` | 配方渲染 |
+| 组件 ID                    | 触发方式                         | 外观              |
+|--------------------------|------------------------------|-----------------|
+| `ageratum:info`          | `::: info` 或 `<info/>`       | 🔵 蓝色信息框        |
+| `ageratum:tip`           | `::: tip` 或 `<tip/>`         | 🟢 绿色建议框        |
+| `ageratum:warning`       | `::: warning` 或 `<warning/>` | 🟠 橙色警告框        |
+| `ageratum:danger`        | `::: danger` 或 `<danger/>`   | 🔴 红色危险框        |
+| `ageratum:recipe`        | `<recipe id="..."/>`         | 配方渲染            |
+| `ageratum:structure`     | `<structure id="..."/>`      | 结构 NBT 摘要 + 树视图 |
 
 ### 配方组件
 
@@ -276,11 +307,22 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 ```
 
 参数：
+
 - `id`：**必填**，目标配方的 ResourceLocation
 
 ---
 
 ## 内置行内标签
+
+行内组件使用自闭合标签语法：
+
+```markdown
+<namespace:id key="value"/>
+```
+
+- `namespace` 可省略，默认 `ageratum`
+- 参数使用 `key="value"` 或 `key=value` 格式
+- 标签会按 `namespace:id` 分发到对应的行内组件实现进行渲染
 
 ### 颜色标签
 
@@ -298,20 +340,30 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 渲染为随机字符的"乱码"效果。
 
+### 翻译标签
+
+```markdown
+<translate key="item.minecraft.diamond"/>
+<translate key="ageratum.guide.missing" fallback="Missing translation"/>
+```
+
+- `key`：**必填**，语言键
+- `fallback`：可选，语言键不存在时显示的后备文本
+
 ### 悬停事件
 
 ```markdown
 <hover type="SHOW_TEXT" data="这是提示内容">悬停我</hover>
-<hover type="SHOW_ITEM" data="{\"id\":\"minecraft:diamond\",\"count\":1}">悬停查看物品</hover>
-<hover type="SHOW_ENTITY" data="{\"type\":\"minecraft:zombie\",\"id\":\"...\",\"name\":\"僵尸\"}">悬停查看实体</hover>
+<hover type="SHOW_ITEM" data="{"id":"minecraft:diamond","count":1}">悬停查看物品</hover>
+<hover type="SHOW_ENTITY" data="{"type":"minecraft:zombie","id":"...","name":"僵尸"}">悬停查看实体</hover>
 ```
 
 支持类型：
 
-| `type` | `data` 格式 | 说明 |
-|--------|------------|------|
-| `SHOW_TEXT` | 纯文本字符串 | 显示文本提示 |
-| `SHOW_ITEM` | ItemStackInfo JSON | 显示物品提示 |
+| `type`        | `data` 格式              | 说明     |
+|---------------|------------------------|--------|
+| `SHOW_TEXT`   | 纯文本字符串                 | 显示文本提示 |
+| `SHOW_ITEM`   | ItemStackInfo JSON     | 显示物品提示 |
 | `SHOW_ENTITY` | EntityTooltipInfo JSON | 显示实体提示 |
 
 ### 点击事件
@@ -325,12 +377,12 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 支持类型：
 
-| `type` | `data` 格式 | 说明 |
-|--------|------------|------|
-| `OPEN_URL` | 完整 URL | 打开网页 |
-| `COPY_TO_CLIPBOARD` | 任意文本 | 复制到剪贴板 |
-| `SUGGEST_COMMAND` | 命令文本 | 填入聊天框 |
-| `RUN_COMMAND` | 命令文本 | 直接执行命令 |
+| `type`              | `data` 格式 | 说明     |
+|---------------------|-----------|--------|
+| `OPEN_URL`          | 完整 URL    | 打开网页   |
+| `COPY_TO_CLIPBOARD` | 任意文本      | 复制到剪贴板 |
+| `SUGGEST_COMMAND`   | 命令文本      | 填入聊天框  |
+| `RUN_COMMAND`       | 命令文本      | 直接执行命令 |
 
 ### 组合使用
 

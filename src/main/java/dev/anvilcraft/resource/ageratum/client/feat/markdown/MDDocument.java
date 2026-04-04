@@ -74,6 +74,26 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
         return Optional.of(fileName);
     }
 
+    /**
+     * 从 Front Matter 中读取绑定物品 ID。
+     *
+     * <p>支持以下字段（按优先级）：</p>
+     * <ul>
+     *   <li>{@code guide.item_id}</li>
+     *   <li>{@code guide.item}</li>
+     *   <li>{@code item_id}</li>
+     *   <li>{@code item}</li>
+     * </ul>
+     */
+    public Optional<ResourceLocation> getGuideItemId() {
+        return this.resolveGuideItemIdValue()
+            .map(value -> {
+                ResourceLocation parsed = ResourceLocation.tryParse(value);
+                return parsed;
+            })
+            .filter(java.util.Objects::nonNull);
+    }
+
     private Optional<String> resolveFrontMatterTitle() {
         Object navigation = this.frontMatter.get("navigation");
         if (navigation instanceof Map<?, ?> navigationMap) {
@@ -85,6 +105,28 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
 
         String title = stringValue(this.frontMatter.get("title"));
         return title == null ? Optional.empty() : Optional.of(title);
+    }
+
+    private Optional<String> resolveGuideItemIdValue() {
+        Object guide = this.frontMatter.get("guide");
+        if (guide instanceof Map<?, ?> guideMap) {
+            String nestedItemId = stringValue(guideMap.get("item_id"));
+            if (nestedItemId != null) {
+                return Optional.of(nestedItemId);
+            }
+            String nestedItem = stringValue(guideMap.get("item"));
+            if (nestedItem != null) {
+                return Optional.of(nestedItem);
+            }
+        }
+
+        String itemId = stringValue(this.frontMatter.get("item_id"));
+        if (itemId != null) {
+            return Optional.of(itemId);
+        }
+
+        String item = stringValue(this.frontMatter.get("item"));
+        return item == null ? Optional.empty() : Optional.of(item);
     }
 
     private Optional<String> resolveTopHeadingTitle() {

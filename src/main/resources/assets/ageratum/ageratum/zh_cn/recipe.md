@@ -14,3 +14,32 @@
 <recipe id="minecraft:anvil" />
 
 ---
+
+<recipe id="minecraft:netherite_sword_smithing" />
+
+
+---
+
+<recipe id="minecraft:host_armor_trim_smithing_template_smithing_trim" />
+
+---
+
+<recipe id="minecraft:andesite_wall_from_andesite_stonecutting" />
+
+---
+
+<recipe id="minecraft:iron_ingot_from_smelting_deepslate_iron_ore" />
+
+---
+
+<recipe id="minecraft:cooked_chicken_from_smoking" />
+
+---
+
+<recipe id="minecraft:iron_ingot_from_blasting_deepslate_iron_ore" />
+
+---
+
+<recipe id="minecraft:cooked_chicken_from_campfire_cooking" />
+
+---

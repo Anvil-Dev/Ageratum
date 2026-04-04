@@ -8,6 +8,32 @@ navigation:
 
 This document covers advanced features of Ageratum.
 
+## Built-in Extension Components
+
+Ageratum provides several built-in extension components you can use directly in any document:
+
+### Item Display
+
+Renders a Minecraft item in a slot with hover tooltip:
+
+```
+<item id="minecraft:diamond"/>
+<item id="minecraft:oak_log" count="3"/>
+```
+
+### Block Display
+
+Renders a Minecraft block using its item icon:
+
+```
+<block id="minecraft:grass_block"/>
+<block id="minecraft:stone_bricks" count="2"/>
+```
+
+Blocks without a corresponding inventory item (e.g. technical blocks) are silently skipped.
+
+---
+
 ## Custom Extensions
 
 ### Registering Custom Components

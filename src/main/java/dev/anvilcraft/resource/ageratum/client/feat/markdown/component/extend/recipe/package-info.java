@@ -1,7 +1,7 @@
 @ParametersAreNonnullByDefault
 @MethodsReturnNonnullByDefault
 @FieldsAreNonnullByDefault
-package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
 
 import net.minecraft.FieldsAreNonnullByDefault;
 import net.minecraft.MethodsReturnNonnullByDefault;

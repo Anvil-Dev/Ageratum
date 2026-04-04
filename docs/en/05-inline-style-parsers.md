@@ -2,6 +2,9 @@
 
 This document explains how to register custom inline style parsers, allowing Ageratum's Markdown renderer to recognize and apply your mod's custom inline tags.
 
+> Note: self-closing tags like `<namespace:id .../>` belong to the "inline component" system and should be registered via `MDInlineComponentFactory`.
+> `MDInlineStyleParser` in this document is mainly for paired style tags such as `<tag>...</tag>`.
+
 ---
 
 ## Overview

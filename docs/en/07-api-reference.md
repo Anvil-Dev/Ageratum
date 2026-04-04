@@ -46,6 +46,7 @@ dev.anvilcraft.resource.ageratum
             ├── MDImageComponent                # Images
             ├── MDHorizontalRuleComponent       # Horizontal rules
             ├── MDNoticeBoxComponent            # Notice boxes
+            ├── MDEntityComponent               # Entity preview component
             ├── MDInlineStyleParser             # Inline parser interface
             └── recipe/
                 ├── MDRecipeComponent           # Recipe component base class
@@ -104,6 +105,17 @@ public final class AgeratumRegistries {
 
     public static final Registry<MDExtensionComponentFactory>
         EXTENSION_COMPONENT_FACTORY_REGISTRY;         // Runtime access
+
+    // ── Inline Component Factory Registry ───────────────────────────────────
+
+    public static final ResourceKey<Registry<MDInlineComponentFactory>>
+        INLINE_COMPONENT_FACTORY_REGISTRY_KEY;
+
+    public static final DeferredRegister<MDInlineComponentFactory>
+        INLINE_COMPONENT_FACTORIES;
+
+    public static final Registry<MDInlineComponentFactory>
+        INLINE_COMPONENT_FACTORY_REGISTRY;
 
     // ── Inline Style Parser Registry ──────────────────────────────────────────
 
@@ -167,6 +179,7 @@ Context object received by an extension component factory.
 
 ```java
 public record MDExtensionContext(
+    ResourceLocation sourceLocation,      // Current document location
     ResourceLocation id,                   // e.g. mymod:section
     String rawParams,                      // Raw params string (colon syntax)
     Map<String, String> params,            // Parsed key-value pairs (tag syntax)
@@ -174,6 +187,27 @@ public record MDExtensionContext(
     String rawContent                      // Raw block content text
 ) {}
 ```
+
+---
+
+## `MDEntityComponent`
+
+Built-in entity preview extension component for `<entity .../>`, registered by `BuiltinExtensionComponents.ENTITY`.
+
+```java
+public final class MDEntityComponent extends MDComponent {
+    /**
+     * Params: id (required)
+     */
+    public static MDComponent parse(MDExtensionContext context);
+}
+```
+
+Behavior notes:
+
+- Renders the preview using `InventoryScreen.renderEntityInInventoryFollowsMouse(...)`.
+- Supports entity types that can be instantiated as `LivingEntity`.
+- Invalid params return an `MDTextComponent` error placeholder instead of breaking the full document render.
 
 ---
 
@@ -208,6 +242,34 @@ public interface MDInlineStyleParser {
         BiFunction<Style, Matcher, Style> styleFactory
     );
 }
+```
+
+---
+
+## `MDInlineComponentFactory`
+
+Inline component factory interface. Register instances into `INLINE_COMPONENT_FACTORY_REGISTRY_KEY`.
+
+```java
+@FunctionalInterface
+public interface MDInlineComponentFactory {
+    FormattedText create(MDInlineComponentContext context);
+}
+```
+
+---
+
+## `MDInlineComponentContext`
+
+Context object received by an inline component factory.
+
+```java
+public record MDInlineComponentContext(
+    ResourceLocation id,          // Inline component id, e.g. mymod:badge
+    String rawParams,             // Raw params string
+    Map<String, String> params,   // Parsed key-value pairs
+    Style baseStyle               // Current inherited style
+) {}
 ```
 
 ---

@@ -1,8 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDNoticeBoxComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDBlockComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDEntityComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDItemComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNoticeBoxComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
@@ -10,6 +14,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
  *
  * <p>提供 info、tip、warning、danger 四种提示框类型。</p>
  */
+@SuppressWarnings("unused")
 public final class BuiltinExtensionComponents {
     /**
      * info 提示框组件工厂注册项。
@@ -58,6 +63,53 @@ public final class BuiltinExtensionComponents {
             "recipe",
             () -> MDRecipeComponent::parse
         );
+
+    /**
+     * 结构 NBT 扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <structure id="namespace:path"/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> STRUCTURE =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "structure",
+            () -> MDNBTStructureComponent::parse
+        );
+
+    /**
+     * 物品扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <item id="namespace:path"/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> ITEM =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "item",
+            () -> MDItemComponent::parse
+        );
+
+    /**
+     * 方块扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <block id="namespace:path"/>}。</p>
+     * <p>渲染方块对应的物品形式（即背包中看到的方块物品图标）。
+     * 若方块没有对应物品（如技术性方块），则不渲染。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> BLOCK =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "block",
+            () -> MDBlockComponent::parse
+        );
+
+    /**
+     * 实体扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <entity id="namespace:path"/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> ENTITY =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "entity",
+            () -> MDEntityComponent::parse
+        );
+
 
     private BuiltinExtensionComponents() {
     }

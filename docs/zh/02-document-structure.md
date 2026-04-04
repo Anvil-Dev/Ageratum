@@ -93,6 +93,8 @@ navigation:
 |------|------|------|
 | `title` | `string` | 文档标题（覆盖一级标题） |
 | `navigation.title` | `string` | 侧边栏导航中显示的标题（优先于 `title`） |
+| `guide.item_id` 或 `item_id` | `string` | 绑定物品的 ID（`namespace:item_name` 格式），用于"寻思"功能 |
+| `guide.item` 或 `item` | `string` | 绑定物品的 ID（备选字段）|
 
 ### 标题解析优先级
 
@@ -102,6 +104,27 @@ Ageratum 按以下顺序确定文档标题：
 2. `title`（Front Matter）
 3. 文档中第一个一级标题（`# 标题`）
 4. 文件名（不含扩展名）
+
+### 物品绑定与"寻思"功能
+
+在 Front Matter 中声明 `item_id`（或 `guide.item_id`）可以将文档与特定物品绑定。玩家在物品栏中鼠标指向该物品时，会在 Tooltip 中看到进度提示；长按 <kbd>W</kbd> 键 3 秒后自动打开对应文档。
+
+**示例：**
+```markdown
+---
+title: "铁锭的用途指南"
+item_id: "minecraft:iron_ingot"
+---
+
+# 铁锭用途
+
+...
+```
+
+若多个文档绑定同一物品，会按以下优先级打开第一个：
+1. 客户端当前语言版本
+2. 英文（`en_us`）版本
+3. 列表中的第一个（按路径字典序）
 
 ---
 

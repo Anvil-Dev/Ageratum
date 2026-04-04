@@ -1,6 +1,8 @@
-package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
+package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -52,7 +54,15 @@ public class MDNoticeBoxComponent extends MDComponent {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context
+    ) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
+        GuiGraphics guiGraphics = context.graphics();
         if (this.contentComponents.isEmpty()) {
             return;
         }
@@ -73,7 +83,7 @@ public class MDNoticeBoxComponent extends MDComponent {
         pose.translate(translateX, PADDING, 0);
 
         for (MDComponent component : this.contentComponents) {
-            component.render(guiGraphics, minecraft, contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING);
+            component.render(context.child(contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING, 1.0f));
             int componentHeight = component.getHeight(minecraft, contentWidth, Integer.MAX_VALUE);
             pose.translate(0, componentHeight, 0);
         }

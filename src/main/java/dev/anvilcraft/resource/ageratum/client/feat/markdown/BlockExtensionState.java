@@ -22,9 +22,13 @@ public final class BlockExtensionState extends SelfClosingBlockExtensionState {
      * 扩展块类型枚举。
      */
     public enum ExtensionBlockType {
-        /** {@code ::: ... :::} 冒号语法。 */
+        /**
+         * {@code ::: ... :::} 冒号语法。
+         */
         COLON,
-        /** {@code <<...>...</...>>} 标签语法。 */
+        /**
+         * {@code <<...>...</...>>} 标签语法。
+         */
         TAG
     }
 

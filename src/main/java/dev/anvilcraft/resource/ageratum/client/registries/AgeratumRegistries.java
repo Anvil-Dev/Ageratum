@@ -2,8 +2,9 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.neoforged.bus.api.IEventBus;
@@ -35,6 +36,28 @@ public final class AgeratumRegistries {
     public static final Registry<MDExtensionComponentFactory> EXTENSION_COMPONENT_FACTORY_REGISTRY = EXTENSION_COMPONENT_FACTORIES
         .makeRegistry(builder -> {
         });
+
+    /**
+     * 行内组件工厂注册表键。
+     */
+    public static final ResourceKey<Registry<MDInlineComponentFactory>> INLINE_COMPONENT_FACTORY_REGISTRY_KEY = ResourceKey
+        .createRegistryKey(Ageratum.location("inline_component_factory"));
+
+    /**
+     * 行内组件工厂的延迟注册器。
+     */
+    public static final DeferredRegister<MDInlineComponentFactory> INLINE_COMPONENT_FACTORIES = DeferredRegister.create(
+        INLINE_COMPONENT_FACTORY_REGISTRY_KEY,
+        Ageratum.MOD_ID
+    );
+
+    /**
+     * 行内组件工厂注册表实例提供器。
+     */
+    public static final Registry<MDInlineComponentFactory> INLINE_COMPONENT_FACTORY_REGISTRY = INLINE_COMPONENT_FACTORIES.makeRegistry(
+        builder -> {
+        }
+    );
 
     /**
      * 行内样式解析器注册表键。
@@ -86,6 +109,7 @@ public final class AgeratumRegistries {
      */
     public static void register(IEventBus modEventBus) {
         EXTENSION_COMPONENT_FACTORIES.register(modEventBus);
+        INLINE_COMPONENT_FACTORIES.register(modEventBus);
         INLINE_STYLE_PARSERS.register(modEventBus);
         RECIPE_COMPONENT_FACTORIES.register(modEventBus);
     }

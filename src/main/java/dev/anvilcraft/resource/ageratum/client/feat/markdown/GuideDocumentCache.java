@@ -35,6 +35,7 @@ public final class GuideDocumentCache {
 
     private static volatile Map<ResourceLocation, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
     private static volatile Map<NavigationTreeKey, NavigationTree> NAVIGATION_TREE_CACHE = Map.of();
+    private static volatile Map<ResourceLocation, List<ResourceLocation>> ITEM_DOCUMENT_CACHE = Map.of();
 
     private static final PreparableReloadListener RELOAD_LISTENER =
         new SimplePreparableReloadListener<PreparedGuideData>() {
@@ -47,6 +48,7 @@ public final class GuideDocumentCache {
                 );
                 Map<ResourceLocation, MDDocument> prepared = new HashMap<>();
                 Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
+                Map<ResourceLocation, List<ResourceLocation>> itemDocuments = new HashMap<>();
                 for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
                     ResourceLocation location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
@@ -54,13 +56,16 @@ public final class GuideDocumentCache {
                         MDDocument document = parser.parseDocument(location, markdown);
                         prepared.put(location, document);
                         registerNavigationNode(treeRoots, location, document);
+                        document.getGuideItemId().ifPresent(itemId ->
+                            itemDocuments.computeIfAbsent(itemId, ignored -> new ArrayList<>()).add(location)
+                        );
                     } catch (IOException exception) {
                         throw new UncheckedIOException("Failed to preload guide: " + location, exception);
                     } catch (RuntimeException exception) {
                         LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
                     }
                 }
-                return new PreparedGuideData(prepared, freezeNavigationTrees(treeRoots));
+                return new PreparedGuideData(prepared, freezeNavigationTrees(treeRoots), freezeItemDocuments(itemDocuments));
             }
 
             @Override
@@ -71,9 +76,22 @@ public final class GuideDocumentCache {
             ) {
                 PARSED_DOCUMENT_CACHE = Map.copyOf(prepared.documents());
                 NAVIGATION_TREE_CACHE = Map.copyOf(prepared.navigationTrees());
+                ITEM_DOCUMENT_CACHE = Map.copyOf(prepared.itemDocuments());
                 LOGGER.info("Preloaded {} guide markdown files", PARSED_DOCUMENT_CACHE.size());
             }
         };
+
+    private static Map<ResourceLocation, List<ResourceLocation>> freezeItemDocuments(
+        Map<ResourceLocation, List<ResourceLocation>> source
+    ) {
+        Map<ResourceLocation, List<ResourceLocation>> result = new HashMap<>();
+        for (Map.Entry<ResourceLocation, List<ResourceLocation>> entry : source.entrySet()) {
+            List<ResourceLocation> sorted = new ArrayList<>(entry.getValue());
+            sorted.sort(Comparator.comparing(ResourceLocation::toString));
+            result.put(entry.getKey(), List.copyOf(sorted));
+        }
+        return result;
+    }
 
     private static void registerNavigationNode(
         Map<NavigationTreeKey, MutableDirectoryNode> treeRoots,
@@ -150,6 +168,49 @@ public final class GuideDocumentCache {
     }
 
     /**
+     * 根据物品 ID 返回文档位置（当前语言优先，其次 en_us，最后��回列表中的第一个）。
+     */
+    public static Optional<ResourceLocation> getFirstDocumentByItemId(ResourceLocation itemId, @Nullable String languageCode) {
+        List<ResourceLocation> locations = ITEM_DOCUMENT_CACHE.get(itemId);
+        if (locations == null || locations.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String preferredLanguage = normalizeLanguageCode(languageCode);
+        if (!preferredLanguage.isEmpty()) {
+            for (ResourceLocation location : locations) {
+                if (preferredLanguage.equals(extractLanguageCode(location))) {
+                    return Optional.of(location);
+                }
+            }
+        }
+
+        if (!GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(preferredLanguage)) {
+            for (ResourceLocation location : locations) {
+                if (GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(extractLanguageCode(location))) {
+                    return Optional.of(location);
+                }
+            }
+        }
+
+        return Optional.of(locations.getFirst());
+    }
+
+    private static String extractLanguageCode(ResourceLocation location) {
+        String path = location.getPath().replace('\\', '/');
+        String prefix = GUIDE_ROOT + "/";
+        if (!path.startsWith(prefix)) {
+            return "";
+        }
+        String withoutRoot = path.substring(prefix.length());
+        int slash = withoutRoot.indexOf('/');
+        if (slash < 0) {
+            return "";
+        }
+        return normalizeLanguageCode(withoutRoot.substring(0, slash));
+    }
+
+    /**
      * 根据文档资源位置读取预解析组件。
      */
     public static Optional<List<MDComponent>> getParsedComponents(ResourceLocation location) {
@@ -158,7 +219,8 @@ public final class GuideDocumentCache {
 
     private record PreparedGuideData(
         Map<ResourceLocation, MDDocument> documents,
-        Map<NavigationTreeKey, NavigationTree> navigationTrees
+        Map<NavigationTreeKey, NavigationTree> navigationTrees,
+        Map<ResourceLocation, List<ResourceLocation>> itemDocuments
     ) {
     }
 

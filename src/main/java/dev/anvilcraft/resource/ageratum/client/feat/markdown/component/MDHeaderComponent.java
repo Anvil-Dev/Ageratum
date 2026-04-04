@@ -1,10 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +39,7 @@ public class MDHeaderComponent extends MDComponent {
     /**
      * 尝试从单行文本解析标题组件。
      */
-    public static @Nullable MDHeaderComponent parse(String text) {
+    public static @Nullable MDHeaderComponent parse(ResourceLocation sourceLocation, String text) {
         Matcher matcher = HEADER_PATTERN.matcher(text);
         if (!matcher.matches()) return null;
         int level = matcher.group(1).length();
@@ -76,11 +78,28 @@ public class MDHeaderComponent extends MDComponent {
      * 渲染标题文本；一级标题额外绘制一条分隔线。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context
+    ) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
+        GuiGraphics guiGraphics = context.graphics();
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.scale(this.getScale(), this.getScale(), 1);
-        super.render(guiGraphics, minecraft, this.unscale(maxX), this.unscale(maxY), mouseX / this.getScale(), mouseY / this.getScale());
+        float scale = this.getScale();
+        pose.scale(scale, scale, scale);
+        super.render(
+            context.child(
+                this.unscale(maxX),
+                this.unscale(maxY),
+                mouseX / scale,
+                mouseY / scale,
+                scale
+            )
+        );
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
             guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);

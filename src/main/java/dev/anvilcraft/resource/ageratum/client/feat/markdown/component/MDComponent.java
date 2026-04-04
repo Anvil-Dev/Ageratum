@@ -1,6 +1,10 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -11,9 +15,11 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +42,10 @@ public abstract class MDComponent {
     private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])_([^_\\n]+)_(?![A-Za-z0-9_])");
     private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
     private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
+    private static final Pattern INLINE_COMPONENT_TAG_PATTERN = Pattern.compile(
+        "<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*/>",
+        Pattern.CASE_INSENSITIVE
+    );
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
@@ -67,7 +77,11 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(MDRenderContext context) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
+        GuiGraphics guiGraphics = context.graphics();
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
         PoseStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {
@@ -93,6 +107,84 @@ public abstract class MDComponent {
     @Nullable
     public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
         return this.getStyleAtFormattedTextPosition(minecraft, this.text, mouseX, mouseY, maxX);
+    }
+
+    /**
+     * 处理组件内部鼠标滚轮事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部鼠标按下事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部鼠标拖拽事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseDragged(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int button,
+        double dragX,
+        double dragY,
+        int maxX
+    ) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部鼠标释放事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean mouseReleased(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
+        return false;
+    }
+
+    /**
+     * 处理组件内部键盘事件。
+     *
+     * @return 若组件消费事件返回 {@code true}
+     */
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        return false;
+    }
+
+    /**
+     * 指示组件是否需要阻止父级继续处理当前按键。
+     *
+     * <p>适用于组件希望独占某些导航按键，但当前按下后内部状态没有发生变化的情况。</p>
+     */
+    public boolean blocksParentKeyHandling(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        return false;
     }
 
     /**
@@ -362,6 +454,17 @@ public abstract class MDComponent {
         while (pos < text.length()) {
             // 查找最近的标签
             ParserMatch nextTag = findNextTag(text, pos);
+            InlineComponentMatch nextInlineComponent = findNextInlineComponent(text, pos, parentStyle);
+
+            if (nextInlineComponent != null && (nextTag == null || nextInlineComponent.start() < nextTag.start())) {
+                if (nextInlineComponent.start() > pos) {
+                    String plainText = text.substring(pos, nextInlineComponent.start());
+                    parts.add(FormattedText.of(plainText, parentStyle));
+                }
+                parts.add(nextInlineComponent.text());
+                pos = nextInlineComponent.end();
+                continue;
+            }
 
             if (nextTag != null) {
                 int tagStart = nextTag.start();
@@ -465,6 +568,9 @@ public abstract class MDComponent {
         }
     }
 
+    private record InlineComponentMatch(int start, int end, FormattedText text) {
+    }
+
     private enum MarkdownTokenType {
         IMAGE,
         LINK,
@@ -513,6 +619,39 @@ public abstract class MDComponent {
         return earliest;
     }
 
+    private static @Nullable InlineComponentMatch findNextInlineComponent(String text, int pos, Style parentStyle) {
+        Matcher matcher = INLINE_COMPONENT_TAG_PATTERN.matcher(text);
+        while (matcher.find(pos)) {
+            ResourceLocation id = parseInlineComponentId(matcher.group(1));
+            if (id == null) {
+                pos = matcher.start() + 1;
+                continue;
+            }
+
+            Registry<MDInlineComponentFactory> registry = AgeratumRegistries.INLINE_COMPONENT_FACTORY_REGISTRY;
+            MDInlineComponentFactory factory = registry.getOptional(id).orElse(null);
+            if (factory == null) {
+                pos = matcher.start() + 1;
+                continue;
+            }
+
+            String rawParams = matcher.group(2) == null ? "" : matcher.group(2).trim();
+            Map<String, String> params = ExtensionParamParser.parse(rawParams);
+            FormattedText componentText = factory.create(new MDInlineComponentContext(id, rawParams, params, parentStyle));
+            return new InlineComponentMatch(matcher.start(), matcher.end(), componentText);
+        }
+        return null;
+    }
+
+    private static @Nullable ResourceLocation parseInlineComponentId(String idText) {
+        String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
+        try {
+            return ResourceLocation.parse(normalized);
+        } catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
     private static int compareInlineStyleParser(ResourceLocation parserId, int priority, ParserMatch current) {
         int priorityCompare = Integer.compare(priority, current.priority());
         if (priorityCompare != 0) {
@@ -553,5 +692,19 @@ public abstract class MDComponent {
         }
 
         return -1;
+    }
+
+    public boolean isHoverItem(int startX, int startY, float mouseX, float mouseY) {
+        return this.isHover(startX, startY, 16, 16, mouseX, mouseY);
+    }
+
+    public boolean isHover(int startX, int startY, int width, int height, float mouseX, float mouseY) {
+        return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
+    }
+
+    protected void renderTooltip(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+        }
     }
 }

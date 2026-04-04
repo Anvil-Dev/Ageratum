@@ -91,6 +91,8 @@ navigation:
 |-------|------|-------------|
 | `title` | `string` | Document title (overrides first heading) |
 | `navigation.title` | `string` | Title shown in the sidebar navigation (takes priority over `title`) |
+| `guide.item_id` or `item_id` | `string` | Bound item ID in `namespace:item_name` format, used for the "contemplate" feature |
+| `guide.item` or `item` | `string` | Bound item ID (alternative field) |
 
 ### Title Resolution Priority
 
@@ -100,6 +102,27 @@ Ageratum determines the document title in the following order:
 2. `title` (Front Matter)
 3. First level-1 heading (`# Heading`) in the document
 4. File name (without extension)
+
+### Item Binding & "Contemplate" Feature
+
+By declaring `item_id` (or `guide.item_id`) in the Front Matter, you can bind a document to a specific item. When players hover over that item in their inventory, a progress indicator appears in the Tooltip. Holding the <kbd>W</kbd> key for 3 seconds automatically opens the corresponding document.
+
+**Example:**
+```markdown
+---
+title: "Uses of Iron Ingots"
+item_id: "minecraft:iron_ingot"
+---
+
+# Iron Ingot Uses
+
+...
+```
+
+If multiple documents are bound to the same item, the first one is opened according to the following priority:
+1. Client's current language version
+2. English (`en_us`) version
+3. First in the list (by path lexicographical order)
 
 ---
 

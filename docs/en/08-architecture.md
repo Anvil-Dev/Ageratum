@@ -1,6 +1,7 @@
 # Architecture
 
-This document describes Ageratum's module layout, core data flows, and extension mechanisms, to help developers understand the codebase for maintenance and contribution.
+This document describes Ageratum's module layout, core data flows, and extension mechanisms, to help developers understand the codebase for
+maintenance and contribution.
 
 ---
 
@@ -200,6 +201,8 @@ Output FormattedText
 
 ## Design Principles
 
+> For detailed NBT structure preview flow, see: [Structure Preview Rendering](10-structure-preview-rendering.md)
+
 ### 1. Separation of Concerns (SoC)
 
 Each class has a single responsibility:
@@ -211,7 +214,8 @@ Each class has a single responsibility:
 
 ### 2. Client-Side Isolation (`@Mod(dist = Dist.CLIENT)`)
 
-All rendering-related code (GUI, Markdown parsing, registries) is isolated to the client side via `@Mod(dist = Dist.CLIENT)`. The server side holds only `Ageratum` (no render code) and `AgeratumNetwork`.
+All rendering-related code (GUI, Markdown parsing, registries) is isolated to the client side via `@Mod(dist = Dist.CLIENT)`. The server
+side holds only `Ageratum` (no render code) and `AgeratumNetwork`.
 
 ### 3. Registry-Driven Extension
 
@@ -223,11 +227,13 @@ All extension points are implemented via NeoForge Custom Registries, not reflect
 
 ### 4. Preload + Cache
 
-All documents are parsed once on resource pack load and cached. This eliminates IO and parsing overhead on every document open. The cache is invalidated and rebuilt automatically on resource pack reload.
+All documents are parsed once on resource pack load and cached. This eliminates IO and parsing overhead on every document open. The cache is
+invalidated and rebuilt automatically on resource pack reload.
 
 ### 5. Language Fallback
 
-When looking up documents, Ageratum first tries the client's current language (e.g. `zh_cn`), then falls back to `en_us` if not found. This simplifies mod development: **providing only the `en_us` version is sufficient** for all language clients.
+When looking up documents, Ageratum first tries the client's current language (e.g. `zh_cn`), then falls back to `en_us` if not found. This
+simplifies mod development: **providing only the `en_us` version is sufficient** for all language clients.
 
 ---
 
@@ -235,10 +241,10 @@ When looking up documents, Ageratum first tries the client's current language (e
 
 The project follows a "no oversized files" policy:
 
-| File Type | Line Limit | Policy |
-|-----------|-----------|--------|
-| Single Java class | ~400 lines | Split if exceeded |
-| Inner classes | Extracted to separate files |
+| File Type              | Line Limit                       | Policy            |
+|------------------------|----------------------------------|-------------------|
+| Single Java class      | ~400 lines                       | Split if exceeded |
+| Inner classes          | Extracted to separate files      |
 | Static utility methods | Moved to dedicated utility class |
 
 ---

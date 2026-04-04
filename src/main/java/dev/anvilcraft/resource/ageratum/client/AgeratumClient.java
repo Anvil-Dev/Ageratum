@@ -1,23 +1,22 @@
 package dev.anvilcraft.resource.ageratum.client;
 
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
+import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineComponents;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineStyleParsers;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinRecipeComponentFactories;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -27,11 +26,16 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -42,6 +46,7 @@ public class AgeratumClient {
      * 模组日志记录器。
      */
     private static final Logger LOGGER = LogUtils.getLogger();
+    public static final String PREVIEW_NAMESPACE = "ageratum_review";
 
     public static final AgeratumClientConfig CONFIG = ConfigManager.register(Ageratum.MOD_ID, AgeratumClientConfig::new);
 
@@ -58,6 +63,8 @@ public class AgeratumClient {
         BuiltinExtensionComponents.init();
         // 触发内置行内样式解析器注册项的类加载
         BuiltinInlineStyleParsers.init();
+        // 触发内置行内组件注册项的类加载
+        BuiltinInlineComponents.init();
         // 触发内置配方组件解析器注册项的类加载
         BuiltinRecipeComponentFactories.init();
     }
@@ -67,7 +74,7 @@ public class AgeratumClient {
      *
      * <p>若无法读取语言管理器，回退到 {@code en_us}。</p>
      */
-    private static String getClientLanguageCode(Minecraft minecraft) {
+    public static String getClientLanguageCode(Minecraft minecraft) {
         try {
             return minecraft.getLanguageManager().getSelected();
         } catch (RuntimeException exception) {
@@ -77,65 +84,12 @@ public class AgeratumClient {
     }
 
     /**
-     * 注册客户端命令 {@code /ageratum}。
-     *
-     * <p>命令格式：</p>
-     * <pre>
-     *   /ageratum &lt;namespace&gt;               — 打开该命名空间的 index.md
-     *   /ageratum &lt;namespace&gt; &lt;file&gt;        — 打开指定文件（不需要 .md 后缀）
-     * </pre>
-     * <p>两个参数均支持 Tab 补全，仅显示资源包中实际存在的值。</p>
-     *
-     * @param event 命令注册事件
-     */
-    @SubscribeEvent
-    public static void onCommandRegister(RegisterClientCommandsEvent event) {
-        event.getDispatcher().register(
-            Commands.literal("ageratum")
-                .then(
-                    // ── 第一个参数：命名空间 ──────────────────────────
-                    Commands.argument("namespace", StringArgumentType.word())
-                        .suggests((context, builder) -> {
-                            Minecraft minecraft = Minecraft.getInstance();
-                            // 枚举资源包中所有含有 ageratum/*.md 的命名空间
-                            return SharedSuggestionProvider.suggest(
-                                GuideDocumentLoader.listNamespaces(minecraft.getResourceManager(), getClientLanguageCode(minecraft)),
-                                builder
-                            );
-                        })
-                        // 仅提供 namespace，file 缺省为 index.md
-                        .executes(context -> openGuide(context, StringArgumentType.getString(context, "namespace"), null))
-                        .then(
-                            // ── 第二个参数（可选）：文件名 ──────────────
-                            Commands.argument("file", StringArgumentType.word())
-                                .suggests((context, builder) -> {
-                                    Minecraft minecraft = Minecraft.getInstance();
-                                    String namespace = StringArgumentType.getString(context, "namespace");
-                                    // 枚举该命名空间下的所有 .md 文件（返回不含扩展名的相对路径）
-                                    return SharedSuggestionProvider.suggest(
-                                        GuideDocumentLoader.listFiles(
-                                            minecraft.getResourceManager(),
-                                            namespace,
-                                            getClientLanguageCode(minecraft)
-                                        ),
-                                        builder
-                                    );
-                                })
-                                .executes(context -> openGuide(
-                                    context,
-                                    StringArgumentType.getString(context, "namespace"),
-                                    StringArgumentType.getString(context, "file")
-                                ))
-                        )
-                ));
-    }
-
-    /**
      * 注册客户端资源重载监听器。
      */
     @SubscribeEvent
     public static void onReloadListenerRegister(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(GuideDocumentCache.reloadListener());
+        event.registerReloadListener(AgeratumStructureTemplateManager.reloadListener());
     }
 
     /**
@@ -148,7 +102,12 @@ public class AgeratumClient {
      * @param fileArgument 文件名参数（可为 {@code null}，此时使用 index.md）
      * @return 命令执行结果码：1 表示成功，0 表示失败
      */
-    private static int openGuide(CommandContext<CommandSourceStack> context, String namespace, @Nullable String fileArgument) {
+    public static int openGuide(
+        CommandContext<CommandSourceStack> context,
+        String namespace,
+        @Nullable String fileArgument,
+        @Nullable String anchor
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
 
         String languageCode = getClientLanguageCode(minecraft);
@@ -173,7 +132,7 @@ public class AgeratumClient {
             context.getSource().sendFailure(Component.literal("Invalid guide path."));
             return 0;
         }
-        if (!openGuideOnClient(documentLocation, List.of())) {
+        if (!openGuideOnClient(documentLocation, anchor, List.of())) {
             context.getSource().sendFailure(
                 Component.literal(
                     "Guide file not found: assets/" + documentLocation.getNamespace() + "/" + documentLocation.getPath()
@@ -198,6 +157,10 @@ public class AgeratumClient {
      * @param anchor   目标锚点（可为 null）
      */
     public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
+        if (isPreviewLocation(location)) {
+            return openPreviewGuideOnClient(location, anchor, breadCrumbs);
+        }
+
         Minecraft minecraft = Minecraft.getInstance();
         ResourceManager resourceManager = minecraft.getResourceManager();
         if (!GuideDocumentLoader.exists(resourceManager, location)) {
@@ -214,7 +177,7 @@ public class AgeratumClient {
         // 优先使用预解析缓存，缺失时回退为即时解析
         Optional<MDDocument> cachedDocument = GuideDocumentCache.getParsedDocument(location);
         if (cachedDocument.isPresent()) {
-            GuideScreen screen = new GuideScreen(location, cachedDocument.get().components(), breadCrumbs);
+            GuideScreen screen = new GuideScreen(location, cachedDocument.get(), breadCrumbs, false);
             screen.setAnchor(anchor);
             screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
             minecraft.setScreen(screen);
@@ -222,11 +185,136 @@ public class AgeratumClient {
         }
 
         String content = GuideDocumentLoader.read(resourceManager, location);
+        return AgeratumClient.parseDocumentAndSetScreen(
+            location,
+            anchor,
+            breadCrumbs,
+            minecraft,
+            inheritedLabelScrollRows,
+            inheritedLabelScrollRemainder,
+            content,
+            false
+        );
+    }
+
+    private static boolean openPreviewGuideOnClient(
+        ResourceLocation location,
+        @Nullable String anchor,
+        List<ResourceLocation> breadCrumbs
+    ) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Path previewFile = resolvePreviewDocumentPath(location);
+        if (!Files.isRegularFile(previewFile)) {
+            return false;
+        }
+
+        int inheritedLabelScrollRows = 0;
+        double inheritedLabelScrollRemainder = 0.0d;
+        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+            inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
+            inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
+        }
+
+        String content;
+        try {
+            content = Files.readString(previewFile, StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            LOGGER.warn("Failed to read preview document: {}", previewFile, exception);
+            return false;
+        }
+
+        return AgeratumClient.parseDocumentAndSetScreen(
+            location,
+            anchor,
+            breadCrumbs,
+            minecraft,
+            inheritedLabelScrollRows,
+            inheritedLabelScrollRemainder,
+            content,
+            true
+        );
+    }
+
+    private static boolean parseDocumentAndSetScreen(
+        ResourceLocation location,
+        @Nullable String anchor,
+        List<ResourceLocation> breadCrumbs,
+        Minecraft minecraft,
+        int inheritedLabelScrollRows,
+        double inheritedLabelScrollRemainder,
+        String content,
+        boolean preview
+    ) {
         MDDocument parsedDocument = new MarkdownParser().parseDocument(location, content);
-        GuideScreen screen = new GuideScreen(location, parsedDocument.components(), breadCrumbs);
+        GuideScreen screen = new GuideScreen(location, parsedDocument, breadCrumbs, preview);
         screen.setAnchor(anchor);
         screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
         minecraft.setScreen(screen);
         return true;
+    }
+
+    public static boolean isPreviewLocation(ResourceLocation location) {
+        return PREVIEW_NAMESPACE.equals(location.getNamespace());
+    }
+
+    public static ResourceLocation toPreviewLocation(@Nullable String fileArgument) {
+        String normalized = normalizePreviewFileArgument(fileArgument);
+        return ResourceLocation.fromNamespaceAndPath(PREVIEW_NAMESPACE, normalized);
+    }
+
+    public static Path getPreviewRootPath() {
+        return FMLLoader.getGamePath().resolve(AgeratumClient.CONFIG.previewPath).normalize();
+    }
+
+    public static Path resolvePreviewDocumentPath(ResourceLocation location) {
+        String path = location.getPath();
+        if (!path.endsWith(".md")) {
+            path += ".md";
+        }
+        return resolvePreviewPath(path);
+    }
+
+    public static Path resolvePreviewAssetPath(String relativePath) {
+        return resolvePreviewPath(relativePath);
+    }
+
+    private static String normalizePreviewFileArgument(@Nullable String fileArgument) {
+        String file = fileArgument;
+        if (file == null || file.isBlank()) {
+            file = "index";
+        }
+        file = file.trim().replace('\\', '/');
+        while (file.startsWith("/")) {
+            file = file.substring(1);
+        }
+        if (file.endsWith(".md")) {
+            file = file.substring(0, file.length() - 3);
+        }
+        String[] segments = file.split("/");
+        List<String> normalizedSegments = new java.util.ArrayList<>();
+        for (String segment : segments) {
+            if (segment.isEmpty() || ".".equals(segment)) {
+                continue;
+            }
+            if ("..".equals(segment)) {
+                if (!normalizedSegments.isEmpty()) {
+                    normalizedSegments.removeLast();
+                }
+                continue;
+            }
+            normalizedSegments.add(segment.toLowerCase(Locale.ROOT));
+        }
+        if (normalizedSegments.isEmpty()) {
+            return "index";
+        }
+        return String.join("/", normalizedSegments);
+    }
+
+    private static Path resolvePreviewPath(String relativePath) {
+        String normalized = relativePath.replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        return getPreviewRootPath().resolve(normalized).normalize();
     }
 }

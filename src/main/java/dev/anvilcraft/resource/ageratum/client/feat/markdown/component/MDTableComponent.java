@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -125,7 +126,15 @@ public class MDTableComponent extends MDComponent {
      * 渲染表格边框、背景与单元格文本。
      */
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        MDRenderContext context
+    ) {
+        Minecraft minecraft = context.minecraft();
+        int maxX = context.maxX();
+        int maxY = context.maxY();
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
+        GuiGraphics guiGraphics = context.graphics();
         if (this.rows.isEmpty()) return;
         int colWidth = computeColWidth(maxX);
         int totalHeight = getHeight(minecraft, maxX, maxY);

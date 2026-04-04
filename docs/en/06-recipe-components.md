@@ -70,7 +70,7 @@ src/main/resources/
 ```java
 package com.example.mymod.client.markdown.recipe;
 
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
@@ -91,24 +91,26 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
         super(TEXTURE, 256, 128);  // Texture dimensions in pixels
         Ingredient[] ingredients = recipe.getIngredients().toArray(Ingredient[]::new);
         this.input = ingredients.length > 0 && !ingredients[0].isEmpty()
-            ? ingredients[0].getItems()[0] : ItemStack.EMPTY;
-        this.fuel  = new ItemStack(net.minecraft.world.item.Items.COAL);
-        var level  = Minecraft.getInstance().level;
+                     ? ingredients[0].getItems()[0] : ItemStack.EMPTY;
+        this.fuel = new ItemStack(net.minecraft.world.item.Items.COAL);
+        var level = Minecraft.getInstance().level;
         this.output = level != null
-            ? recipe.getResultItem(level.registryAccess()) : ItemStack.EMPTY;
+                      ? recipe.getResultItem(level.registryAccess()) : ItemStack.EMPTY;
     }
 
     @Override
     protected void renderRecipe(GuiGraphics g, float mouseX, float mouseY) {
         // Draw items at their positions in the background image
         // Adjust coordinates to match your texture layout
-        renderItem(g, this.input,   8, 24, mouseX, mouseY);
-        renderItem(g, this.fuel,    8, 60, mouseX, mouseY);
+        renderItem(g, this.input, 8, 24, mouseX, mouseY);
+        renderItem(g, this.fuel, 8, 60, mouseX, mouseY);
         renderItem(g, this.output, 96, 36, mouseX, mouseY);
     }
 
-    private void renderItem(GuiGraphics g, ItemStack stack, int x, int y,
-                             float mouseX, float mouseY) {
+    private void renderItem(
+        GuiGraphics g, ItemStack stack, int x, int y,
+        float mouseX, float mouseY
+    ) {
         if (stack.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
         g.renderItem(stack, x, y);
@@ -126,7 +128,7 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
 package com.example.mymod.client;
 
 import com.example.mymod.client.markdown.recipe.MDFurnaceRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.recipe.MDRecipeComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -136,14 +138,14 @@ public final class MyModRecipeComponentFactories {
 
     public static final DeferredRegister<MDRecipeComponent.RecipeComponentFactory<?>>
         RECIPE_COMPONENT_FACTORIES = DeferredRegister.create(
-            AgeratumRegistries.RECIPE_COMPONENT_FACTORY_REGISTRY_KEY,
-            "mymod"
-        );
+        AgeratumRegistries.RECIPE_COMPONENT_FACTORY_REGISTRY_KEY,
+        "mymod"
+    );
 
     public static final DeferredHolder<
         MDRecipeComponent.RecipeComponentFactory<?>,
         MDRecipeComponent.RecipeComponentFactory<?>
-    > SMELTING = RECIPE_COMPONENT_FACTORIES.register(
+        > SMELTING = RECIPE_COMPONENT_FACTORIES.register(
         "smelting",
         () -> MDRecipeComponent.RecipeComponentFactory.create(
             RecipeType.SMELTING,
@@ -151,7 +153,8 @@ public final class MyModRecipeComponentFactories {
         )
     );
 
-    private MyModRecipeComponentFactories() {}
+    private MyModRecipeComponentFactories() {
+    }
 }
 ```
 
