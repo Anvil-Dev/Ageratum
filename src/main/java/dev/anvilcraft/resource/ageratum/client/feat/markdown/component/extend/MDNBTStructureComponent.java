@@ -7,8 +7,8 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCompone
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
-import dev.anvilcraft.resource.ageratum.client.util.level.DelegatingServerLevelAccessor;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
@@ -26,8 +26,6 @@ import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.levelgen.SingleThreadedRandomSource;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import org.lwjgl.glfw.GLFW;
 
@@ -291,21 +289,11 @@ public final class MDNBTStructureComponent extends MDComponent {
             HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
             CompoundTag root = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
             template.load(blocks, root);
-            SingleThreadedRandomSource random = new SingleThreadedRandomSource(0L);
-            StructurePlaceSettings settings = new StructurePlaceSettings();
-            settings.setIgnoreEntities(true);
-            SandboxRenderLevel level = new SandboxRenderLevel();
-            DelegatingServerLevelAccessor fakeServerLevel = new DelegatingServerLevelAccessor(level);
             Vec3i size = template.getSize();
-            int x = (int) Math.ceil(size.getX() / 2.0f);
-            int z = (int) Math.ceil(size.getZ() / 2.0f);
-            BlockPos pos = new BlockPos(-x, 0, -z);
+            BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
             this.contentHeight = (int) (20d * Math.sqrt(BlockPos.ZERO.distSqr(size)));
             this.bottomHeight = (int) (18d * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
-            if (!template.placeInWorld(fakeServerLevel, pos, pos, settings, random, 0)) {
-                log.debug("Failed to place structure.");
-            }
-            return level;
+            return StructureSandboxFactory.create(clientLevel, template, pos);
         } catch (Exception exception) {
             return null;
         }

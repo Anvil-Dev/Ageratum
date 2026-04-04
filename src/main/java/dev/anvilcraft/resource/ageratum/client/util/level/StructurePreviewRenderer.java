@@ -6,6 +6,8 @@ import com.mojang.blaze3d.shaders.FogShape;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
+import dev.anvilcraft.resource.ageratum.client.util.AlphaVertexConsumer;
+import dev.anvilcraft.resource.ageratum.client.util.OffsetVertexConsumer;
 import dev.anvilcraft.resource.ageratum.client.util.SectionOffsetVertexConsumer;
 import dev.anvilcraft.resource.ageratum.client.util.SodiumSpriteBridge;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
@@ -31,6 +33,7 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import org.joml.Matrix4f;
@@ -197,6 +200,33 @@ public class StructurePreviewRenderer {
         });
     }
 
+    /**
+     * 在主世界视图中以半透明形式渲染结构投影。
+     */
+    @SuppressWarnings("deprecation")
+    public void renderWorldProjection(
+        SandboxRenderLevel level,
+        PoseStack poseStack,
+        MultiBufferSource.BufferSource buffers,
+        Vec3 cameraPos,
+        BlockPos origin,
+        int visibleMinY,
+        int visibleMaxYExclusive,
+        float alpha
+    ) {
+        lightmap.update(level);
+
+        var lightEngine = level.getLightEngine();
+        while (lightEngine.hasLightWork()) {
+            lightEngine.runLightUpdates();
+        }
+
+        RenderSystem.runAsFancy(() -> {
+            this.renderProjectionBlocks(level, poseStack, buffers, cameraPos, origin, visibleMinY, visibleMaxYExclusive, alpha);
+            buffers.endBatch(RenderType.translucent());
+        });
+    }
+
     private void renderBlocks(
         SandboxRenderLevel level,
         MultiBufferSource buffers,
@@ -260,6 +290,69 @@ public class StructurePreviewRenderer {
                         poseStack.popPose();
                     }
                 }
+            }
+        });
+    }
+
+    private void renderProjectionBlocks(
+        SandboxRenderLevel level,
+        PoseStack poseStack,
+        MultiBufferSource buffers,
+        Vec3 cameraPos,
+        BlockPos origin,
+        int visibleMinY,
+        int visibleMaxYExclusive,
+        float alpha
+    ) {
+        var randomSource = level.random;
+        var blockRenderDispatcher = Minecraft.getInstance().getBlockRenderer();
+        var layerView = new VisibleLayerBlockAndTintGetter(level, visibleMinY, visibleMaxYExclusive);
+        float offsetX = (float) (origin.getX() - cameraPos.x());
+        float offsetY = (float) (origin.getY() - cameraPos.y());
+        float offsetZ = (float) (origin.getZ() - cameraPos.z());
+
+        level.getFilledBlocks().forEach(pos -> {
+            if (!isVisibleLayer(pos.getY(), visibleMinY, visibleMaxYExclusive)) {
+                return;
+            }
+
+            var blockState = level.getBlockState(pos);
+            var fluidState = blockState.getFluidState();
+            if (!fluidState.isEmpty()) {
+                var baseBuffer = new AlphaVertexConsumer(buffers.getBuffer(RenderType.translucent()), alpha);
+                var sectionOffsetWriter = new SectionOffsetVertexConsumer(baseBuffer, SectionPos.of(pos));
+                var projectionWriter = new OffsetVertexConsumer(sectionOffsetWriter, offsetX, offsetY, offsetZ);
+                blockRenderDispatcher.renderLiquid(pos, layerView, projectionWriter, blockState, fluidState);
+                markFluidSpritesActive(fluidState);
+            }
+
+            if (blockState.getRenderShape() == RenderShape.INVISIBLE) {
+                return;
+            }
+
+            var blockEntity = level.getBlockEntity(pos);
+            ModelData modelData = blockEntity != null ? blockEntity.getModelData() : ModelData.EMPTY;
+            var model = blockRenderDispatcher.getBlockModel(blockState);
+            modelData = model.getModelData(layerView, pos, blockState, modelData);
+            var renderTypes = model.getRenderTypes(blockState, randomSource, modelData);
+
+            for (var renderType : renderTypes) {
+                var bufferBuilder = new AlphaVertexConsumer(buffers.getBuffer(RenderType.translucent()), alpha);
+
+                poseStack.pushPose();
+                poseStack.translate(offsetX + pos.getX(), offsetY + pos.getY(), offsetZ + pos.getZ());
+                blockRenderDispatcher.renderBatched(
+                    blockState,
+                    pos,
+                    layerView,
+                    poseStack,
+                    bufferBuilder,
+                    true,
+                    randomSource,
+                    modelData,
+                    renderType
+                );
+                poseStack.popPose();
             }
         });
     }
