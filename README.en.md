@@ -17,15 +17,26 @@
 [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/donate/patreon-plural_vector.svg)][Patreon]
 [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/social/discord-plural_vector.svg)][Discord]
 
-[![License](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)][License]
-[![Asset License](https://img.shields.io/badge/Asset%20License-ARR-green.svg)][Asset License]
+### License
+
+[![License](https://cdn.jsdelivr.net/npm/@gugle/devins-badges-plus/assets/cozy/license/lgpl-v3_vector.svg)][License]
+
+### Asset License
+
+[![Asset License](https://cdn.jsdelivr.net/npm/@gugle/devins-badges-plus/assets/cozy/license/arr_vector.svg)][Asset License]
 
 [Patreon]: https://www.patreon.com/gugle2308
+
 [License]: https://spdx.org/licenses/LGPL-3.0-only.html
+
 [Asset License]: https://gist.github.com/Gu-ZT/38961ed5c97500cf61b04ab048fa38ad
+
 [Modrinth]: https://modrinth.com/mod/ageratum
+
 [CurseForge]: https://www.curseforge.com/minecraft/mc-mods/ageratum
+
 [Documentation]: https://ageratum.anvilcraft.dev/
+
 [Discord]: https://discord.gg/4ZsG8m9XcM
 
 </div>
@@ -183,7 +194,8 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 
 ### Structure NBT Component (`<structure/>`)
 
-Use the structure extension to render a summary, top-down block preview, and bounded NBT tree for `.nbt` structure files directly inside documents:
+Use the structure extension to render a summary, top-down block preview, and bounded NBT tree for `.nbt` structure files directly inside
+documents:
 
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
@@ -194,8 +206,10 @@ Use the structure extension to render a summary, top-down block preview, and bou
 - `id` / `path`: required, target structure file `ResourceLocation`
 - `maxDepth`: optional, maximum expansion depth, default `2`
 - `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
-- Relative paths are supported and resolved against the current document directory, including `.nbt` files placed next to the Markdown document inside the resource pack; in preview mode the matching file is loaded from `run/ageratum_review/`
-- The component first shows structure metadata such as size, palette, block count, and entity count, then renders a top-down block preview followed by a depth-limited NBT tree
+- Relative paths are supported and resolved against the current document directory, including `.nbt` files placed next to the Markdown
+  document inside the resource pack; in preview mode the matching file is loaded from `run/ageratum_review/`
+- The component first shows structure metadata such as size, palette, block count, and entity count, then renders a top-down block preview
+  followed by a depth-limited NBT tree
 - Hovering a block in the preview shows its block ID, structure coordinates, palette index, and whether it carries block-entity NBT
 
 ### Preloading & Caching
