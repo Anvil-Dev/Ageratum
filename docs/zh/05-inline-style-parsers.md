@@ -119,6 +119,21 @@ public final class MyModInlineStyleParsers {
 
     private MyModInlineStyleParsers() {}
 }
+
+    // ── 示例 4：<gradient start="#RRGGBB" end="#RRGGBB">文本</gradient> - 按字符渐变 ──
+    public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> GRADIENT =
+        INLINE_STYLE_PARSERS.register(
+            "gradient",
+            () -> MDInlineStyleParser.create(
+                0,
+                Pattern.compile("<gradient\\b([^>]*)>", Pattern.CASE_INSENSITIVE),
+                "</gradient>",
+                (innerText, parentStyle, matcher) -> {
+                    // 工厂函数应返回一个对 innerText 按字符插值着色的 FormattedText，以下为占位示例。
+                    return net.minecraft.network.chat.FormattedText.of(innerText, parentStyle);
+                }
+            )
+        );
 ```
 
 ### 2. 在客户端初始化中绑定
@@ -142,6 +157,8 @@ public class MyModClient {
 <highlight=#FFAA00>这是高亮文字</highlight>
 
 剧透内容：<spoiler>答案是 42</spoiler>（悬停不可见，因为混淆）
+
+ 渐变：<gradient start="#FF0000" end="#0000FF">按字符渐变</gradient>
 ```
 
 ---

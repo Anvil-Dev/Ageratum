@@ -16,6 +16,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
+import org.apache.commons.lang3.function.TriFunction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -482,7 +483,9 @@ public abstract class MDComponent {
                 if (closeTagIndex != -1) {
                     // 递归解析内部内容
                     String innerContent = text.substring(contentStart, closeTagIndex);
-                    FormattedText innerText = parseStyledText(innerContent, nextTag.match().applyStyle(parentStyle));
+
+                    InlineStyleMatch match = nextTag.match();
+                    FormattedText innerText = match.applyTextFactory(innerContent, parentStyle);
                     parts.add(innerText);
 
                     pos = closeTagIndex + nextTag.match().closeTag().length();
@@ -508,24 +511,35 @@ public abstract class MDComponent {
     }
 
     /**
-     * 一次内联样式匹配结果，保存起止标签与样式生成逻辑。
+     * 一次内联样式匹配结果，保存起止标签与样式 / 文本生成逻辑。
+     *
+     * <p>此类可保存两类工厂之一：
+     * <ul>
+     *   <li>传统的 {@code BiFunction<Style, Matcher, Style>}：用于在解析时返回一个新的
+     *   {@link net.minecraft.network.chat.Style}，随后由解析器对标签内部文本递归解析并应用该样式；</li>
+     *   <li>新的 {@code TriFunction<String, Style, Matcher, FormattedText>}：直接基于原始
+     *   内部字符串 (innerText)、父样式与匹配器生产最终的 {@link net.minecraft.network.chat.FormattedText}，
+     *   这使得解析器可以一次性生成多段文本（例如按字符的渐变色片段）。</li>
+     * </ul>
+     *
+     * <p>当两者都存在时优先使用 textFactory；通常只会有其一被设置（由工厂方法创建）。
      */
     public static final class InlineStyleMatch {
         private final Pattern openTagPattern;
         private final Matcher matcher;
         private final String closeTag;
-        private final BiFunction<Style, Matcher, Style> styleFactory;
+        private final TriFunction<String, Style, Matcher, FormattedText> textFactory;
 
         private InlineStyleMatch(
             Pattern openTagPattern,
             Matcher matcher,
             String closeTag,
-            BiFunction<Style, Matcher, Style> styleFactory
+            TriFunction<String, Style, Matcher, FormattedText> textFactory
         ) {
             this.openTagPattern = openTagPattern;
             this.matcher = matcher;
             this.closeTag = closeTag;
-            this.styleFactory = styleFactory;
+            this.textFactory = textFactory;
         }
 
         public static InlineStyleMatch of(
@@ -534,7 +548,21 @@ public abstract class MDComponent {
             String closeTag,
             BiFunction<Style, Matcher, Style> styleFactory
         ) {
-            return new InlineStyleMatch(openTagPattern, matcher, closeTag, styleFactory);
+            return new InlineStyleMatch(
+                openTagPattern,
+                matcher,
+                closeTag,
+                (innerText, style, matcher1) -> FormattedText.of(innerText, styleFactory.apply(style, matcher1))
+            );
+        }
+
+        public static InlineStyleMatch of(
+            Pattern openTagPattern,
+            Matcher matcher,
+            String closeTag,
+            TriFunction<String, Style, Matcher, FormattedText> textFactory
+        ) {
+            return new InlineStyleMatch(openTagPattern, matcher, closeTag, textFactory);
         }
 
         public int start() {
@@ -553,8 +581,8 @@ public abstract class MDComponent {
             return this.closeTag;
         }
 
-        public Style applyStyle(Style parentStyle) {
-            return this.styleFactory.apply(parentStyle, this.matcher);
+        public FormattedText applyTextFactory(String innerText, Style parentStyle) {
+            return this.textFactory.apply(innerText, parentStyle, this.matcher);
         }
     }
 

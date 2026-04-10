@@ -1,6 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
+import org.apache.commons.lang3.function.TriFunction;
 
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
@@ -51,6 +53,37 @@ public interface MDInlineStyleParser {
                     return null;
                 }
                 return MDComponent.InlineStyleMatch.of(openTagPattern, matcher, closeTag, styleFactory);
+            }
+        };
+    }
+
+    /**
+     * 创建一个能够直接生成内联内容 {@link net.minecraft.network.chat.FormattedText} 的解析器工厂。
+     *
+     * @param priority 解析优先级
+     * @param openTagPattern 开始标签正则
+     * @param closeTag 结束标签字面串
+     * @param textFactory 工厂函数： (innerText, parentStyle, matcher) -> FormattedText
+     */
+    static MDInlineStyleParser create(
+        int priority,
+        Pattern openTagPattern,
+        String closeTag,
+        TriFunction<String, Style, Matcher, FormattedText> textFactory
+    ) {
+        return new MDInlineStyleParser() {
+            @Override
+            public int priority() {
+                return priority;
+            }
+
+            @Override
+            public @Nullable MDComponent.InlineStyleMatch parse(String text, int pos) {
+                Matcher matcher = openTagPattern.matcher(text);
+                if (!matcher.find(pos)) {
+                    return null;
+                }
+                return MDComponent.InlineStyleMatch.of(openTagPattern, matcher, closeTag, textFactory);
             }
         };
     }

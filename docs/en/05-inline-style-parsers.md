@@ -119,6 +119,22 @@ public final class MyModInlineStyleParsers {
 
     private MyModInlineStyleParsers() {}
 }
+
+    // ── Example 4: <gradient start="#RRGGBB" end="#RRGGBB">text</gradient> - Per-character gradient ──
+    public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> GRADIENT =
+        INLINE_STYLE_PARSERS.register(
+            "gradient",
+            () -> MDInlineStyleParser.create(
+                0,
+                Pattern.compile("<gradient\\b([^>]*)>", Pattern.CASE_INSENSITIVE),
+                "</gradient>",
+                (innerText, parentStyle, matcher) -> {
+                    // This factory should produce a FormattedText that applies a per-character color
+                    // interpolation from matcher.group(1)'s start/end attributes. See docs for details.
+                    return net.minecraft.network.chat.FormattedText.of(innerText, parentStyle);
+                }
+            )
+        );
 ```
 
 ### 2. Bind to the Event Bus in Client Init
@@ -142,6 +158,8 @@ Normal text <rainbow>This is colorful text</rainbow> normal text
 <highlight=#FFAA00>This is highlighted text</highlight>
 
 Spoiler: <spoiler>The answer is 42</spoiler>
+ 
+ Gradient: <gradient start="#FF0000" end="#0000FF">Per-character gradient</gradient>
 ```
 
 ---
