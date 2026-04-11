@@ -4,14 +4,15 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.HoverEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 import java.util.List;
 import java.util.regex.Pattern;
-import net.minecraft.network.chat.FormattedText;
 import javax.annotation.Nullable;
 
 /**
@@ -19,14 +20,16 @@ import javax.annotation.Nullable;
  */
 @SuppressWarnings("unused")
 public final class BuiltinInlineStyleParsers {
-    private static final Pattern COLOR_TAG_PATTERN = Pattern.compile("<color=#([0-9a-fA-F]{6})>");
+    private static final Pattern COLOR_TAG_PATTERN = Pattern.compile("<color=(#?[0-9a-zA-Z_]+)>");
     private static final Pattern OBFUSCATED_TAG_PATTERN = Pattern.compile("<o>");
     private static final Pattern HOVER_TAG_PATTERN = Pattern.compile("<hover\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
     private static final Pattern CLICK_TAG_PATTERN = Pattern.compile("<click\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
     private static final Pattern GRADIENT_TAG_PATTERN = Pattern.compile("<gradient\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
     private static final Pattern TAG_ATTRIBUTE_PATTERN = Pattern.compile("([a-zA-Z_:][-a-zA-Z0-9_:.]*)\\s*=\\s*\"([^\"]*)\"");
 
-    /** 颜色标签：{@code <color=#RRGGBB>...</color>}。 */
+    /**
+     * 颜色标签：{@code <color=#RRGGBB>...</color>}。
+     */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> COLOR =
         AgeratumRegistries.INLINE_STYLE_PARSERS.register(
             "color",
@@ -34,18 +37,22 @@ public final class BuiltinInlineStyleParsers {
                 0,
                 COLOR_TAG_PATTERN,
                 "</color>",
-                (parentStyle, matcher) -> parentStyle.withColor(Integer.parseInt(matcher.group(1), 16))
+                (parentStyle, matcher) -> parentStyle.withColor(parseColor(matcher.group(1)))
             )
         );
 
-    /** 混淆标签：{@code <o>...</o>}。 */
+    /**
+     * 混淆标签：{@code <o>...</o>}。
+     */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> OBFUSCATED =
         AgeratumRegistries.INLINE_STYLE_PARSERS.register(
             "obfuscated",
             () -> MDInlineStyleParser.create(0, OBFUSCATED_TAG_PATTERN, "</o>", (parentStyle, matcher) -> parentStyle.withObfuscated(true))
         );
 
-    /** 悬停事件标签。 */
+    /**
+     * 悬停事件标签。
+     */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> HOVER =
         AgeratumRegistries.INLINE_STYLE_PARSERS.register(
             "hover",
@@ -92,7 +99,9 @@ public final class BuiltinInlineStyleParsers {
             )
         );
 
-    /** 点击事件标签。 */
+    /**
+     * 点击事件标签。
+     */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> CLICK =
         AgeratumRegistries.INLINE_STYLE_PARSERS.register(
             "click",
@@ -173,10 +182,8 @@ public final class BuiltinInlineStyleParsers {
                         return FormattedText.of(innerText, parentStyle);
                     }
                     try {
-                        String sStart = startColor.startsWith("#") ? startColor.substring(1) : startColor;
-                        String sEnd = endColor.startsWith("#") ? endColor.substring(1) : endColor;
-                        int start = Integer.parseInt(sStart, 16);
-                        int end = Integer.parseInt(sEnd, 16);
+                        int start = parseColor(startColor);
+                        int end = parseColor(endColor);
                         int[] cps = innerText.codePoints().toArray();
                         List<FormattedText> parts = new java.util.ArrayList<>();
                         int n = cps.length;
@@ -224,6 +231,23 @@ public final class BuiltinInlineStyleParsers {
             }
         }
         return null;
+    }
+
+    public static int parseColor(String value) {
+        if (value.startsWith("#")) {
+            return Integer.parseInt(value.substring(1), 16);
+        } else {
+            ChatFormatting formatting;
+            if (value.length() == 1) {
+                formatting = ChatFormatting.getByCode(value.charAt(0));
+            } else {
+                formatting = ChatFormatting.getByName(value);
+            }
+            if (formatting == null || formatting.getColor() == null) {
+                return 0;
+            }
+            return formatting.getColor();
+        }
     }
 }
 
