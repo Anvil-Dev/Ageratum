@@ -41,12 +41,12 @@ assets/
 
 ### 有效路径示例
 
-| 资源位置 | 说明 |
-|---------|------|
-| `mymod:ageratum/en_us/index.md` | 英文首页 |
-| `mymod:ageratum/zh_cn/index.md` | 中文首页 |
+| 资源位置                                      | 说明    |
+|-------------------------------------------|-------|
+| `mymod:ageratum/en_us/index.md`           | 英文首页  |
+| `mymod:ageratum/zh_cn/index.md`           | 中文首页  |
 | `mymod:ageratum/en_us/tutorial/basics.md` | 子目录文档 |
-| `mymod:ageratum/en_us/faq.md` | 顶层文档 |
+| `mymod:ageratum/en_us/faq.md`             | 顶层文档  |
 
 ### 路径规范化规则
 
@@ -89,12 +89,12 @@ navigation:
 
 ### 支持的字段
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `title` | `string` | 文档标题（覆盖一级标题） |
-| `navigation.title` | `string` | 侧边栏导航中显示的标题（优先于 `title`） |
-| `guide.item_id` 或 `item_id` | `string` | 绑定物品的 ID（`namespace:item_name` 格式），用于"寻思"功能 |
-| `guide.item` 或 `item` | `string` | 绑定物品的 ID（备选字段）|
+| 字段                                            | 类型                        | 说明                         |
+|-----------------------------------------------|---------------------------|----------------------------|
+| `title`                                       | `string`                  | 文档标题（覆盖一级标题）               |
+| `navigation.title`                            | `string`                  | 侧边栏导航中显示的标题（优先于 `title`）   |
+| `guide.items` 或 `items`                       | `string` / `list<string>` | 绑定物品规则，用于"寻思"功能            |
+| `guide.item_id`、`item_id`、`guide.item`、`item` | `string`                  | 旧版兼容字段，仍可读取，但推荐迁移到 `items` |
 
 ### 标题解析优先级
 
@@ -107,13 +107,28 @@ Ageratum 按以下顺序确定文档标题：
 
 ### 物品绑定与"寻思"功能
 
-在 Front Matter 中声明 `item_id`（或 `guide.item_id`）可以将文档与特定物品绑定。玩家在物品栏中鼠标指向该物品时，会在 Tooltip 中看到进度提示；长按 <kbd>W</kbd> 键 3 秒后自动打开对应文档。
+在 Front Matter 中声明 `items`（或 `guide.items`）可以将文档与特定物品绑定。玩家在物品栏中鼠标指向匹配物品时，会在 Tooltip
+中看到进度提示；长按 <kbd>W</kbd> 键后会自动打开对应文档。
+
+`items` 支持以下写法：
+
+- 单个物品字符串
+- 物品字符串列表
+- 物品后追加 `{}` 组件条件，例如 `minecraft:diamond{\"test\":1}`
+
+匹配规则如下：
+
+1. 只写物品 ID，如 `minecraft:diamond`：匹配时忽略物品组件
+2. 写空组件，如 `minecraft:diamond{}`：等价于只写物品 ID
+3. 写了组件，如 `minecraft:diamond{\"test\":1}`：只要求这些已填写组件匹配
+4. 因此 `minecraft:diamond{\"test\":1}` 可以匹配 `minecraft:diamond{\"test\":1,\"test2\":2}`，但不能匹配 `minecraft:diamond{\"test\":0}`
 
 **示例：**
+
 ```markdown
 ---
 title: "铁锭的用途指南"
-item_id: "minecraft:iron_ingot"
+items: "minecraft:iron_ingot"
 ---
 
 # 铁锭用途
@@ -121,7 +136,20 @@ item_id: "minecraft:iron_ingot"
 ...
 ```
 
+**列表示例：**
+
+```markdown
+---
+title: "钻石相关文档"
+items:
+  - "minecraft:diamond"
+  - "minecraft:diamond{\"test\":1}"
+  - "minecraft:diamond_sword{damage=0}"
+---
+```
+
 若多个文档绑定同一物品，会按以下优先级打开第一个：
+
 1. 客户端当前语言版本
 2. 英文（`en_us`）版本
 3. 列表中的第一个（按路径字典序）

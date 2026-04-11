@@ -8,7 +8,6 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
@@ -32,11 +31,11 @@ public final class BoundItemGuideNavigator {
     private static final long HOVER_STALE_MS = 200L;
 
     @Nullable
-    private static ResourceLocation hoveredItemId;
+    private static ResourceLocation hoveredDocumentLocation;
     private static long hoverSeenAtMs;
 
     @Nullable
-    private static ResourceLocation holdingItemId;
+    private static ResourceLocation holdingDocumentLocation;
     private static long holdStartAtMs = -1L;
     private static boolean openedDuringCurrentHold;
 
@@ -47,24 +46,24 @@ public final class BoundItemGuideNavigator {
     public static void onTooltipGather(RenderTooltipEvent.GatherComponents event) {
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) {
-            hoveredItemId = null;
+            hoveredDocumentLocation = null;
             return;
         }
 
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         Minecraft minecraft = Minecraft.getInstance();
         String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-        Optional<ResourceLocation> targetDocument = GuideDocumentCache.getFirstDocumentByItemId(itemId, languageCode);
+        Optional<ResourceLocation> targetDocument = GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode);
         if (targetDocument.isEmpty()) {
-            hoveredItemId = null;
+            hoveredDocumentLocation = null;
             return;
         }
 
         long now = System.currentTimeMillis();
-        hoveredItemId = itemId;
+        ResourceLocation documentLocation = targetDocument.get();
+        hoveredDocumentLocation = documentLocation;
         hoverSeenAtMs = now;
 
-        double progress = getCurrentProgressPercent(now, itemId, isWDown(minecraft));
+        double progress = getCurrentProgressPercent(now, documentLocation, isWDown(minecraft));
         List<Either<FormattedText, TooltipComponent>> tooltipElements = event.getTooltipElements();
         if (progress <= 0) {
             tooltipElements.add(Either.left(
@@ -96,8 +95,8 @@ public final class BoundItemGuideNavigator {
         }
 
         long now = System.currentTimeMillis();
-        if (hoveredItemId == null || now - hoverSeenAtMs > HOVER_STALE_MS) {
-            hoveredItemId = null;
+        if (hoveredDocumentLocation == null || now - hoverSeenAtMs > HOVER_STALE_MS) {
+            hoveredDocumentLocation = null;
             resetHoldState();
             return;
         }
@@ -107,8 +106,8 @@ public final class BoundItemGuideNavigator {
             return;
         }
 
-        if (!hoveredItemId.equals(holdingItemId)) {
-            holdingItemId = hoveredItemId;
+        if (!hoveredDocumentLocation.equals(holdingDocumentLocation)) {
+            holdingDocumentLocation = hoveredDocumentLocation;
             holdStartAtMs = now;
             openedDuringCurrentHold = false;
             return;
@@ -118,15 +117,13 @@ public final class BoundItemGuideNavigator {
             return;
         }
 
-        String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-        Optional<ResourceLocation> targetDocument = GuideDocumentCache.getFirstDocumentByItemId(holdingItemId, languageCode);
-        if (targetDocument.isPresent() && AgeratumClient.openGuideOnClient(targetDocument.get(), List.of())) {
+        if (AgeratumClient.openGuideOnClient(holdingDocumentLocation, List.of())) {
             openedDuringCurrentHold = true;
         }
     }
 
-    private static double getCurrentProgressPercent(long now, ResourceLocation itemId, boolean wDown) {
-        if (!wDown || holdStartAtMs < 0L || !itemId.equals(holdingItemId)) {
+    private static double getCurrentProgressPercent(long now, ResourceLocation documentLocation, boolean wDown) {
+        if (!wDown || holdStartAtMs < 0L || !documentLocation.equals(holdingDocumentLocation)) {
             return 0;
         }
         long elapsed = Math.max(0L, now - holdStartAtMs);
@@ -146,13 +143,13 @@ public final class BoundItemGuideNavigator {
     }
 
     private static void resetHoldState() {
-        holdingItemId = null;
+        holdingDocumentLocation = null;
         holdStartAtMs = -1L;
         openedDuringCurrentHold = false;
     }
 
     private static void clearAllState() {
-        hoveredItemId = null;
+        hoveredDocumentLocation = null;
         hoverSeenAtMs = 0L;
         resetHoldState();
     }

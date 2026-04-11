@@ -1,0 +1,279 @@
+package dev.anvilcraft.resource.ageratum.client.feat.markdown;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonParser;
+import com.mojang.brigadier.StringReader;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Optional;
+import javax.annotation.Nullable;
+
+/**
+ * 文档绑定物品规格。
+ *
+ * <p>支持以下形式：</p>
+ * <ul>
+ *   <li>{@code namespace:item}</li>
+ *   <li>{@code namespace:item{"component":value}}</li>
+ * </ul>
+ *
+ * <p>若未填写组件，匹配时忽略物品组件；若填写了组件，则只要求这些组件匹配，
+ * 其余组件允许存在。</p>
+ */
+public record GuideItemBinding(ResourceLocation itemId, @Nullable String rawComponents) {
+    public static Optional<GuideItemBinding> parse(@Nullable String rawValue) {
+        if (rawValue == null) {
+            return Optional.empty();
+        }
+
+        String normalized = rawValue.trim();
+        if (normalized.isEmpty()) {
+            return Optional.empty();
+        }
+
+        int componentStart = normalized.indexOf('{');
+        String itemIdText = normalized;
+        String componentsText = "";
+        if (componentStart >= 0) {
+            if (!normalized.endsWith("}")) {
+                return Optional.empty();
+            }
+            itemIdText = normalized.substring(0, componentStart).trim();
+            componentsText = normalized.substring(componentStart).trim();
+        }
+
+        ResourceLocation itemId = ResourceLocation.tryParse(itemIdText);
+        if (itemId == null) {
+            return Optional.empty();
+        }
+
+        String requiredComponents = normalizeComponents(componentsText);
+        return Optional.of(new GuideItemBinding(itemId, requiredComponents));
+    }
+
+    public boolean matches(ItemStack stack) {
+        if (stack.isEmpty() || !this.itemId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
+            return false;
+        }
+        if (this.rawComponents == null) {
+            return true;
+        }
+
+        JsonObject requiredComponents = this.parseRequiredComponentsAsJsonObject();
+        JsonObject actualComponents = encodeStackComponentsToJsonObject(stack);
+        if (requiredComponents == null || actualComponents == null) {
+            return false;
+        }
+
+        return isJsonSubset(requiredComponents, actualComponents);
+    }
+
+    private @Nullable JsonObject parseRequiredComponentsAsJsonObject() {
+        String rawComponents = this.rawComponents;
+        if (rawComponents == null) {
+            return null;
+        }
+
+        JsonObject parsed = tryParseJsonObject(rawComponents);
+        if (parsed != null) {
+            return parsed;
+        }
+
+        String unescaped = decodeEscapedString(rawComponents);
+        if (!unescaped.equals(rawComponents)) {
+            parsed = tryParseJsonObject(unescaped);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+
+        parsed = tryParseSnbtObject(rawComponents);
+        if (parsed != null) {
+            return parsed;
+        }
+        if (!unescaped.equals(rawComponents)) {
+            return tryParseSnbtObject(unescaped);
+        }
+        return null;
+    }
+
+    private static @Nullable JsonObject tryParseJsonObject(String text) {
+        try {
+            JsonElement element = JsonParser.parseString(text);
+            return element instanceof JsonObject object ? object : null;
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private static @Nullable JsonObject tryParseSnbtObject(String text) {
+        try {
+            CompoundTag tag = new TagParser(new StringReader(text)).readStruct();
+            JsonElement jsonElement = convertNbtToJson(tag);
+            return jsonElement instanceof JsonObject object ? object : null;
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private static String decodeEscapedString(String raw) {
+        if (raw.indexOf('\\') < 0) {
+            return raw;
+        }
+
+        StringBuilder decoded = new StringBuilder(raw.length());
+        boolean escaping = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char ch = raw.charAt(i);
+            if (!escaping) {
+                if (ch == '\\') {
+                    escaping = true;
+                } else {
+                    decoded.append(ch);
+                }
+                continue;
+            }
+
+            escaping = false;
+            switch (ch) {
+                case '"' -> decoded.append('"');
+                case '\\' -> decoded.append('\\');
+                case '/' -> decoded.append('/');
+                case 'b' -> decoded.append('\b');
+                case 'f' -> decoded.append('\f');
+                case 'n' -> decoded.append('\n');
+                case 'r' -> decoded.append('\r');
+                case 't' -> decoded.append('\t');
+                case 'u' -> {
+                    if (i + 4 >= raw.length()) {
+                        decoded.append('u');
+                        break;
+                    }
+                    String hex = raw.substring(i + 1, i + 5);
+                    try {
+                        decoded.append((char) Integer.parseInt(hex, 16));
+                        i += 4;
+                    } catch (NumberFormatException ignored) {
+                        decoded.append('u').append(hex);
+                        i += 4;
+                    }
+                }
+                default -> decoded.append(ch);
+            }
+        }
+
+        if (escaping) {
+            decoded.append('\\');
+        }
+        return decoded.toString();
+    }
+
+    private static @Nullable JsonObject encodeStackComponentsToJsonObject(ItemStack stack) {
+        DynamicOps<JsonElement> ops = createJsonOps();
+        DataResult<JsonElement> encoded = DataComponentMap.CODEC.encodeStart(ops, stack.getComponents());
+        JsonElement result = encoded.result().orElse(null);
+        return result instanceof JsonObject object ? object : null;
+    }
+
+    private static JsonElement convertNbtToJson(Tag tag) {
+        return NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE, tag);
+    }
+
+    private static DynamicOps<JsonElement> createJsonOps() {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return JsonOps.INSTANCE;
+        }
+        HolderLookup.Provider registries = level.registryAccess();
+        return RegistryOps.create(JsonOps.INSTANCE, registries);
+    }
+
+    private static boolean isJsonSubset(@Nullable JsonElement required, @Nullable JsonElement actual) {
+        if (required == null || required instanceof JsonNull) {
+            return actual == null || actual instanceof JsonNull;
+        }
+        if (actual == null || actual instanceof JsonNull) {
+            return false;
+        }
+
+        switch (required) {
+            case JsonObject requiredObject -> {
+                if (!(actual instanceof JsonObject actualObject)) {
+                    return false;
+                }
+                for (Map.Entry<String, JsonElement> entry : requiredObject.entrySet()) {
+                    if (!actualObject.has(entry.getKey())) {
+                        return false;
+                    }
+                    if (!isJsonSubset(entry.getValue(), actualObject.get(entry.getKey()))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            case JsonArray requiredArray -> {
+                if (!(actual instanceof JsonArray actualArray) || requiredArray.size() > actualArray.size()) {
+                    return false;
+                }
+                int actualIndex = 0;
+                for (JsonElement requiredElement : requiredArray) {
+                    boolean matched = false;
+                    while (actualIndex < actualArray.size()) {
+                        if (isJsonSubset(requiredElement, actualArray.get(actualIndex))) {
+                            matched = true;
+                            actualIndex++;
+                            break;
+                        }
+                        actualIndex++;
+                    }
+                    if (!matched) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            case JsonPrimitive requiredPrimitive when actual instanceof JsonPrimitive actualPrimitive -> {
+                if (requiredPrimitive.isNumber() && actualPrimitive.isNumber()) {
+                    BigDecimal requiredNumber = requiredPrimitive.getAsBigDecimal();
+                    BigDecimal actualNumber = actualPrimitive.getAsBigDecimal();
+                    return requiredNumber.compareTo(actualNumber) == 0;
+                }
+                return requiredPrimitive.equals(actualPrimitive);
+            }
+            default -> {
+            }
+        }
+
+        return required.equals(actual);
+    }
+
+    private static @Nullable String normalizeComponents(String rawComponents) {
+        String normalized = rawComponents.trim();
+        if (normalized.isEmpty() || "{}".equals(normalized)) {
+            return null;
+        }
+        return normalized;
+    }
+}
+
+

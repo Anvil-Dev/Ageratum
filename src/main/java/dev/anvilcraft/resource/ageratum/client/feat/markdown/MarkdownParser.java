@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -391,47 +392,7 @@ public class MarkdownParser {
     }
 
     private static Map<String, Object> parseFrontMatterYaml(List<String> yamlLines) {
-        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-        LinkedHashMap<String, Object> root = new LinkedHashMap<>();
-        List<MapLevel> levels = new ArrayList<>();
-        levels.add(new MapLevel(0, root));
-
-        for (String line : yamlLines) {
-            if (line == null || line.isBlank()) {
-                continue;
-            }
-            String trimmed = line.trim();
-            if (trimmed.startsWith("#")) {
-                continue;
-            }
-
-            int colon = trimmed.indexOf(':');
-            if (colon <= 0) {
-                continue;
-            }
-
-            int indent = countYamlIndent(line);
-            while (levels.size() > 1 && indent < levels.getLast().indent()) {
-                levels.removeLast();
-            }
-
-            Map<String, Object> current = levels.getLast().map();
-            String key = trimmed.substring(0, colon).trim();
-            String valuePart = trimmed.substring(colon + 1).trim();
-            if (key.isEmpty()) {
-                continue;
-            }
-
-            if (valuePart.isEmpty()) {
-                LinkedHashMap<String, Object> nested = new LinkedHashMap<>();
-                current.put(key, nested);
-                levels.add(new MapLevel(indent + 1, nested));
-            } else {
-                current.put(key, parseYamlScalar(valuePart));
-            }
-        }
-
-        return Map.copyOf(root);
+        return parseYamlMap(yamlLines, 0, 0).map();
     }
 
     private static int countYamlIndent(String line) {
@@ -453,6 +414,10 @@ public class MarkdownParser {
 
     private static @Nullable Object parseYamlScalar(String valuePart) {
         String value = valuePart.trim();
+        List<Object> inlineList = tryParseInlineYamlList(value);
+        if (inlineList != null) {
+            return inlineList;
+        }
         if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
             return value.substring(1, value.length() - 1);
         }
@@ -473,6 +438,220 @@ public class MarkdownParser {
         } catch (NumberFormatException ignored) {
             return value;
         }
+    }
+
+    private static ParseYamlMapResult parseYamlMap(List<String> yamlLines, int startIndex, int expectedIndent) {
+        LinkedHashMap<String, Object> result = new LinkedHashMap<>();
+        int index = startIndex;
+        while (index < yamlLines.size()) {
+            String line = yamlLines.get(index);
+            if (line == null || line.isBlank() || line.trim().startsWith("#")) {
+                index++;
+                continue;
+            }
+
+            int indent = countYamlIndent(line);
+            if (indent < expectedIndent) {
+                break;
+            }
+            if (indent > expectedIndent) {
+                index++;
+                continue;
+            }
+
+            String trimmed = line.trim();
+            if (trimmed.startsWith("- ")) {
+                break;
+            }
+
+            int colon = trimmed.indexOf(':');
+            if (colon <= 0) {
+                index++;
+                continue;
+            }
+
+            String key = trimmed.substring(0, colon).trim();
+            if (key.isEmpty()) {
+                index++;
+                continue;
+            }
+
+            String valuePart = trimmed.substring(colon + 1).trim();
+            if (!valuePart.isEmpty()) {
+                result.put(key, parseYamlScalar(valuePart));
+                index++;
+                continue;
+            }
+
+            int nextIndex = skipYamlIgnorableLines(yamlLines, index + 1);
+            if (nextIndex >= yamlLines.size()) {
+                result.put(key, new LinkedHashMap<String, Object>());
+                index++;
+                continue;
+            }
+
+            int childIndent = countYamlIndent(yamlLines.get(nextIndex));
+            if (childIndent <= indent) {
+                result.put(key, new LinkedHashMap<String, Object>());
+                index++;
+                continue;
+            }
+
+            String childTrimmed = yamlLines.get(nextIndex).trim();
+            if (childTrimmed.startsWith("- ")) {
+                ParseYamlListResult listResult = parseYamlList(yamlLines, nextIndex, childIndent);
+                result.put(key, listResult.list());
+                index = listResult.nextIndex();
+                continue;
+            }
+
+            ParseYamlMapResult mapResult = parseYamlMap(yamlLines, nextIndex, childIndent);
+            result.put(key, mapResult.map());
+            index = mapResult.nextIndex();
+        }
+        return new ParseYamlMapResult(Map.copyOf(result), index);
+    }
+
+    private static ParseYamlListResult parseYamlList(List<String> yamlLines, int startIndex, int expectedIndent) {
+        List<Object> result = new ArrayList<>();
+        int index = startIndex;
+        while (index < yamlLines.size()) {
+            String line = yamlLines.get(index);
+            if (line == null || line.isBlank() || line.trim().startsWith("#")) {
+                index++;
+                continue;
+            }
+
+            int indent = countYamlIndent(line);
+            if (indent < expectedIndent) {
+                break;
+            }
+            if (indent != expectedIndent) {
+                index++;
+                continue;
+            }
+
+            String trimmed = line.trim();
+            if (!trimmed.startsWith("- ")) {
+                break;
+            }
+
+            String valuePart = trimmed.substring(2).trim();
+            if (!valuePart.isEmpty()) {
+                result.add(parseYamlScalar(valuePart));
+                index++;
+                continue;
+            }
+
+            int nextIndex = skipYamlIgnorableLines(yamlLines, index + 1);
+            if (nextIndex >= yamlLines.size()) {
+                result.add("");
+                index++;
+                continue;
+            }
+
+            int childIndent = countYamlIndent(yamlLines.get(nextIndex));
+            if (childIndent <= indent) {
+                result.add("");
+                index++;
+                continue;
+            }
+
+            String childTrimmed = yamlLines.get(nextIndex).trim();
+            if (childTrimmed.startsWith("- ")) {
+                ParseYamlListResult listResult = parseYamlList(yamlLines, nextIndex, childIndent);
+                result.add(listResult.list());
+                index = listResult.nextIndex();
+                continue;
+            }
+
+            ParseYamlMapResult mapResult = parseYamlMap(yamlLines, nextIndex, childIndent);
+            result.add(mapResult.map());
+            index = mapResult.nextIndex();
+        }
+        return new ParseYamlListResult(List.copyOf(result), index);
+    }
+
+    private static int skipYamlIgnorableLines(List<String> yamlLines, int index) {
+        int current = index;
+        while (current < yamlLines.size()) {
+            String line = yamlLines.get(current);
+            if (line != null && !line.isBlank() && !line.trim().startsWith("#")) {
+                break;
+            }
+            current++;
+        }
+        return current;
+    }
+
+    private static @Nullable List<Object> tryParseInlineYamlList(String value) {
+        if (!value.startsWith("[") || !value.endsWith("]")) {
+            return null;
+        }
+
+        String inner = value.substring(1, value.length() - 1).trim();
+        if (inner.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> tokens = splitInlineYamlList(inner);
+        if (tokens.isEmpty()) {
+            return List.of();
+        }
+
+        List<Object> values = new ArrayList<>(tokens.size());
+        for (String token : tokens) {
+            values.add(parseYamlScalar(token));
+        }
+        return Collections.unmodifiableList(values);
+    }
+
+    private static List<String> splitInlineYamlList(String value) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int braceDepth = 0;
+        int bracketDepth = 0;
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (ch == '\'' && !inDoubleQuote) {
+                inSingleQuote = !inSingleQuote;
+                current.append(ch);
+                continue;
+            }
+            if (ch == '"' && !inSingleQuote) {
+                inDoubleQuote = !inDoubleQuote;
+                current.append(ch);
+                continue;
+            }
+            if (!inSingleQuote && !inDoubleQuote) {
+                if (ch == '{') {
+                    braceDepth++;
+                } else if (ch == '}') {
+                    braceDepth = Math.max(0, braceDepth - 1);
+                } else if (ch == '[') {
+                    bracketDepth++;
+                } else if (ch == ']') {
+                    bracketDepth = Math.max(0, bracketDepth - 1);
+                } else if (ch == ',' && braceDepth == 0 && bracketDepth == 0) {
+                    String token = current.toString().trim();
+                    if (!token.isEmpty()) {
+                        parts.add(token);
+                    }
+                    current.setLength(0);
+                    continue;
+                }
+            }
+            current.append(ch);
+        }
+
+        String token = current.toString().trim();
+        if (!token.isEmpty()) {
+            parts.add(token);
+        }
+        return parts;
     }
 
     /**
@@ -620,9 +799,9 @@ public class MarkdownParser {
     private static boolean isReservedInlineTag(String idText) {
         String simpleId = idText.contains(":") ? idText.substring(idText.indexOf(':') + 1) : idText;
         if ("hover".equalsIgnoreCase(simpleId)
-               || "click".equalsIgnoreCase(simpleId)
-               || "color".equalsIgnoreCase(simpleId)
-               || "o".equalsIgnoreCase(simpleId)) {
+            || "click".equalsIgnoreCase(simpleId)
+            || "color".equalsIgnoreCase(simpleId)
+            || "o".equalsIgnoreCase(simpleId)) {
             return true;
         }
 
@@ -835,9 +1014,15 @@ public class MarkdownParser {
         }
     }
 
-    private record MapLevel(int indent, Map<String, Object> map) {
-        private MapLevel {
+    private record ParseYamlMapResult(Map<String, Object> map, int nextIndex) {
+        private ParseYamlMapResult {
             Objects.requireNonNull(map, "map");
+        }
+    }
+
+    private record ParseYamlListResult(List<Object> list, int nextIndex) {
+        private ParseYamlListResult {
+            Objects.requireNonNull(list, "list");
         }
     }
 

@@ -4,6 +4,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCompone
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,21 +25,30 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
     private static Map<String, Object> freezeMap(Map<String, Object> source) {
         LinkedHashMap<String, Object> copy = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : source.entrySet()) {
-            Object value = entry.getValue();
-            if (value instanceof Map<?, ?> mapValue) {
-                LinkedHashMap<String, Object> nested = new LinkedHashMap<>();
-                for (Map.Entry<?, ?> nestedEntry : mapValue.entrySet()) {
-                    Object nestedKey = nestedEntry.getKey();
-                    if (nestedKey != null) {
-                        nested.put(String.valueOf(nestedKey), nestedEntry.getValue());
-                    }
-                }
-                copy.put(entry.getKey(), freezeMap(nested));
-            } else {
-                copy.put(entry.getKey(), value);
-            }
+            copy.put(entry.getKey(), freezeValue(entry.getValue()));
         }
         return Map.copyOf(copy);
+    }
+
+    private static Object freezeValue(@Nullable Object value) {
+        if (value instanceof Map<?, ?> mapValue) {
+            LinkedHashMap<String, Object> nested = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> nestedEntry : mapValue.entrySet()) {
+                Object nestedKey = nestedEntry.getKey();
+                if (nestedKey != null) {
+                    nested.put(String.valueOf(nestedKey), freezeValue(nestedEntry.getValue()));
+                }
+            }
+            return freezeMap(nested);
+        }
+        if (value instanceof List<?> listValue) {
+            List<Object> frozen = new ArrayList<>(listValue.size());
+            for (Object element : listValue) {
+                frozen.add(freezeValue(element));
+            }
+            return List.copyOf(frozen);
+        }
+        return value;
     }
 
     /**
@@ -75,23 +85,24 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
     }
 
     /**
-     * 从 Front Matter 中读取绑定物品 ID。
+     * 从 Front Matter 中读取绑定物品列表。
      *
      * <p>支持以下字段（按优先级）：</p>
      * <ul>
-     *   <li>{@code guide.item_id}</li>
+     *   <li>{@code guide.items}</li>
      *   <li>{@code guide.item}</li>
-     *   <li>{@code item_id}</li>
+     *   <li>{@code guide.item_id}（兼容旧字段）</li>
+     *   <li>{@code items}</li>
      *   <li>{@code item}</li>
+     *   <li>{@code item_id}（兼容旧字段）</li>
      * </ul>
      */
-    public Optional<ResourceLocation> getGuideItemId() {
-        return this.resolveGuideItemIdValue()
-            .map(value -> {
-                ResourceLocation parsed = ResourceLocation.tryParse(value);
-                return parsed;
-            })
-            .filter(java.util.Objects::nonNull);
+    public List<GuideItemBinding> getGuideItemBindings() {
+        List<GuideItemBinding> bindings = new ArrayList<>();
+        for (String value : this.resolveGuideItemValues()) {
+            GuideItemBinding.parse(value).ifPresent(bindings::add);
+        }
+        return List.copyOf(bindings);
     }
 
     private Optional<String> resolveFrontMatterTitle() {
@@ -107,26 +118,35 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
         return title == null ? Optional.empty() : Optional.of(title);
     }
 
-    private Optional<String> resolveGuideItemIdValue() {
+    private List<String> resolveGuideItemValues() {
         Object guide = this.frontMatter.get("guide");
         if (guide instanceof Map<?, ?> guideMap) {
-            String nestedItemId = stringValue(guideMap.get("item_id"));
-            if (nestedItemId != null) {
-                return Optional.of(nestedItemId);
+            List<String> nestedItems = stringValues(guideMap.get("items"));
+            if (!nestedItems.isEmpty()) {
+                return nestedItems;
             }
             String nestedItem = stringValue(guideMap.get("item"));
             if (nestedItem != null) {
-                return Optional.of(nestedItem);
+                return List.of(nestedItem);
+            }
+            String nestedItemId = stringValue(guideMap.get("item_id"));
+            if (nestedItemId != null) {
+                return List.of(nestedItemId);
             }
         }
 
-        String itemId = stringValue(this.frontMatter.get("item_id"));
-        if (itemId != null) {
-            return Optional.of(itemId);
+        List<String> items = stringValues(this.frontMatter.get("items"));
+        if (!items.isEmpty()) {
+            return items;
         }
 
         String item = stringValue(this.frontMatter.get("item"));
-        return item == null ? Optional.empty() : Optional.of(item);
+        if (item != null) {
+            return List.of(item);
+        }
+
+        String itemId = stringValue(this.frontMatter.get("item_id"));
+        return itemId == null ? List.of() : List.of(itemId);
     }
 
     private Optional<String> resolveTopHeadingTitle() {
@@ -160,6 +180,25 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
             return trimmed.isEmpty() ? null : trimmed;
         }
         return null;
+    }
+
+    private static List<String> stringValues(@Nullable Object value) {
+        String singleValue = stringValue(value);
+        if (singleValue != null) {
+            return List.of(singleValue);
+        }
+        if (!(value instanceof List<?> listValue)) {
+            return List.of();
+        }
+
+        List<String> values = new ArrayList<>(listValue.size());
+        for (Object element : listValue) {
+            String stringElement = stringValue(element);
+            if (stringElement != null) {
+                values.add(stringElement);
+            }
+        }
+        return values.isEmpty() ? List.of() : List.copyOf(values);
     }
 }
 
