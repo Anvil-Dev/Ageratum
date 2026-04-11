@@ -552,7 +552,7 @@ public abstract class MDComponent {
                 openTagPattern,
                 matcher,
                 closeTag,
-                (innerText, style, matcher1) -> FormattedText.of(innerText, styleFactory.apply(style, matcher1))
+                (innerText, style, matcher1) -> parseStyledText(innerText, styleFactory.apply(style, matcher1))
             );
         }
 

@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
@@ -175,6 +176,11 @@ public final class BuiltinInlineStyleParsers {
                 GRADIENT_TAG_PATTERN,
                 "</gradient>",
                 (innerText, parentStyle, matcher) -> {
+                    // Keep nested tags functional by delegating to the default recursive inline parser.
+                    if (innerText.indexOf('<') >= 0) {
+                        return MDComponent.parseStyledText(innerText, parentStyle);
+                    }
+
                     String rawAttributes = matcher.group(1);
                     String startColor = getTagAttribute(rawAttributes, "start");
                     String endColor = getTagAttribute(rawAttributes, "end");
