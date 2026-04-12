@@ -7,6 +7,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MD
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNoticeBoxComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
@@ -108,6 +109,17 @@ public final class BuiltinExtensionComponents {
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "entity",
             () -> MDEntityComponent::parse
+        );
+
+    /**
+     * LaTeX 扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <latex formula="..."/>}。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> LATEX =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "latex",
+            () -> MDLatexComponent::parse
         );
 
 

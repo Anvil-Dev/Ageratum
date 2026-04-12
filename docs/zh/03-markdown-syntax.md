@@ -153,6 +153,20 @@ ___
 ![图片描述](namespace:textures/路径/图片.png)
 ```
 
+### 公式图片（LaTeX）
+
+为兼容旧语法，支持单行方括号写法：
+
+```markdown
+[latex:E=mc^2]
+[tex,\frac{a}{b}]
+[formula!\int_0^1 x^2 dx]
+```
+
+- `tex`、`latex`、`formula` 前缀等价
+- 分隔符控制缩放：`,` = `0.75x`，`!` = `1.5x`，`+` = `2.0x`，`:`/`;` = `1.0x`
+- 该语法按独占一行的块组件解析
+
 ---
 
 ## 行内元素
@@ -291,14 +305,15 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 
 ## 内置扩展组件
 
-| 组件 ID                    | 触发方式                         | 外观              |
-|--------------------------|------------------------------|-----------------|
-| `ageratum:info`          | `::: info` 或 `<info/>`       | 🔵 蓝色信息框        |
-| `ageratum:tip`           | `::: tip` 或 `<tip/>`         | 🟢 绿色建议框        |
-| `ageratum:warning`       | `::: warning` 或 `<warning/>` | 🟠 橙色警告框        |
-| `ageratum:danger`        | `::: danger` 或 `<danger/>`   | 🔴 红色危险框        |
-| `ageratum:recipe`        | `<recipe id="..."/>`         | 配方渲染            |
-| `ageratum:structure`     | `<structure id="..."/>`      | 结构 NBT 摘要 + 树视图 |
+| 组件 ID                | 触发方式                                     | 外观              |
+|----------------------|------------------------------------------|-----------------|
+| `ageratum:info`      | `::: info` 或 `<info/>`                   | 🔵 蓝色信息框        |
+| `ageratum:tip`       | `::: tip` 或 `<tip/>`                     | 🟢 绿色建议框        |
+| `ageratum:warning`   | `::: warning` 或 `<warning/>`             | 🟠 橙色警告框        |
+| `ageratum:danger`    | `::: danger` 或 `<danger/>`               | 🔴 红色危险框        |
+| `ageratum:recipe`    | `<recipe id="..."/>`                     | 配方渲染            |
+| `ageratum:structure` | `<structure id="..."/>`                  | 结构 NBT 摘要 + 树视图 |
+| `ageratum:latex`     | `<latex formula="..."/>` 或 `[latex:...]` | LaTeX 公式图片      |
 
 ### 配方组件
 
@@ -402,7 +417,6 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 - 引用块内嵌套块级元素（如引用中的列表、代码块）
 - 脚注（Footnotes）
 - 定义列表（Definition Lists）
-- 数学公式（LaTeX/MathJax）
 - HTML 块（Raw HTML Blocks）
 - 任务列表复选框点击（仅渲染，不可交互）
 

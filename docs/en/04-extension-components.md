@@ -1,12 +1,14 @@
 # Extension Components
 
-This document explains how to register custom block-level extension components, allowing your mod to use custom rendering blocks inside Ageratum documents.
+This document explains how to register custom block-level extension components, allowing your mod to use custom rendering blocks inside
+Ageratum documents.
 
 ---
 
 ## Overview
 
-**Extension Components** are custom block-level elements that can be rendered in Ageratum documents. By registering an `MDExtensionComponentFactory`, developers can insert custom rendering content into documents using either of two syntaxes:
+**Extension Components** are custom block-level elements that can be rendered in Ageratum documents. By registering an
+`MDExtensionComponentFactory`, developers can insert custom rendering content into documents using either of two syntaxes:
 
 ```markdown
 <!-- Colon syntax -->
@@ -49,7 +51,8 @@ public record MDExtensionContext(
     Map<String, String> params,        // Parsed key-value pairs (tag syntax)
     List<MDComponent> renderedContent, // Parsed child components from block content
     String rawContent                  // Raw block content text
-) {}
+) {
+}
 ```
 
 ### `MDComponent` (Base Class)
@@ -59,16 +62,20 @@ All components must extend `MDComponent` and implement:
 ```java
 public abstract class MDComponent {
     /** Render the component within the given bounds */
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft,
-                       int maxX, int maxY, float mouseX, float mouseY);
+    public void render(
+        GuiGraphics guiGraphics, Minecraft minecraft,
+        int maxX, int maxY, float mouseX, float mouseY
+    );
 
     /** Calculate the component's rendered height within the given width */
     public int getHeight(Minecraft minecraft, int maxX, int maxY);
 
     /** Get the text style at a given coordinate (for click/hover) */
     @Nullable
-    public Style getStyleAtPosition(Minecraft minecraft, double mouseX,
-                                    double mouseY, int maxX);
+    public Style getStyleAtPosition(
+        Minecraft minecraft, double mouseX,
+        double mouseY, int maxX
+    );
 }
 ```
 
@@ -104,8 +111,10 @@ public class MyCustomComponent extends MDComponent {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft,
-                       int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        GuiGraphics guiGraphics, Minecraft minecraft,
+        int maxX, int maxY, float mouseX, float mouseY
+    ) {
         // Draw label header
         guiGraphics.drawString(minecraft.font, "▶ " + this.label, 0, 0, 0xFF5500, false);
         int yOffset = minecraft.font.lineHeight + 2;
@@ -116,8 +125,10 @@ public class MyCustomComponent extends MDComponent {
             if (yOffset + childHeight > maxY) break;
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate(8, yOffset, 0);
-            child.render(guiGraphics, minecraft, maxX - 8, maxY - yOffset,
-                         mouseX - 8, mouseY - yOffset);
+            child.render(
+                guiGraphics, minecraft, maxX - 8, maxY - yOffset,
+                mouseX - 8, mouseY - yOffset
+            );
             guiGraphics.pose().popPose();
             yOffset += childHeight;
         }
@@ -134,14 +145,18 @@ public class MyCustomComponent extends MDComponent {
 
     @Nullable
     @Override
-    public Style getStyleAtPosition(Minecraft minecraft,
-                                    double mouseX, double mouseY, int maxX) {
+    public Style getStyleAtPosition(
+        Minecraft minecraft,
+        double mouseX, double mouseY, int maxX
+    ) {
         int yOffset = minecraft.font.lineHeight + 2;
         for (MDComponent child : this.children) {
             int childHeight = child.getHeight(minecraft, maxX - 8, Integer.MAX_VALUE);
             if (mouseY >= yOffset && mouseY < yOffset + childHeight) {
-                return child.getStyleAtPosition(minecraft,
-                                                mouseX - 8, mouseY - yOffset, maxX - 8);
+                return child.getStyleAtPosition(
+                    minecraft,
+                    mouseX - 8, mouseY - yOffset, maxX - 8
+                );
             }
             yOffset += childHeight;
         }
@@ -183,7 +198,8 @@ public final class MyModExtensionComponents {
             }
         );
 
-    private MyModExtensionComponents() {}
+    private MyModExtensionComponents() {
+    }
 }
 ```
 
@@ -218,7 +234,7 @@ This is the section content. Full Markdown is supported here.
 
 - List item 1
 - List item 2
-</mymod:section>
+  </mymod:section>
 
 <!-- Colon syntax (params passed as raw string) -->
 ::: mymod:section label="Important Notice"
@@ -239,8 +255,8 @@ Tag syntax `<mymod:component key="value" flag=true>` params are parsed into a `M
 
 ```java
 Map<String, String> params = context.params();
-String id    = params.get("id");     // "value"
-String flag  = params.get("flag");   // "true" (as String)
+String id = params.get("id");     // "value"
+String flag = params.get("flag");   // "true" (as String)
 ```
 
 - Parameter names support letters, digits, `_`, `:`, and `-`
@@ -262,7 +278,8 @@ String raw = context.rawParams(); // "raw param string"
 
 ## Block Content
 
-`context.renderedContent()` contains the parsed `MDComponent` list from the block content, in document order. Pass it directly to container components for rendering.
+`context.renderedContent()` contains the parsed `MDComponent` list from the block content, in document order. Pass it directly to container
+components for rendering.
 
 `context.rawContent()` contains the raw text of the block content, useful when you need to re-parse or further process it.
 
@@ -311,12 +328,14 @@ public class ColoredNoticeComponent extends MDComponent {
 
 // Registration
 public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> CUSTOM_NOTICE =
-    EXTENSION_COMPONENTS.register("notice", () -> context -> {
-        String colorStr = context.params().getOrDefault("color", "5555FF");
-        String icon     = context.params().getOrDefault("icon", "ℹ");
-        int color = Integer.parseInt(colorStr, 16);
-        return new ColoredNoticeComponent(color, icon, context.renderedContent());
-    });
+    EXTENSION_COMPONENTS.register(
+        "notice", () -> context -> {
+            String colorStr = context.params().getOrDefault("color", "5555FF");
+            String icon = context.params().getOrDefault("icon", "ℹ");
+            int color = Integer.parseInt(colorStr, 16);
+            return new ColoredNoticeComponent(color, icon, context.renderedContent());
+        }
+    );
 ```
 
 Document usage:
@@ -363,11 +382,11 @@ Renders a Minecraft item in a slot frame with tooltip support.
 <item id="minecraft:potion" components='{"minecraft:potion_contents":{"potion":"minecraft:healing"}}'/>
 ```
 
-| Parameter    | Type    | Required | Default | Description                              |
-|--------------|---------|----------|---------|------------------------------------------|
+| Parameter    | Type    | Required | Default | Description                               |
+|--------------|---------|----------|---------|-------------------------------------------|
 | `id`         | string  | ✓        | —       | Item registry ID (e.g. `minecraft:apple`) |
-| `count`      | integer | ✗        | `1`     | Stack size shown in the slot             |
-| `components` | JSON    | ✗        | `{}`    | Data component map (NBT-style JSON)      |
+| `count`      | integer | ✗        | `1`     | Stack size shown in the slot              |
+| `components` | JSON    | ✗        | `{}`    | Data component map (NBT-style JSON)       |
 
 ### Block Display — `<block>`
 
@@ -380,10 +399,10 @@ Blocks without a corresponding item (technical blocks) will not render.
 <block id="minecraft:stone_bricks"/>
 ```
 
-| Parameter | Type    | Required | Default | Description                               |
-|-----------|---------|----------|---------|-------------------------------------------|
+| Parameter | Type    | Required | Default | Description                                |
+|-----------|---------|----------|---------|--------------------------------------------|
 | `id`      | string  | ✓        | —       | Block registry ID (e.g. `minecraft:stone`) |
-| `count`   | integer | ✗        | `1`     | Stack size shown in the slot              |
+| `count`   | integer | ✗        | `1`     | Stack size shown in the slot               |
 
 > **Note:** Unlike `<item>`, `<block>` looks up the **block** registry and automatically finds the
 > matching block item. You do not need to know the block item's ID separately.
@@ -399,13 +418,36 @@ The entity rotates to follow the cursor.
 <entity id="minecraft:wolf"/>
 ```
 
-| Parameter | Type  | Required | Default | Description                                                                                                                     |
-|-----------|-------|----------|---------|---------------------------------------------------------------------------------------------------------------------------------|
+| Parameter | Type   | Required | Default | Description                                                                                                                     |
+|-----------|--------|----------|---------|---------------------------------------------------------------------------------------------------------------------------------|
 | `id`      | string | ✓        | —       | Entity registry ID (e.g. `minecraft:zombie`)                                                                                    |
-| `nbt` | string | ✗  | '{}' | Entity NBT (e.g. `{Item:{id:"minecraft:diamond"}}`, External quotation marks and internal quotation marks need to be different) |
+| `nbt`     | string | ✗        | '{}'    | Entity NBT (e.g. `{Item:{id:"minecraft:diamond"}}`, External quotation marks and internal quotation marks need to be different) |
 
 > **Note:** Only entity types that can be rendered as `LivingEntity` are supported.
 > Non-living entities will show a load-failed placeholder.
+
+### LaTeX Formula — `<latex>` and `[latex:...]`
+
+Renders formulas as remote PNG textures (cached locally).
+
+```markdown
+<latex formula="E=mc^2"/>
+<latex formula="\\frac{a}{b}" scale="1.2" dpi="150" color="#000000" center="true"/>
+
+[latex:E=mc^2]
+[tex,\\frac{a}{b}]
+[formula!\\int_0^1 x^2 dx]
+```
+
+| Parameter | Type    | Required | Default           | Description                           |
+|-----------|---------|----------|-------------------|---------------------------------------|
+| `formula` | string  | ✓        | —                 | LaTeX formula body                    |
+| `scale`   | number  | ✗        | component default | Formula image scale multiplier        |
+| `dpi`     | integer | ✗        | `150`             | Render DPI sent to CodeCogs           |
+| `color`   | string  | ✗        | `000000`          | RGB hex color (`#RRGGBB` or `RRGGBB`) |
+| `center`  | boolean | ✗        | `true`            | Whether to center the image           |
+
+Legacy bracket syntax only matches a full line and supports scale delimiters (`: ; , ! +`).
 
 ---
 

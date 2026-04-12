@@ -9,6 +9,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDListCom
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDQuoteComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTableComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
@@ -96,6 +97,7 @@ public class MarkdownParser {
 
     private void registerBaseComponentParser() {
         this.registerComponentParser(-10, MDImageComponent::parse);
+        this.registerComponentParser(-9, (sourceLocation, text) -> MDLatexComponent.parseLegacyLine(text));
         this.registerComponentParser(0, MDHeaderComponent::parse);
     }
 

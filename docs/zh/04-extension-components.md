@@ -49,7 +49,8 @@ public record MDExtensionContext(
     Map<String, String> params,   // 解析后的参数键值对（标签语法时可用）
     List<MDComponent> renderedContent, // 块内容解析后的子组件列表
     String rawContent             // 块内容的原始文本
-) {}
+) {
+}
 ```
 
 ### `MDComponent`（基类）
@@ -59,16 +60,20 @@ public record MDExtensionContext(
 ```java
 public abstract class MDComponent {
     /** 在给定区域内渲染组件内容 */
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft,
-                       int maxX, int maxY, float mouseX, float mouseY);
+    public void render(
+        GuiGraphics guiGraphics, Minecraft minecraft,
+        int maxX, int maxY, float mouseX, float mouseY
+    );
 
     /** 计算组件在指定宽度下的渲染高度 */
     public int getHeight(Minecraft minecraft, int maxX, int maxY);
 
     /** 获取指定坐标对应的文本样式（用于点击/悬停交互） */
     @Nullable
-    public Style getStyleAtPosition(Minecraft minecraft, double mouseX,
-                                    double mouseY, int maxX);
+    public Style getStyleAtPosition(
+        Minecraft minecraft, double mouseX,
+        double mouseY, int maxX
+    );
 }
 ```
 
@@ -105,8 +110,10 @@ public class MyCustomComponent extends MDComponent {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft,
-                       int maxX, int maxY, float mouseX, float mouseY) {
+    public void render(
+        GuiGraphics guiGraphics, Minecraft minecraft,
+        int maxX, int maxY, float mouseX, float mouseY
+    ) {
         // 绘制标签头部
         guiGraphics.drawString(minecraft.font, "▶ " + this.label, 0, 0, 0xFF5500, false);
         int yOffset = minecraft.font.lineHeight + 2;
@@ -181,7 +188,8 @@ public final class MyModExtensionComponents {
             }
         );
 
-    private MyModExtensionComponents() {}
+    private MyModExtensionComponents() {
+    }
 }
 ```
 
@@ -216,7 +224,7 @@ public class MyModClient {
 
 - 列表项 1
 - 列表项 2
-</mymod:section>
+  </mymod:section>
 
 <!-- 冒号语法（参数以空格分隔的原始字符串传入） -->
 ::: mymod:section label="重要说明"
@@ -313,12 +321,14 @@ public class ColoredNoticeComponent extends MDComponent {
 
 // 注册
 public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> CUSTOM_NOTICE =
-    EXTENSION_COMPONENTS.register("notice", () -> context -> {
-        String colorStr = context.params().getOrDefault("color", "5555FF");
-        String icon = context.params().getOrDefault("icon", "ℹ");
-        int color = Integer.parseInt(colorStr, 16);
-        return new ColoredNoticeComponent(color, icon, context.renderedContent());
-    });
+    EXTENSION_COMPONENTS.register(
+        "notice", () -> context -> {
+            String colorStr = context.params().getOrDefault("color", "5555FF");
+            String icon = context.params().getOrDefault("icon", "ℹ");
+            int color = Integer.parseInt(colorStr, 16);
+            return new ColoredNoticeComponent(color, icon, context.renderedContent());
+        }
+    );
 ```
 
 文档使用：
@@ -365,11 +375,11 @@ Ageratum 自带若干内置扩展组件，可在任意文档中直接使用。
 <item id="minecraft:potion" components='{"minecraft:potion_contents":{"potion":"minecraft:healing"}}'/>
 ```
 
-| 参数           | 类型    | 必填 | 默认值 | 说明                              |
-|--------------|---------|------|-------|----------------------------------|
-| `id`         | 字符串  | ✓    | —     | 物品注册表 ID（如 `minecraft:apple`）  |
-| `count`      | 整数    | ✗    | `1`   | 物品格中显示的堆叠数量                |
-| `components` | JSON    | ✗    | `{}`  | 数据组件映射（NBT 风格 JSON）         |
+| 参数           | 类型   | 必填 | 默认值  | 说明                            |
+|--------------|------|----|------|-------------------------------|
+| `id`         | 字符串  | ✓  | —    | 物品注册表 ID（如 `minecraft:apple`） |
+| `count`      | 整数   | ✗  | `1`  | 物品格中显示的堆叠数量                   |
+| `components` | JSON | ✗  | `{}` | 数据组件映射（NBT 风格 JSON）           |
 
 ### 方块展示 — `<block>`
 
@@ -382,10 +392,10 @@ Ageratum 自带若干内置扩展组件，可在任意文档中直接使用。
 <block id="minecraft:stone_bricks"/>
 ```
 
-| 参数      | 类型    | 必填 | 默认值 | 说明                               |
-|---------|---------|------|-------|-----------------------------------|
-| `id`    | 字符串  | ✓    | —     | 方块注册表 ID（如 `minecraft:stone`）  |
-| `count` | 整数    | ✗    | `1`   | 物品格中显示的堆叠数量               |
+| 参数      | 类型  | 必填 | 默认值 | 说明                            |
+|---------|-----|----|-----|-------------------------------|
+| `id`    | 字符串 | ✓  | —   | 方块注册表 ID（如 `minecraft:stone`） |
+| `count` | 整数  | ✗  | `1` | 物品格中显示的堆叠数量                   |
 
 > **注意：** 与 `<item>` 不同，`<block>` 查询的是**方块**注册表，自动匹配对应的方块物品。
 > 你不需要知道方块物品的独立 ID。
@@ -406,6 +416,29 @@ Ageratum 自带若干内置扩展组件，可在任意文档中直接使用。
 | `nbt` | 字符串 | ✗  | '{}' | 实体NBT（如 `{Item:{id:"minecraft:diamond"}}`，外部引号与内部引号需不同） |
 
 > **注意：** 仅支持可渲染为 `LivingEntity` 的实体类型；非生物实体会显示加载失败提示。
+
+### LaTeX 公式 — `<latex>` 与 `[latex:...]`
+
+将公式渲染为远程 PNG 纹理（本地缓存）。
+
+```markdown
+<latex formula="E=mc^2"/>
+<latex formula="\\frac{a}{b}" scale="1.2" dpi="150" color="#000000" center="true"/>
+
+[latex:E=mc^2]
+[tex,\\frac{a}{b}]
+[formula!\\int_0^1 x^2 dx]
+```
+
+| 参数        | 类型  | 必填 | 默认值      | 说明                               |
+|-----------|-----|----|----------|----------------------------------|
+| `formula` | 字符串 | ✓  | —        | LaTeX 公式正文                       |
+| `scale`   | 数值  | ✗  | 组件默认值    | 公式图片缩放倍率                         |
+| `dpi`     | 整数  | ✗  | `150`    | 发送给 CodeCogs 的渲染 DPI             |
+| `color`   | 字符串 | ✗  | `000000` | RGB 十六进制颜色（`#RRGGBB` 或 `RRGGBB`） |
+| `center`  | 布尔值 | ✗  | `true`   | 是否居中绘制                           |
+
+兼容方括号语法仅在独占一行时生效，并支持缩放分隔符（`: ; , ! +`）。
 
 ---
 

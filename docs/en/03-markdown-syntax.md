@@ -153,6 +153,20 @@ Images **must be on their own line** and use namespace-qualified paths:
 ![Description](namespace:textures/path/image.png)
 ```
 
+### Formula Images (LaTeX)
+
+Single-line bracket syntax is supported for compatibility:
+
+```markdown
+[latex:E=mc^2]
+[tex,\frac{a}{b}]
+[formula!\int_0^1 x^2 dx]
+```
+
+- `tex`, `latex`, and `formula` are equivalent prefixes
+- Delimiters control scale: `,` = `0.75x`, `!` = `1.5x`, `+` = `2.0x`, `:`/`;` = `1.0x`
+- This syntax is parsed as a standalone block component (formula line only)
+
 ---
 
 ## Inline Elements
@@ -281,7 +295,8 @@ structure files stored under `data/<namespace>/structure/*.nbt`:
 - `id` / `path`: required, target structure file `ResourceLocation`
 - `maxDepth`: optional, maximum expansion depth, default `2`
 - `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
-- Relative paths are supported, for example `./test.nbt` or `../shared/demo.nbt`, resolved against the current document directory and able to point to `.nbt` files placed next to the Markdown document inside the resource pack
+- Relative paths are supported, for example `./test.nbt` or `../shared/demo.nbt`, resolved against the current document directory and able
+  to point to `.nbt` files placed next to the Markdown document inside the resource pack
 - In preview mode, relative paths are loaded from the matching location under `run/ageratum_review/`
 - Rendered content: structure size, palette/block/entity counts, a top-down block preview, and a depth-limited NBT tree
 - Hovering a block in the preview shows its block ID, structure coordinates, palette index, and whether it carries block-entity NBT
@@ -291,14 +306,15 @@ structure files stored under `data/<namespace>/structure/*.nbt`:
 
 ## Built-in Extension Components
 
-| Component ID             | Trigger                       | Appearance                   |
-|--------------------------|-------------------------------|------------------------------|
-| `ageratum:info`          | `::: info` or `<info/>`       | 🔵 Blue info box             |
-| `ageratum:tip`           | `::: tip` or `<tip/>`         | 🟢 Green tip box             |
-| `ageratum:warning`       | `::: warning` or `<warning/>` | 🟠 Orange warning box        |
-| `ageratum:danger`        | `::: danger` or `<danger/>`   | 🔴 Red danger box            |
-| `ageratum:recipe`        | `<recipe id="..."/>`          | Recipe rendering             |
-| `ageratum:structure`     | `<structure id="..."/>`       | Structure NBT summary + tree |
+| Component ID         | Trigger                                   | Appearance                   |
+|----------------------|-------------------------------------------|------------------------------|
+| `ageratum:info`      | `::: info` or `<info/>`                   | 🔵 Blue info box             |
+| `ageratum:tip`       | `::: tip` or `<tip/>`                     | 🟢 Green tip box             |
+| `ageratum:warning`   | `::: warning` or `<warning/>`             | 🟠 Orange warning box        |
+| `ageratum:danger`    | `::: danger` or `<danger/>`               | 🔴 Red danger box            |
+| `ageratum:recipe`    | `<recipe id="..."/>`                      | Recipe rendering             |
+| `ageratum:structure` | `<structure id="..."/>`                   | Structure NBT summary + tree |
+| `ageratum:latex`     | `<latex formula="..."/>` or `[latex:...]` | LaTeX formula image          |
 
 ### Recipe Component
 
@@ -402,7 +418,6 @@ The following Markdown elements are **not currently supported**:
 - Block elements nested inside blockquotes (e.g. lists or code blocks within `>`)
 - Footnotes
 - Definition Lists
-- Math formulas (LaTeX/MathJax)
 - Raw HTML blocks
 - Interactive task list checkboxes (rendered only, not clickable)
 
