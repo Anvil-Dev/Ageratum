@@ -80,7 +80,8 @@ public abstract class MDRecipeComponent extends MDImageComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        return this.width;
+        Size size = new Size(this.width, this.height, 1.0f);
+        return this.computeRenderSize(size, maxX, maxY).width();
     }
 
     /**
@@ -200,6 +201,14 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                 }
             }
             return false;
+        }
+
+        @Override
+        public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+            if (this.component == null) {
+                return this.emptyComponent.getPreferredWidth(minecraft, maxX, maxY);
+            }
+            return this.component.getPreferredWidth(minecraft, maxX, maxY);
         }
 
         @Override

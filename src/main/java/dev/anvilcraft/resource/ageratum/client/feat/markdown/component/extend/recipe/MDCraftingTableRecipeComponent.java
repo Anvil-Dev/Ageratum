@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 
 import javax.annotation.Nullable;
 
@@ -49,7 +50,7 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             this.resultItem = null;
             return;
         }
-        this.ingredients = recipe.getIngredients();
+        this.ingredients = MDCraftingTableRecipeComponent.getIngredients(recipe);
         this.resultItem = recipe.getResultItem(level.registryAccess());
     }
 
@@ -77,5 +78,22 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
         this.renderTooltip(context, this.resultItem, 93, 19, mouseX, mouseY);
         pose.popPose();
+    }
+
+    private static NonNullList<Ingredient> getIngredients(CraftingRecipe recipe) {
+        NonNullList<Ingredient> ingredients = recipe.getIngredients();
+        if (!(recipe instanceof ShapedRecipe shaped)) return ingredients;
+
+        int width = shaped.pattern.width();
+        int height = shaped.pattern.height();
+        if (width == 3 && height == 3) return ingredients;
+
+        NonNullList<Ingredient> result = NonNullList.withSize(3 * 3, Ingredient.EMPTY);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                result.set(x + y * 3, ingredients.get(x + y * width));
+            }
+        }
+        return result;
     }
 }

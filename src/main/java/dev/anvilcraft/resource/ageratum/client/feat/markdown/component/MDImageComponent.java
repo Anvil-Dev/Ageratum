@@ -193,7 +193,8 @@ public class MDImageComponent extends MDComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        return this.resolveSize(minecraft).width;
+        Size size = this.resolveSize(minecraft);
+        return this.computeRenderSize(size, maxX, maxY).width();
     }
 
     /**
