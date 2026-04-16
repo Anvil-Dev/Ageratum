@@ -97,7 +97,7 @@ public class MDItemComponent extends MDImageComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        return 32;
+        return Math.max(32, this.itemStack != null ? minecraft.font.width(this.itemStack.getHoverName()) : 0);
     }
 
     @Override

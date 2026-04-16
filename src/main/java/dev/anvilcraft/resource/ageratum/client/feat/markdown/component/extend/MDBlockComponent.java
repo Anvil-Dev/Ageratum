@@ -132,7 +132,7 @@ public class MDBlockComponent extends MDImageComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        return 32;
+        return Math.max(32, this.blockState != null ? minecraft.font.width(this.blockState.getBlock().getName()) : 0);
     }
 
     @Override
