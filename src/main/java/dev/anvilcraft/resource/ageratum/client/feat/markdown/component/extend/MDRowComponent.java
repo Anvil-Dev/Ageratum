@@ -258,7 +258,7 @@ public class MDRowComponent extends MDComponent {
 
             if (preferredWidth > 0) {
                 int remaining = availableWidth - usedWidth;
-                widths[i] = Math.clamp(preferredWidth, 1, remaining);
+                widths[i] = Math.max(1, Math.min(preferredWidth, remaining));
                 usedWidth += widths[i];
             } else {
                 widths[i] = -1;
