@@ -101,7 +101,8 @@ public final class MDEntityComponent extends MDComponent {
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
         Entity entity = this.cachedEntity;
         if (entity == null) return super.getPreferredWidth(minecraft, maxX, maxY);
-        return Math.max(this.getContentWidth(maxX), minecraft.font.width(entity.getName()));
+        int textWidth = this.showText ? minecraft.font.width(entity.getName()) : 0;
+        return Math.max(this.getContentWidth(maxX), textWidth);
     }
 
     @Override
