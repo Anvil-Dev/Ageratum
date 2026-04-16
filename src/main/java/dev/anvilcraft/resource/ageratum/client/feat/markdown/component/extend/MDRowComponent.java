@@ -45,10 +45,6 @@ public class MDRowComponent extends MDComponent {
     private final HorizontalAlign horizontalAlign;
     private final VerticalAlign verticalAlign;
 
-    public MDRowComponent(List<MDComponent> contentComponents) {
-        this(contentComponents, Direction.HORIZONTAL, HorizontalAlign.LEFT, VerticalAlign.TOP);
-    }
-
     public MDRowComponent(
         List<MDComponent> contentComponents,
         Direction direction,
@@ -73,7 +69,7 @@ public class MDRowComponent extends MDComponent {
 
         // 说明：
         // - halign 用于：水平排列时整体在 maxX 内的对齐；垂直排列时子组件在 maxX 内的对齐。
-        // - valign 用于：水平排��时子组件在该行高度内的对齐（上/中/下）。
+        // - valign 用于：水平排列时子组件在该行高度内的对齐（上/中/下）。
         HorizontalAlign horizontalAlign = parseHorizontalAlign(
             params.getOrDefault("halign", params.getOrDefault("alignX", params.getOrDefault("xAlign", params.getOrDefault("align", "left"))))
         );
@@ -243,7 +239,7 @@ public class MDRowComponent extends MDComponent {
     /**
      * 计算水平排列时每个子组件应分配的宽度。
      *
-     * <p>优先��用子组件声明的期望宽度（通过 {@link MDComponent#getPreferredWidth}），
+     * <p>优先使用子组件声明的期望宽度（通过 {@link MDComponent#getPreferredWidth}），
      * 剩余空间由没有期望宽度的组件平均分配。</p>
      */
     private int[] calculateComponentWidths(Minecraft minecraft, int maxX, int maxY) {

@@ -222,7 +222,8 @@ public class MDImageComponent extends MDComponent {
 
     protected float computeScale(Size source, int maxX, int maxY) {
         int availableWidth = Math.max(1, maxX);
-        int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : availableWidth;
+        // maxY <= 0 means "unbounded" (no vertical constraint).
+        int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : maxY;
         float scale = Math.min((float) availableWidth / source.width(), (float) availableHeight / source.height());
         if (!this.shouldScaleUp()) scale = Math.min(1.0f, scale);
         return scale;
