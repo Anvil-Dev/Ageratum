@@ -191,6 +191,11 @@ public class MDImageComponent extends MDComponent {
         RenderSystem.disableBlend();
     }
 
+    @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        return this.resolveSize(minecraft).width;
+    }
+
     /**
      * 返回图片在目标区域中的渲染高度。
      */

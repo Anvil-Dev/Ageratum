@@ -38,12 +38,14 @@ public class MDItemComponent extends MDImageComponent {
     protected final ResourceLocation itemLoc;
     protected final int count;
     protected final @Nullable JsonElement components;
+    protected final boolean showText;
 
-    public MDItemComponent(ResourceLocation itemLoc, int count, @Nullable JsonElement components) {
+    public MDItemComponent(ResourceLocation itemLoc, int count, @Nullable JsonElement components, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.itemLoc = itemLoc;
         this.count = count;
         this.components = components;
+        this.showText = showText;
     }
 
     @Override
@@ -57,10 +59,13 @@ public class MDItemComponent extends MDImageComponent {
         GuiGraphics graphics = context.graphics();
         ItemStack itemStack = this.getItemStack();
         Font font = context.minecraft().font;
-        if (itemStack != null) {
-            graphics.renderItem(itemStack, 8, 8);
-            graphics.renderItemDecorations(font, itemStack, 8, 8);
-            this.renderTooltip(context, itemStack, 8, 8, mouseX, mouseY);
+        if (itemStack == null) return;
+
+        graphics.renderItem(itemStack, 8, 8);
+        graphics.renderItemDecorations(font, itemStack, 8, 8);
+        this.renderTooltip(context, itemStack, 8, 8, mouseX, mouseY);
+
+        if (this.showText) {
             Component hoverName = itemStack.getHoverName();
             int width = font.width(hoverName);
             graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
@@ -91,8 +96,14 @@ public class MDItemComponent extends MDImageComponent {
     }
 
     @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        return 32;
+    }
+
+    @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        Size size = new Size(this.width, this.height + minecraft.font.lineHeight, 1.0f);
+        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        Size size = new Size(this.width, this.height + textHeight, 1.0f);
         return this.computeRenderSize(size, maxX, maxY).height();
     }
 
@@ -117,6 +128,7 @@ public class MDItemComponent extends MDImageComponent {
         } catch (Exception e) {
             return new MDTextComponent("[错误：item 的 components 参数仅接受对象]");
         }
-        return new MDItemComponent(id, count, element);
+        boolean showText = Boolean.parseBoolean(context.params().getOrDefault("showText", "true"));
+        return new MDItemComponent(id, count, element, showText);
     }
 }

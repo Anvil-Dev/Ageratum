@@ -87,6 +87,41 @@ This is a dangerous warning.
 
 ---
 
+## Implemented: Row Component (Horizontal Layout)
+
+The `row` component allows you to render child components side by side:
+
+::: row
+::: info
+First column
+This is the first info box.
+:::
+
+::: tip
+Second column
+This is a tip box.
+:::
+
+::: warning
+Third column
+This is a warning.
+:::
+:::
+
+You can also use tag syntax:
+
+<row>
+
+Content in the first column.
+
+---
+
+Content in the second column.
+
+</row>
+
+---
+
 ## Implemented: Setext headings
 
 Setext heading H1

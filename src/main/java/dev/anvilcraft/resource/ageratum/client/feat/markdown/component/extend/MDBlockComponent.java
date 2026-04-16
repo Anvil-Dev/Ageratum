@@ -39,14 +39,16 @@ public class MDBlockComponent extends MDImageComponent {
 
     private final ResourceLocation blockLoc;
     private final Map<String, String> stateProps;
+    private final boolean showText;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
     private @Nullable BlockState blockState;
     private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
-    public MDBlockComponent(ResourceLocation blockLoc, Map<String, String> stateProps) {
+    public MDBlockComponent(ResourceLocation blockLoc, Map<String, String> stateProps, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.blockLoc = blockLoc;
         this.stateProps = stateProps;
+        this.showText = showText;
     }
 
     private @Nullable SandboxRenderLevel getSandboxRenderLevel(BlockState state) {
@@ -84,9 +86,11 @@ public class MDBlockComponent extends MDImageComponent {
             this.renderTooltip(context, tooltipStack, 8, 8, mouseX, mouseY);
         }
 
-        Component hoverName = state.getBlock().getName();
-        int width = font.width(hoverName);
-        graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+        if (this.showText) {
+            Component hoverName = state.getBlock().getName();
+            int width = font.width(hoverName);
+            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+        }
     }
 
     protected @Nullable BlockState getBlockState() {
@@ -127,8 +131,14 @@ public class MDBlockComponent extends MDImageComponent {
     }
 
     @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        return 32;
+    }
+
+    @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        Size size = new Size(SLOT_SIZE, SLOT_SIZE + minecraft.font.lineHeight, 1.0f);
+        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        Size size = new Size(SLOT_SIZE, SLOT_SIZE + textHeight, 1.0f);
         return this.computeRenderSize(size, maxX, maxY).height();
     }
 
@@ -159,7 +169,7 @@ public class MDBlockComponent extends MDImageComponent {
         }
 
         Map<String, String> stateProps = parseStateProps(context.params().get("state"));
-        return new MDBlockComponent(id, stateProps);
+        boolean showText = Boolean.parseBoolean(context.params().getOrDefault("showText", "true"));
+        return new MDBlockComponent(id, stateProps, showText);
     }
 }
-

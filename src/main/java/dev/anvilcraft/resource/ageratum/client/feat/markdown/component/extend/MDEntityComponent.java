@@ -37,14 +37,16 @@ import javax.annotation.Nullable;
 public final class MDEntityComponent extends MDComponent {
     private final ResourceLocation entityId;
     private final CompoundTag entityNbt;
+    private final boolean showText;
     private @Nullable Entity cachedEntity;
     private @Nullable SandboxRenderLevel cachedLevel;
     private Vector2f entityBbSize = new Vector2f(1.0F, 1.0F);
 
-    public MDEntityComponent(ResourceLocation entityId, CompoundTag entityNbt) {
+    public MDEntityComponent(ResourceLocation entityId, CompoundTag entityNbt, boolean showText) {
         super(Component.literal("[entity load failed]").withStyle(ChatFormatting.RED));
         this.entityId = entityId;
         this.entityNbt = entityNbt;
+        this.showText = showText;
     }
 
     @Override
@@ -69,9 +71,11 @@ public final class MDEntityComponent extends MDComponent {
         graphics.fill(drawX, 0, drawX + contentWidth, contentHeight, 0x22000000);
         graphics.renderOutline(drawX, 0, contentWidth, contentHeight, 0x66000000);
 
-        Component hoverName = entity.getType().getDescription();
-        int nameWidth = minecraft.font.width(hoverName);
-        graphics.drawString(minecraft.font, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
+        if (this.showText) {
+            Component hoverName = entity.getType().getDescription();
+            int nameWidth = minecraft.font.width(hoverName);
+            graphics.drawString(minecraft.font, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
+        }
 
         context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
         PoseStack pose = graphics.pose();
@@ -94,10 +98,18 @@ public final class MDEntityComponent extends MDComponent {
     }
 
     @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        Entity entity = this.cachedEntity;
+        if (entity == null) return super.getPreferredWidth(minecraft, maxX, maxY);
+        return this.getContentWidth(maxX);
+    }
+
+    @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         Entity entity = this.cachedEntity;
         if (entity == null) return super.getHeight(minecraft, maxX, maxY);
-        return this.getContentHeight() + minecraft.font.lineHeight + 2;
+        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        return this.getContentHeight() + textHeight + 2;
     }
 
     private static void renderEntity(
@@ -132,7 +144,7 @@ public final class MDEntityComponent extends MDComponent {
             living.yHeadRot = living.getYRot();
             living.yHeadRotO = living.getYRot();
         }
-        Vector3f translate = new Vector3f(0.0F, entity.getBbHeight() / 2.0F, 0.0F);
+        Vector3f translate = new Vector3f(0.0F, entity.getBbHeight() / 2.0F, entity.getBbWidth() / -2.0F);
         MDEntityComponent.renderEntity(
             graphics,
             centerX,
@@ -175,11 +187,17 @@ public final class MDEntityComponent extends MDComponent {
 
         entityrenderdispatcher.setRenderShadow(false);
         // noinspection deprecation
-        RenderSystem.runAsFancy(
-            () -> entityrenderdispatcher.render(
-                entity, 0.0, 0.0, 0.0, 0.0F, 1.0F, guiGraphics.pose(), guiGraphics.bufferSource(),
-                15728880
-            ));
+        RenderSystem.runAsFancy(() -> entityrenderdispatcher.render(
+            entity,
+            0.0,
+            0.0,
+            0.0,
+            0.0F,
+            1.0F,
+            guiGraphics.pose(),
+            guiGraphics.bufferSource(),
+            15728880
+        ));
         guiGraphics.flush();
         entityrenderdispatcher.setRenderShadow(true);
         guiGraphics.pose().popPose();
@@ -235,7 +253,9 @@ public final class MDEntityComponent extends MDComponent {
         } catch (Exception ignore) {
         }
 
-        return new MDEntityComponent(id, nbt);
+        boolean showText = Boolean.parseBoolean(context.params().getOrDefault("showText", "true"));
+
+        return new MDEntityComponent(id, nbt, showText);
     }
 }
 

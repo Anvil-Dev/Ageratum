@@ -94,6 +94,24 @@ public abstract class MDComponent {
     }
 
     /**
+     * 计算组件的期望宽度。
+     *
+     * <p>此方法主要用于行内布局（如 {@code <row>} 组件）场景，
+     * 允许组件声明其期望的渲染宽度。</p>
+     *
+     * <p>默认实现返回 {@code -1}，表示使用父容器分配的宽度。
+     * 子类可以重写此方法以声明固定宽度或最小宽度需求。</p>
+     *
+     * @param minecraft Minecraft 实例
+     * @param maxX 可用的最大宽度
+     * @param maxY 可用的最大高度
+     * @return 期望宽度（像素），{@code -1} 表示使用可用空间
+     */
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        return -1;
+    }
+
+    /**
      * 计算组件在指定宽度下的渲染高度。
      */
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {

@@ -8,6 +8,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MD
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRowComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
@@ -120,6 +121,18 @@ public final class BuiltinExtensionComponents {
         AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
             "latex",
             () -> MDLatexComponent::parse
+        );
+
+    /**
+     * 行组件扩展组件注册项。
+     *
+     * <p>对应 Markdown 扩展标签：{@code <row>...</row>} 或 {@code ::: row\n...\n:::}。</p>
+     * <p>将内部的子组件以水平方式（并排）渲染。</p>
+     */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> ROW =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register(
+            "row",
+            () -> MDRowComponent::parse
         );
 
 

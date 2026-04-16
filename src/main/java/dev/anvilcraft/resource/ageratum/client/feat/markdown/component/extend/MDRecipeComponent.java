@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -77,6 +76,11 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         boolean enableAlignCenter = "true".equals(context.params().getOrDefault("center", "true"));
         ResourceLocation location = ResourceLocation.parse(id);
         return new MDRecipeComponentProxy(location, enableAlignCenter);
+    }
+
+    @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        return this.width;
     }
 
     /**

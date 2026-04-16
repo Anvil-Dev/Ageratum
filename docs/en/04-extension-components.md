@@ -372,6 +372,61 @@ This is a danger box (red).
 :::
 ```
 
+### Row Component — `<row>` / `::: row`
+
+Renders child components side by side in a horizontal layout.
+
+**Smart Width Allocation:**
+- Components can declare their preferred width via the `getPreferredWidth()` method
+- Remaining space is evenly distributed among components without preferred width
+- This allows mixing fixed-width components (like images, items) with flexible components (like text)
+
+```markdown
+::: ageratum:row
+::: info
+First column content
+:::
+
+::: tip
+Second column content
+:::
+
+::: warning
+Third column content
+:::
+:::
+```
+
+You can also use tag syntax:
+
+```markdown
+<ageratum:row>
+
+Content for the first column.
+
+---
+
+Content for the second column.
+
+---
+
+Content for the third column.
+
+</ageratum:row>
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `direction` | string | ✗ | `horizontal` | Layout direction: `horizontal` (side-by-side) / `vertical` (stacked) |
+| `halign` | string | ✗ | `left` | Horizontal alignment: `left` / `center` / `right`.<br/>In horizontal mode: aligns the whole row within `maxX` when there is free space; in vertical mode: aligns each child within `maxX` |
+| `valign` | string | ✗ | `top` | Vertical alignment: `top` / `center` / `bottom`.<br/>Only effective when `direction=horizontal` (aligns children inside the row height) |
+
+> **Tips:**
+> - In horizontal mode, the row component automatically calculates the width of each child component.
+> - Child components can declare their preferred width by overriding `getPreferredWidth()`.
+> - Components without preferred width share the remaining space equally.
+> - A fixed 4-pixel spacing is maintained between child components.
+
 ### Item Display — `<item>`
 
 Renders a Minecraft item in a slot frame with tooltip support.

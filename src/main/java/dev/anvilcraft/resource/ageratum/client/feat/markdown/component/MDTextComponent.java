@@ -1,5 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import net.minecraft.client.Minecraft;
+
 /**
  * 纯文本段落组件。
  *
@@ -22,6 +24,11 @@ public class MDTextComponent extends MDComponent {
      */
     public MDTextComponent(String text, boolean preserveLineBreaks) {
         super(MDTextComponent.processText(text, preserveLineBreaks));
+    }
+
+    @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        return minecraft.font.width(this.text);
     }
 
     /**
