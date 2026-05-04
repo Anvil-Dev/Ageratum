@@ -2,13 +2,12 @@ package dev.anvilcraft.resource.ageratum.client.feat.structure;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
-import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
+import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
 import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,10 +22,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -38,23 +35,7 @@ import java.util.Set;
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public final class StructureProjectionManager {
     private static final float PROJECTION_ALPHA = 0.45f;
-    private static final ReferenceHolder<Set<Item>> DEFAULT_SCROLL_ITEMS = ReferenceHolder.create(() -> Set.of(Ageratum.DEFAULT_GUIDE_ITEM.get()));
-
-    public static final KeyMapping LAYER_UP_KEY = new KeyMapping(
-        "key.ageratum.structure_projection.layer_up",
-        GLFW.GLFW_KEY_PAGE_UP,
-        "key.categories.ageratum"
-    );
-    public static final KeyMapping LAYER_DOWN_KEY = new KeyMapping(
-        "key.ageratum.structure_projection.layer_down",
-        GLFW.GLFW_KEY_PAGE_DOWN,
-        "key.categories.ageratum"
-    );
-    public static final KeyMapping REMOVE_KEY = new KeyMapping(
-        "key.ageratum.structure_projection.remove",
-        GLFW.GLFW_KEY_END,
-        "key.categories.ageratum"
-    );
+    private static final ReferenceHolder<Set<Item>> DEFAULT_SCROLL_ITEMS = ReferenceHolder.create(() -> Set.of(AgeratumItems.DEFAULT_GUIDE_ITEM.get()));
 
     private static @Nullable ActiveProjection activeProjection;
 
@@ -95,7 +76,7 @@ public final class StructureProjectionManager {
         if (projection == null || scrollY == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
-        if (minecraft.screen != null || !Screen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
+        if (minecraft.screen != null /*TODO || !Screen.hasControlDown()*/ || projection.isNotInLevel(minecraft.level)) {
             return false;
         }
         if (!projection.canMoveWith(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
@@ -118,13 +99,6 @@ public final class StructureProjectionManager {
     }
 
     @SubscribeEvent
-    public static void onKeyMappingsRegister(RegisterKeyMappingsEvent event) {
-        event.register(LAYER_UP_KEY);
-        event.register(LAYER_DOWN_KEY);
-        event.register(REMOVE_KEY);
-    }
-
-    @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) {
@@ -144,40 +118,43 @@ public final class StructureProjectionManager {
             return;
         }
 
-        if (REMOVE_KEY.consumeClick()) {
+        if (AgeratumKeyMappings.REMOVE_KEY.consumeClick()) {
             activeProjection = null;
             return;
         }
-        while (LAYER_UP_KEY.consumeClick()) {
+        while (AgeratumKeyMappings.LAYER_UP_KEY.consumeClick()) {
             projection.expandVisibleLayers();
         }
-        while (LAYER_DOWN_KEY.consumeClick()) {
+        while (AgeratumKeyMappings.LAYER_DOWN_KEY.consumeClick()) {
             projection.shrinkVisibleLayers();
         }
     }
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterLevel event) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
         if (projection == null || minecraft.level == null || projection.isNotInLevel(minecraft.level)) {
             return;
         }
+        /* TODO
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             return;
         }
-
+        */
         PoseStack poseStack = event.getPoseStack();
+        /* TODO
         StructurePreviewRenderer.getInstance().renderWorldProjection(
             projection.level,
             poseStack,
             minecraft.renderBuffers().bufferSource(),
-            minecraft.gameRenderer.getMainCamera().getPosition(),
+            minecraft.gameRenderer.getMainCamera().position(),
             projection.origin,
             projection.visibleMinY,
             projection.visibleMinY + projection.visibleLayerCount,
             PROJECTION_ALPHA
         );
+        */
     }
 
     private static final class ActiveProjection {

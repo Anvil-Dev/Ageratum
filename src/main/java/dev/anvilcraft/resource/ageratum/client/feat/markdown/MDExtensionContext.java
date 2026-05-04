@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.Map;
@@ -19,8 +19,8 @@ import java.util.Map;
  * @param rawContent      块内容的原始文本。
  */
 public record MDExtensionContext(
-    ResourceLocation sourceLocation,
-    ResourceLocation id,
+    Identifier sourceLocation,
+    Identifier id,
     String rawParams,
     Map<String, String> params,
     List<MDComponent> renderedContent,

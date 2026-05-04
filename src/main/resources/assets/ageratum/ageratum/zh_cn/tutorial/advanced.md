@@ -22,7 +22,7 @@ public class MyCustomComponent extends MDComponent {
     }
     
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphicsExtractor guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         // 自定义渲染逻辑
     }
 }
@@ -89,7 +89,7 @@ ageratum/
 
 ### 检查文档位置
 
-使用命令获取当前文档的 ResourceLocation：
+使用命令获取当前文档的 Identifier：
 
 ```
 /say ageratum:en_us/guide/index

@@ -7,12 +7,12 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(SmithingTrimRecipe.class)
 public interface SmithingTrimRecipeAccessor {
-    @Accessor
-    Ingredient getTemplate();
+    @Accessor("template")
+    Ingredient template();
 
-    @Accessor
-    Ingredient getBase();
+    @Accessor("base")
+    Ingredient base();
 
-    @Accessor
-    Ingredient getAddition();
+    @Accessor("addition")
+    Ingredient addition();
 }

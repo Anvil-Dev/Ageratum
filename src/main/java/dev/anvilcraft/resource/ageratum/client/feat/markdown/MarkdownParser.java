@@ -12,7 +12,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextCom
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,21 +116,21 @@ public class MarkdownParser {
      * @param markdown 原始 Markdown 文本
      * @return 按渲染顺序排列的组件列表
      */
-    public List<MDComponent> parse(ResourceLocation sourceLocation, String markdown) {
+    public List<MDComponent> parse(Identifier sourceLocation, String markdown) {
         return this.parseDocument(sourceLocation, markdown).components();
     }
 
     /**
      * 将 Markdown 文本解析为文档模型，并携带文档来源位置。
      */
-    public MDDocument parseDocument(ResourceLocation sourceLocation, String markdown) {
+    public MDDocument parseDocument(Identifier sourceLocation, String markdown) {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         FrontMatterParseResult frontMatterParseResult = extractFrontMatter(normalized);
         List<MDComponent> components = this.parseComponents(sourceLocation, frontMatterParseResult.body());
         return new MDDocument(sourceLocation, frontMatterParseResult.frontMatter(), components);
     }
 
-    private List<MDComponent> parseComponents(ResourceLocation sourceLocation, String markdownBody) {
+    private List<MDComponent> parseComponents(Identifier sourceLocation, String markdownBody) {
         String normalized = markdownBody;
         String[] split = normalized.split("\n", -1);
 
@@ -660,7 +660,7 @@ public class MarkdownParser {
      * 创建扩展组件。
      */
     private static @Nullable MDComponent createExtensionComponent(
-        ResourceLocation sourceLocation,
+        Identifier sourceLocation,
         BlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
@@ -673,7 +673,7 @@ public class MarkdownParser {
      */
     @SuppressWarnings("SameParameterValue")
     private static @Nullable MDComponent createExtensionComponent(
-        ResourceLocation sourceLocation,
+        Identifier sourceLocation,
         SelfClosingBlockExtensionState block,
         List<MDComponent> renderedContent,
         String rawContent
@@ -683,7 +683,7 @@ public class MarkdownParser {
 
 
     private static @Nullable MDComponent getMdComponent(
-        ResourceLocation sourceLocation,
+        Identifier sourceLocation,
         List<MDComponent> renderedContent,
         String rawContent,
         SelfClosingBlockExtensionState block
@@ -716,7 +716,7 @@ public class MarkdownParser {
         // 尝试冒号语法
         Matcher colonMatcher = EXTENSION_COLON_OPEN_PATTERN.matcher(trimmed);
         if (colonMatcher.matches()) {
-            ResourceLocation id = parseExtensionId(colonMatcher.group(1));
+            Identifier id = parseExtensionId(colonMatcher.group(1));
             if (id == null) {
                 return null;
             }
@@ -730,7 +730,7 @@ public class MarkdownParser {
             if (isReservedInlineTag(tagMatcher.group(1))) {
                 return null;
             }
-            ResourceLocation id = parseExtensionId(tagMatcher.group(1));
+            Identifier id = parseExtensionId(tagMatcher.group(1));
             if (id == null) {
                 return null;
             }
@@ -748,7 +748,7 @@ public class MarkdownParser {
     /**
      * 尝试解析自闭合扩展。
      */
-    private static @Nullable MDComponent trySelfClosingExtensionBlock(ResourceLocation sourceLocation, String line) {
+    private static @Nullable MDComponent trySelfClosingExtensionBlock(Identifier sourceLocation, String line) {
         String trimmed = line.trim();
         if (containsInlineClosingTag(trimmed)) {
             return null;
@@ -759,7 +759,7 @@ public class MarkdownParser {
             if (isReservedInlineTag(tagMatcher.group(1))) {
                 return null;
             }
-            ResourceLocation id = parseExtensionId(tagMatcher.group(1));
+            Identifier id = parseExtensionId(tagMatcher.group(1));
             if (id == null || !"/".equals(tagMatcher.group(3))) {
                 return null;
             }
@@ -779,10 +779,10 @@ public class MarkdownParser {
     /**
      * 解析扩展组件 ID，支持省略 {@code ageratum:} 前缀。
      */
-    private static @Nullable ResourceLocation parseExtensionId(String idText) {
+    private static @Nullable Identifier parseExtensionId(String idText) {
         String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
         try {
-            return ResourceLocation.parse(normalized);
+            return Identifier.parse(normalized);
         } catch (RuntimeException exception) {
             return null;
         }
@@ -807,7 +807,7 @@ public class MarkdownParser {
             return true;
         }
 
-        ResourceLocation inlineComponentId = parseExtensionId(idText);
+        Identifier inlineComponentId = parseExtensionId(idText);
         if (inlineComponentId == null) {
             return false;
         }
@@ -989,7 +989,7 @@ public class MarkdownParser {
     /**
      * 使用已注册解析器尝试将一行文本解析为组件。
      */
-    public @Nullable MDComponent parseComponent(ResourceLocation sourceLocation, String string) {
+    public @Nullable MDComponent parseComponent(Identifier sourceLocation, String string) {
         for (MDComponentParserHolder parserHolder : this.mdComponentParserHolders) {
             MDComponent component = parserHolder.parser().apply(sourceLocation, string);
             if (component != null) return component;
@@ -1001,7 +1001,7 @@ public class MarkdownParser {
      * 行级组件解析函数接口。
      */
     @FunctionalInterface
-    public interface MDComponentParser extends BiFunction<ResourceLocation, String, MDComponent> {
+    public interface MDComponentParser extends BiFunction<Identifier, String, MDComponent> {
     }
 
     /**

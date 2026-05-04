@@ -16,11 +16,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.api.distmarker.Dist;
@@ -69,7 +69,7 @@ public class AgeratumCommand {
                 .then(
                     Commands.literal("structure")
                         .then(
-                            Commands.argument("template", ResourceLocationArgument.id())
+                            Commands.argument("template", IdentifierArgument.id())
                                 .suggests(SUGGEST_TEMPLATES)
                                 .then(
                                     Commands.argument("pos", BlockPosArgument.blockPos())
@@ -99,7 +99,7 @@ public class AgeratumCommand {
             source.sendFailure(Component.translatable("commands.ageratum.preview.disable"));
             return 0;
         }
-        ResourceLocation previewLocation = AgeratumClient.toPreviewLocation("index");
+        Identifier previewLocation = AgeratumClient.toPreviewLocation("index");
         if (!AgeratumClient.openGuideOnClient(previewLocation, List.of())) {
             source.sendFailure(Component.literal("Preview index.md not found: " + AgeratumClient.resolvePreviewDocumentPath(
                 previewLocation)));
@@ -112,7 +112,7 @@ public class AgeratumCommand {
      * 在指定位置显示结构投影（纯客户端，从资源包中读取模板）。
      */
     public static int structure(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ResourceLocation templateId = ResourceLocationArgument.getId(context, "template");
+        Identifier templateId = IdentifierArgument.getId(context, "template");
         BlockPos pos = BlockPosArgument.getBlockPos(context, "pos");
 
         Optional<StructureTemplate> optional = AgeratumStructureTemplateManager.get(templateId);

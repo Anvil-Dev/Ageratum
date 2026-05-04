@@ -7,18 +7,17 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
-import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -37,14 +36,14 @@ import javax.annotation.Nullable;
 public class MDBlockComponent extends MDImageComponent {
     private static final int SLOT_SIZE = 32;
 
-    private final ResourceLocation blockLoc;
+    private final Identifier blockLoc;
     private final Map<String, String> stateProps;
     private final boolean showText;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
     private @Nullable BlockState blockState;
     private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
-    public MDBlockComponent(ResourceLocation blockLoc, Map<String, String> stateProps, boolean showText) {
+    public MDBlockComponent(Identifier blockLoc, Map<String, String> stateProps, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.blockLoc = blockLoc;
         this.stateProps = stateProps;
@@ -60,17 +59,17 @@ public class MDBlockComponent extends MDImageComponent {
     }
 
     @Override
-    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics graphics = context.graphics();
+    protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphicsExtractor graphics = context.graphics();
         this.innerBlit(graphics, this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
-        this.renderBlock(context, mouseX, mouseY);
+        this.extractBlockRenderState(context, mouseX, mouseY);
     }
 
-    private void renderBlock(MDRenderContext context, float mouseX, float mouseY) {
+    private void extractBlockRenderState(MDRenderContext context, float mouseX, float mouseY) {
         BlockState state = this.getBlockState();
         if (state == null) return;
 
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         Font font = context.minecraft().font;
 
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
@@ -78,18 +77,18 @@ public class MDBlockComponent extends MDImageComponent {
             this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
             this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - context.offsetY() - context.topPos() - 24.25f);
             this.cameraRig.setOffsetX(-context.screenWidth() / 2.0f + context.leftPos() + context.offsetX() + context.maxX() / 2.0f);
-            StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
+            // TODO StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
         }
 
         ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();
         if (!tooltipStack.isEmpty()) {
-            this.renderTooltip(context, tooltipStack, 8, 8, mouseX, mouseY);
+            this.extractTooltipRenderState(context, tooltipStack, 8, 8, mouseX, mouseY);
         }
 
         if (this.showText) {
             Component hoverName = state.getBlock().getName();
             int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.text(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
 
@@ -99,7 +98,7 @@ public class MDBlockComponent extends MDImageComponent {
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return null;
 
-        Optional<HolderLookup.RegistryLookup<Block>> lookup = level.registryAccess().lookup(Registries.BLOCK);
+        Optional<Registry<Block>> lookup = level.registryAccess().lookup(Registries.BLOCK);
         if (lookup.isEmpty()) return null;
 
         Optional<Holder.Reference<Block>> blockReference = lookup.get().get(ResourceKey.create(Registries.BLOCK, this.blockLoc));
@@ -162,9 +161,9 @@ public class MDBlockComponent extends MDImageComponent {
             return new MDTextComponent("[错误：block 需要 id 参数]");
         }
 
-        ResourceLocation id;
+        Identifier id;
         try {
-            id = ResourceLocation.parse(rawId);
+            id = Identifier.parse(rawId);
         } catch (Exception e) {
             return new MDTextComponent("[错误：block 的 id 参数格式无效]");
         }

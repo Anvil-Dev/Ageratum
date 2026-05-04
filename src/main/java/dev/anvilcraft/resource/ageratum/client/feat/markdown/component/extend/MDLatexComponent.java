@@ -8,9 +8,9 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLLoader;
 
 import java.io.InputStream;
@@ -49,7 +49,7 @@ public class MDLatexComponent extends MDImageComponent {
     private final float formulaScale;
     private final String formula;
 
-    private MDLatexComponent(String stateKey, ResourceLocation textureLocation, String formula, float formulaScale, boolean center) {
+    private MDLatexComponent(String stateKey, Identifier textureLocation, String formula, float formulaScale, boolean center) {
         super(textureLocation, false, center);
         this.stateKey = stateKey;
         this.formulaScale = formulaScale;
@@ -57,19 +57,19 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         LatexTextureState state = this.ensureTextureState(context.minecraft());
         if (state.status == LatexStatus.READY) {
-            super.render(context);
+            super.extractRenderState(context);
             return;
         }
 
         if (state.status == LatexStatus.FAILED) {
-            renderPlaceholder(context.graphics(), "[LaTeX load failed] " + this.formula, 0xAA0000);
+            extractPlaceholderRenderState(context.graphics(), "[LaTeX load failed] " + this.formula, 0xAA0000);
             return;
         }
 
-        renderPlaceholder(context.graphics(), "[LaTeX loading...]", 0x555555);
+        extractPlaceholderRenderState(context.graphics(), "[LaTeX loading...]", 0x555555);
     }
 
     @Override
@@ -102,8 +102,8 @@ public class MDLatexComponent extends MDImageComponent {
         return Math.min(clampedScale, fitScale);
     }
 
-    private static void renderPlaceholder(GuiGraphics graphics, String text, int color) {
-        graphics.drawString(Minecraft.getInstance().font, text, 0, 0, color, false);
+    private static void extractPlaceholderRenderState(GuiGraphicsExtractor graphics, String text, int color) {
+        graphics.text(Minecraft.getInstance().font, text, 0, 0, color, false);
     }
 
     private LatexTextureState ensureTextureState(Minecraft minecraft) {
@@ -125,7 +125,7 @@ public class MDLatexComponent extends MDImageComponent {
             try (InputStream inputStream = Files.newInputStream(state.cacheFile)) {
                 NativeImage image = NativeImage.read(inputStream);
                 state.size = new MDImageComponent.Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()), 1.0f);
-                minecraft.getTextureManager().register(state.textureLocation, new DynamicTexture(image));
+                minecraft.getTextureManager().register(state.textureLocation, new DynamicTexture(() -> "Image", image));
                 state.status = LatexStatus.READY;
             } catch (Exception exception) {
                 log.warn("Failed to register latex texture {}", state.cacheFile, exception);
@@ -164,7 +164,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static Path getCacheDir() {
-        return FMLLoader.getGamePath().resolve("config").resolve("ageratum").resolve("cache").resolve("latex");
+        return FMLLoader.getCurrent().getGameDir().resolve("config").resolve("ageratum").resolve("cache").resolve("latex");
     }
 
     private static String sha1Hex(String text) {
@@ -229,7 +229,7 @@ public class MDLatexComponent extends MDImageComponent {
     private static MDComponent createFromFormula(String formula, float scale, int dpi, String color, boolean center) {
         String url = buildUrl(formula, dpi, color);
         String key = sha1Hex("formula=" + formula + "&dpi=" + dpi + "&color=" + color);
-        ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath("ageratum", "latex/" + key);
+        Identifier textureLocation = Identifier.fromNamespaceAndPath("ageratum", "latex/" + key);
         Path cacheFile = getCacheDir().resolve(key + ".png");
         TEXTURE_STATES.computeIfAbsent(key, ignored -> new LatexTextureState(textureLocation, cacheFile, url));
         return new MDLatexComponent(key, textureLocation, formula, scale, center);
@@ -273,13 +273,13 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static final class LatexTextureState {
-        private final ResourceLocation textureLocation;
+        private final Identifier textureLocation;
         private final Path cacheFile;
         private final String url;
         private volatile LatexStatus status = LatexStatus.NEW;
         private volatile MDImageComponent.Size size = PLACEHOLDER_SIZE;
 
-        private LatexTextureState(ResourceLocation textureLocation, Path cacheFile, String url) {
+        private LatexTextureState(Identifier textureLocation, Path cacheFile, String url) {
             this.textureLocation = textureLocation;
             this.cacheFile = cacheFile;
             this.url = url;

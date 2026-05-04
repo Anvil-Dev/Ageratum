@@ -14,7 +14,7 @@ navigation:
 
 ```java
 public record MDDocument(
-    @Nullable ResourceLocation sourceLocation,
+    @Nullable Identifier sourceLocation,
     Map<String, Object> frontMatter,
     List<MDComponent> components
 )
@@ -32,7 +32,7 @@ public record MDDocument(
 
 ```java
 public class GuideScreen extends Screen {
-    public GuideScreen(ResourceLocation documentLocation, List<MDComponent> components)
+    public GuideScreen(Identifier documentLocation, List<MDComponent> components)
     public void setAnchor(@Nullable String anchor)
 }
 ```
@@ -43,7 +43,7 @@ public class GuideScreen extends Screen {
 
 ```java
 public static class GuideDocumentLoader {
-    public static Optional<ResourceLocation> resolveExistingLocation(
+    public static Optional<Identifier> resolveExistingLocation(
         ResourceManager resourceManager,
         String namespace,
         String languageCode,

@@ -1,12 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import org.joml.Matrix3x2fStack;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,7 +39,7 @@ public class MDHeaderComponent extends MDComponent {
     /**
      * 尝试从单行文本解析标题组件。
      */
-    public static @Nullable MDHeaderComponent parse(ResourceLocation sourceLocation, String text) {
+    public static @Nullable MDHeaderComponent parse(Identifier sourceLocation, String text) {
         Matcher matcher = HEADER_PATTERN.matcher(text);
         if (!matcher.matches()) return null;
         int level = matcher.group(1).length();
@@ -78,7 +78,7 @@ public class MDHeaderComponent extends MDComponent {
      * 渲染标题文本；一级标题额外绘制一条分隔线。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -86,12 +86,12 @@ public class MDHeaderComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
-        PoseStack pose = guiGraphics.pose();
-        pose.pushPose();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
+        Matrix3x2fStack pose = guiGraphics.pose();
+        pose.pushMatrix();
         float scale = this.getScale();
-        pose.scale(scale, scale, scale);
-        super.render(
+        pose.scale(scale, scale);
+        super.extractRenderState(
             context.child(
                 this.unscale(maxX),
                 this.unscale(maxY),
@@ -102,9 +102,9 @@ public class MDHeaderComponent extends MDComponent {
         );
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
-            guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
+            guiGraphics.horizontalLine(0, Math.max(0, maxX - 1), y, 0x88000000);
         }
-        pose.popPose();
+        pose.popMatrix();
     }
 
     /**

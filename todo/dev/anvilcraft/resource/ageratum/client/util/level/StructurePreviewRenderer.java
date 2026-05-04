@@ -1,8 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.util.level;
 
-import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.shaders.FogShape;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
@@ -12,30 +10,29 @@ import dev.anvilcraft.resource.ageratum.client.util.SectionOffsetVertexConsumer;
 import dev.anvilcraft.resource.ageratum.client.util.SodiumSpriteBridge;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.LightLayer;
-import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.model.data.ModelData;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
@@ -104,17 +101,19 @@ public class StructurePreviewRenderer {
     ) {
         lightmap.update(level);
 
-        // 先清空待处理光照任务，确保本帧光照采样稳定。
+        // 先完成帧时钟更新，再准备光照与矩阵。
+        level.tickFrameClock();
+        RenderSystem.setShaderGameTime(level.getGameTime(), level.getPartialTick());
+
         var lightEngine = level.getLightEngine();
         while (lightEngine.hasLightWork()) {
             lightEngine.runLightUpdates();
         }
 
-        // 安装预览矩阵并关闭雾效，保证指南页面渲染结果稳定。
         var projectionMatrix = cameraRig.buildProjectionMatrix();
         var viewMatrix = cameraRig.buildViewMatrix();
 
-        // 基本等价于关闭关卡雾效
+        // Essentially disable level fog
         RenderSystem.setShaderFogColor(1, 1, 1, 0);
         RenderSystem.setShaderFogStart(0);
         RenderSystem.setShaderFogEnd(1000);
@@ -135,19 +134,20 @@ public class StructurePreviewRenderer {
 
         Lighting.setupLevel();
 
-        renderContent(level, buffers, visibleMinY, visibleMaxYExclusive);
-
-        modelViewStack.popMatrix();
-        RenderSystem.applyModelViewMatrix();
-        RenderSystem.restoreProjectionMatrix();
-
-        Lighting.setupFor3DItems(); // 恢复为 GUI 物品光照
+        lightmap.bind();
+        try {
+            renderContent(level, buffers, visibleMinY, visibleMaxYExclusive);
+        } finally {
+            modelViewStack.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.restoreProjectionMatrix();
+            Lighting.setupFor3DItems();
+        }
     }
 
     /**
      * 按接近原版关卡渲染的顺序执行各个绘制阶段。
      */
-    @SuppressWarnings("deprecation")
     public void renderContent(SandboxRenderLevel level, MultiBufferSource.BufferSource buffers) {
         this.renderContent(level, buffers, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
@@ -155,49 +155,62 @@ public class StructurePreviewRenderer {
     /**
      * 按接近原版关卡渲染的顺序执行各个绘制阶段，并限制可见层范围。
      */
-    @SuppressWarnings("deprecation")
     public void renderContent(
         SandboxRenderLevel level,
         MultiBufferSource.BufferSource buffers,
         int visibleMinY,
         int visibleMaxYExclusive
     ) {
-        //noinspection deprecation
         RenderSystem.runAsFancy(() -> {
-            // 第一阶段：先绘制不透明内容与实体系统。
+            var poseStack = new PoseStack();
+
+            // Pass 1: opaque blocks + block entities + entities.
             renderBlocks(level, buffers, false, visibleMinY, visibleMaxYExclusive);
             renderBlockEntities(level, buffers, level.getPartialTick(), visibleMinY, visibleMaxYExclusive);
             renderEntities(level, buffers, level.getPartialTick(), visibleMinY, visibleMaxYExclusive);
 
-            // 该顺序参考 LevelRenderer#renderLevel
-            buffers.endBatch(RenderType.entitySolid(TextureAtlas.LOCATION_BLOCKS));
-            buffers.endBatch(RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS));
-            buffers.endBatch(RenderType.entityCutoutNoCull(TextureAtlas.LOCATION_BLOCKS));
-            buffers.endBatch(RenderType.entitySmoothCutout(TextureAtlas.LOCATION_BLOCKS));
+            flushOpaqueBatches(buffers);
 
-            // 这些层在原版通常已预烘焙，这里需要手动结束批次
-            for (var layer : RenderType.chunkBufferLayers()) {
-                if (layer != RenderType.translucent()) {
-                    buffers.endBatch(layer);
-                }
-            }
-
-            buffers.endBatch(RenderType.solid());
-            buffers.endBatch(RenderType.endPortal());
-            buffers.endBatch(RenderType.endGateway());
-            buffers.endBatch(Sheets.solidBlockSheet());
-            buffers.endBatch(Sheets.cutoutBlockSheet());
-            buffers.endBatch(Sheets.bedSheet());
-            buffers.endBatch(Sheets.shulkerBoxSheet());
-            buffers.endBatch(Sheets.signSheet());
-            buffers.endBatch(Sheets.hangingSignSheet());
-            buffers.endBatch(Sheets.chestSheet());
-            buffers.endLastBatch();
-
-            // 第二阶段：在不透明缓冲全部提交后绘制半透明方块。
+            // Pass 2: translucent blocks/layers.
             renderBlocks(level, buffers, true, visibleMinY, visibleMaxYExclusive);
-            buffers.endBatch(RenderType.translucent());
+            flushTranslucentBatches(buffers);
         });
+    }
+
+    private void flushOpaqueBatches(MultiBufferSource.BufferSource buffers) {
+        buffers.endBatch(RenderType.entitySolid(TextureAtlas.LOCATION_BLOCKS));
+        buffers.endBatch(RenderType.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+        buffers.endBatch(RenderType.entityCutoutNoCull(TextureAtlas.LOCATION_BLOCKS));
+        buffers.endBatch(RenderType.entitySmoothCutout(TextureAtlas.LOCATION_BLOCKS));
+
+        for (var layer : RenderType.chunkBufferLayers()) {
+            if (layer == RenderType.translucent()) {
+                continue;
+            }
+            buffers.endBatch(layer);
+        }
+
+        buffers.endBatch(RenderType.solid());
+        buffers.endBatch(RenderType.endPortal());
+        buffers.endBatch(RenderType.endGateway());
+        buffers.endBatch(Sheets.solidBlockSheet());
+        buffers.endBatch(Sheets.cutoutBlockSheet());
+        buffers.endBatch(Sheets.bedSheet());
+        buffers.endBatch(Sheets.shulkerBoxSheet());
+        buffers.endBatch(Sheets.signSheet());
+        buffers.endBatch(Sheets.hangingSignSheet());
+        buffers.endBatch(Sheets.chestSheet());
+        buffers.endLastBatch();
+    }
+
+    private void flushTranslucentBatches(MultiBufferSource.BufferSource buffers) {
+        for (var layer : RenderType.chunkBufferLayers()) {
+            if (layer != RenderType.translucent()) {
+                continue;
+            }
+            buffers.endBatch(layer);
+        }
+        buffers.endBatch(RenderType.translucent());
     }
 
     /**
@@ -223,7 +236,7 @@ public class StructurePreviewRenderer {
 
         RenderSystem.runAsFancy(() -> {
             this.renderProjectionBlocks(level, poseStack, buffers, cameraPos, origin, visibleMinY, visibleMaxYExclusive, alpha);
-            buffers.endBatch(RenderType.translucent());
+            flushTranslucentBatches(buffers);
         });
     }
 

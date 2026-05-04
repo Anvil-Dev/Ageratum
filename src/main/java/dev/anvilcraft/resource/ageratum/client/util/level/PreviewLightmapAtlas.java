@@ -1,10 +1,9 @@
 package dev.anvilcraft.resource.ageratum.client.util.level;
 
-import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.Lightmap;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -20,7 +19,7 @@ public class PreviewLightmapAtlas implements AutoCloseable {
     private final NativeImage lightmapPixels;
 
     public PreviewLightmapAtlas() {
-        this.lightmapTexture = new DynamicTexture(16, 16, false);
+        this.lightmapTexture = new DynamicTexture(() -> "LightmapTexture", 16, 16, false);
         this.lightmapPixels = Objects.requireNonNull(this.lightmapTexture.getPixels());
         this.lightmapPixels.fillRect(0, 0, 16, 16, -1);
         this.lightmapTexture.upload();
@@ -29,8 +28,8 @@ public class PreviewLightmapAtlas implements AutoCloseable {
     /**
      * 近似计算当前时间下的原版天空亮度衰减。
      */
-    public float computeSkyDarken(Level level, float partialTick) {
-        var f = level.getTimeOfDay(partialTick);
+    public float computeSkyDarken(Level level) {
+        var f = level.getDefaultClockTime();
         var g = 1.0F - (Mth.cos(f * (float) (Math.PI * 2)) * 2.0F + 0.2F);
         g = Mth.clamp(g, 0.0F, 1.0F);
         g = 1.0F - g;
@@ -41,7 +40,7 @@ public class PreviewLightmapAtlas implements AutoCloseable {
      * 重算并上传 16x16 光照贴图。
      */
     public void update(Level level) {
-        float f = computeSkyDarken(level, 1.0f);
+        float f = computeSkyDarken(level);
         Vector3f vector3f = new Vector3f(f, f, 1.0F).lerp(new Vector3f(1.0F, 1.0F, 1.0F), 0.35F);
         float g = f * 0.95F + 0.05F;
         float m = 1.5F;
@@ -52,8 +51,8 @@ public class PreviewLightmapAtlas implements AutoCloseable {
 
         for (int skyLightLvl = 0; skyLightLvl < 16; ++skyLightLvl) {
             for (int blockLightLvl = 0; blockLightLvl < 16; ++blockLightLvl) {
-                float p = LightTexture.getBrightness(level.dimensionType(), skyLightLvl) * g;
-                float q = LightTexture.getBrightness(level.dimensionType(), blockLightLvl) * m;
+                float p = Lightmap.getBrightness(level.dimensionType(), skyLightLvl) * g;
+                float q = Lightmap.getBrightness(level.dimensionType(), blockLightLvl) * m;
 
                 float s = q * ((q * 0.6F + 0.4F) * 0.6F + 0.4F);
                 float t = q * (q * q * 0.6F + 0.4F);
@@ -73,7 +72,7 @@ public class PreviewLightmapAtlas implements AutoCloseable {
                 int x = (int) vector3f2.x();
                 int y = (int) vector3f2.y();
                 int z = (int) vector3f2.z();
-                this.lightmapPixels.setPixelRGBA(blockLightLvl, skyLightLvl, 0xFF000000 | z << 16 | y << 8 | x);
+                this.lightmapPixels.setPixelABGR(blockLightLvl, skyLightLvl, 0xFF000000 | z << 16 | y << 8 | x);
             }
         }
 
@@ -81,8 +80,10 @@ public class PreviewLightmapAtlas implements AutoCloseable {
     }
 
     private static void clampColor(Vector3f vector3f) {
-        vector3f.set(Mth.clamp(vector3f.x, 0.0F, 1.0F), Mth.clamp(vector3f.y, 0.0F, 1.0F),
-            Mth.clamp(vector3f.z, 0.0F, 1.0F));
+        vector3f.set(
+            Mth.clamp(vector3f.x, 0.0F, 1.0F), Mth.clamp(vector3f.y, 0.0F, 1.0F),
+            Mth.clamp(vector3f.z, 0.0F, 1.0F)
+        );
     }
 
     private float notGamma(float value) {
@@ -90,20 +91,13 @@ public class PreviewLightmapAtlas implements AutoCloseable {
         return 1.0F - f * f * f * f;
     }
 
-    /**
-     * 按原版世界渲染约定，将该光照贴图绑定到纹理单元 2。
-     */
-    public void bind() {
-        RenderSystem.setShaderTexture(2, this.lightmapTexture.getId());
-        this.lightmapTexture.bind();
-        RenderSystem.texParameter(GlConst.GL_TEXTURE_2D, GlConst.GL_TEXTURE_MIN_FILTER, GlConst.GL_LINEAR);
-        RenderSystem.texParameter(GlConst.GL_TEXTURE_2D, GlConst.GL_TEXTURE_MAG_FILTER, GlConst.GL_LINEAR);
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-    }
-
     @Override
     public void close() {
         this.lightmapTexture.close();
+    }
+
+    public GpuTextureView textureView() {
+        return this.lightmapTexture.getTextureView();
     }
 }
 

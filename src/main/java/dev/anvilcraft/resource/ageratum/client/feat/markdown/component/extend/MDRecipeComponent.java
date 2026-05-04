@@ -9,16 +9,14 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextCom
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
@@ -46,35 +44,35 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     /**
      * 创建配方组件。
      */
-    public MDRecipeComponent(ResourceLocation imageLocation, int width, int height, boolean enableAlignCenter) {
+    public MDRecipeComponent(Identifier imageLocation, int width, int height, boolean enableAlignCenter) {
         super(imageLocation, false, enableAlignCenter);
         this.width = width;
         this.height = height;
     }
 
     @Override
-    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
+    protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
-        this.renderRecipe(context, mouseX, mouseY);
+        this.extractRecipeRenderState(context, mouseX, mouseY);
     }
 
     /**
      * 在组件底图上绘制配方具体内容（输入、输出等）。
      */
-    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
+    protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
     }
 
     /**
      * 解析 {@code recipe} 扩展标签。
      *
-     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link ResourceLocation}。</p>
+     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link Identifier}。</p>
      */
     public static MDComponent parse(MDExtensionContext context) {
         String id = context.params().get("id");
         boolean enableAlignCenter = "true".equals(context.params().getOrDefault("center", "true"));
-        ResourceLocation location = ResourceLocation.parse(id);
+        Identifier location = Identifier.parse(id);
         return new MDRecipeComponentProxy(location, enableAlignCenter);
     }
 
@@ -157,33 +155,34 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         /**
          * 文档中声明的配方资源 ID。
          */
-        private final ResourceLocation location;
+        private final Identifier location;
 
-        public MDRecipeComponentProxy(ResourceLocation location, boolean enableAlignCenter) {
+        public MDRecipeComponentProxy(Identifier location, boolean enableAlignCenter) {
             super(Ageratum.location("empty"), 0, 0, enableAlignCenter);
             this.location = location;
         }
 
         @Override
-        public void render(MDRenderContext context) {
+        public void extractRenderState(MDRenderContext context) {
             Minecraft minecraft = context.minecraft();
             if (component != null) {
-                this.component.render(context.child());
+                this.component.extractRenderState(context.child());
                 return;
             }
             ClientLevel level = minecraft.level;
             if (level == null) {
-                emptyComponent.render(context.child());
+                emptyComponent.extractRenderState(context.child());
                 return;
             }
-            RecipeManager manager = level.getRecipeManager();
-            Optional<RecipeHolder<?>> holderOptional = manager.byKey(this.location);
-            if (holderOptional.isPresent()) {
-                if (this.setComponent(holderOptional.get())) {
-                    return;
-                }
-            }
-            emptyComponent.render(context.child());
+            // TODO
+//            RecipeManager manager = level.getRecipeManager();
+//            Optional<RecipeHolder<?>> holderOptional = manager.byKey(this.location);
+//            if (holderOptional.isPresent()) {
+//                if (this.setComponent(holderOptional.get())) {
+//                    return;
+//                }
+//            }
+//            emptyComponent.extractRenderState(context.child());
         }
 
         /**

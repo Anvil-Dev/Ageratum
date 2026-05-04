@@ -5,12 +5,12 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.platform.Window;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(GuiGraphics.class)
-public class GuiGraphicsMixin {
+@Mixin(GuiGraphicsExtractor.class)
+public class GuiGraphicsExtractorMixin {
 
     @WrapOperation(
         method = "guiWidth",

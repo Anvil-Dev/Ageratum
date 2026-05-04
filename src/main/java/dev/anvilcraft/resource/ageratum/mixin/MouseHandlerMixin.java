@@ -13,7 +13,7 @@ public class MouseHandlerMixin {
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void ageratum$handleStructureProjectionScroll(long windowPointer, double xOffset, double yOffset, CallbackInfo ci) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (windowPointer != minecraft.getWindow().getWindow()) {
+        if (windowPointer != minecraft.getWindow().handle()) {
             return;
         }
         if (StructureProjectionManager.handleMouseScroll(yOffset)) {

@@ -1,12 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -126,7 +126,7 @@ public class MDTableComponent extends MDComponent {
      * 渲染表格边框、背景与单元格文本。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -134,11 +134,11 @@ public class MDTableComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         if (this.rows.isEmpty()) return;
         int colWidth = computeColWidth(maxX);
         int totalHeight = getHeight(minecraft, maxX, maxY);
-        guiGraphics.renderOutline(0, 0, maxX, totalHeight, BORDER_COLOR);
+        guiGraphics.outline(0, 0, maxX, totalHeight, BORDER_COLOR);
 
         int y = 0;
         for (int rowIdx = 0; rowIdx < this.rows.size(); rowIdx++) {
@@ -157,28 +157,28 @@ public class MDTableComponent extends MDComponent {
                 int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
                 List<FormattedCharSequence> lines = splitCellLines(minecraft, cell, colWidth, isHeader);
 
-                PoseStack pose = guiGraphics.pose();
-                pose.pushPose();
-                pose.translate(cellX, y + PADDING_V, 0);
+                Matrix3x2fStack pose = guiGraphics.pose();
+                pose.pushMatrix();
+                pose.translate(cellX, y + PADDING_V);
                 for (FormattedCharSequence seq : lines) {
                     int drawX = switch (this.alignments[col]) {
                         case CENTER -> Math.max(0, (colWidth - minecraft.font.width(seq)) / 2);
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
                         default -> 0;
                     };
-                    guiGraphics.drawString(minecraft.font, seq, drawX, 0, 0x000000, false);
-                    pose.translate(0, minecraft.font.lineHeight, 0);
+                    guiGraphics.text(minecraft.font, seq, drawX, 0, 0xFF000000, false);
+                    pose.translate(0, minecraft.font.lineHeight);
                 }
-                pose.popPose();
+                pose.popMatrix();
             }
 
             for (int col = 1; col < this.columnCount; col++) {
-                guiGraphics.vLine(col * (colWidth + PADDING_H * 2), y, y + rowH - 1, BORDER_COLOR);
+                guiGraphics.verticalLine(col * (colWidth + PADDING_H * 2), y, y + rowH - 1, BORDER_COLOR);
             }
 
             if (rowIdx < this.rows.size() - 1) {
                 int sepColor = (isHeader) ? HEADER_SEP_COLOR : BORDER_COLOR;
-                guiGraphics.hLine(1, maxX - 2, y + rowH - 1, sepColor);
+                guiGraphics.horizontalLine(1, maxX - 2, y + rowH - 1, sepColor);
             }
 
             y += rowH;
@@ -238,7 +238,8 @@ public class MDTableComponent extends MDComponent {
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(line));
                         default -> 0;
                     };
-                    return minecraft.font.getSplitter().componentStyleAtWidth(
+                    return MDComponent.componentStyleAtWidth(
+                        minecraft.font.getSplitter(),
                         line,
                         (int) Math.floor(mouseX - cellX - drawX)
                     );

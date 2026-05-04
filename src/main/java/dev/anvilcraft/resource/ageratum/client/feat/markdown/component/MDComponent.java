@@ -1,23 +1,28 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
+import dev.anvilcraft.resource.ageratum.mixin.accessor.StringSplitterAccessor;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.StringSplitter;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.FormattedCharSink;
 import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.function.TriFunction;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.joml.Matrix3x2fStack;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +48,7 @@ public abstract class MDComponent {
     private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])_([^_\\n]+)_(?![A-Za-z0-9_])");
     private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
     private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
-    private static final Pattern INLINE_COMPONENT_TAG_PATTERN = Pattern.compile(
-        "<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*/>",
+    private static final Pattern INLINE_COMPONENT_TAG_PATTERN = Pattern.compile("<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*/>",
         Pattern.CASE_INSENSITIVE
     );
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
@@ -78,17 +82,17 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
-        PoseStack pose = guiGraphics.pose();
+        Matrix3x2fStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
-            pose.translate(0, minecraft.font.lineHeight, 0);
+            guiGraphics.text(minecraft.font, sequence, 0, 0, 0xFF000000, false);
+            pose.translate(0, minecraft.font.lineHeight);
             maxY -= minecraft.font.lineHeight;
         }
     }
@@ -103,8 +107,8 @@ public abstract class MDComponent {
      * 子类可以重写此方法以声明固定宽度或最小宽度需求。</p>
      *
      * @param minecraft Minecraft 实例
-     * @param maxX 可用的最大宽度
-     * @param maxY 可用的最大高度
+     * @param maxX      可用的最大宽度
+     * @param maxY      可用的最大高度
      * @return 期望宽度（像素），{@code -1} 表示使用可用空间
      */
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
@@ -151,15 +155,7 @@ public abstract class MDComponent {
      *
      * @return 若组件消费事件返回 {@code true}
      */
-    public boolean mouseDragged(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int button,
-        double dragX,
-        double dragY,
-        int maxX
-    ) {
+    public boolean mouseDragged(Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX) {
         return false;
     }
 
@@ -177,15 +173,7 @@ public abstract class MDComponent {
      *
      * @return 若组件消费事件返回 {@code true}
      */
-    public boolean keyPressed(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int keyCode,
-        int scanCode,
-        int modifiers,
-        int maxX
-    ) {
+    public boolean keyPressed(Minecraft minecraft, double mouseX, double mouseY, int keyCode, int scanCode, int modifiers, int maxX) {
         return false;
     }
 
@@ -210,9 +198,7 @@ public abstract class MDComponent {
      * 根据格式化文本在指定宽度下的换行结果获取命中的文本样式。
      */
     @Nullable
-    protected final Style getStyleAtFormattedTextPosition(
-        Minecraft minecraft, FormattedText text, double mouseX, double mouseY, int maxX
-    ) {
+    protected final Style getStyleAtFormattedTextPosition(Minecraft minecraft, FormattedText text, double mouseX, double mouseY, int maxX) {
         if (mouseX < 0 || mouseY < 0 || maxX <= 0) {
             return null;
         }
@@ -224,7 +210,7 @@ public abstract class MDComponent {
         }
 
         FormattedCharSequence line = lines.get(lineIndex);
-        return minecraft.font.getSplitter().componentStyleAtWidth(line, (int) Math.floor(mouseX));
+        return MDComponent.componentStyleAtWidth(minecraft.font.getSplitter(), line, (int) Math.floor(mouseX));
     }
 
     /**
@@ -400,7 +386,7 @@ public abstract class MDComponent {
         if (target == null || target.isBlank()) {
             return style;
         }
-        return style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, target));
+        return style.withClickEvent(new ClickEvent.OpenUrl(URI.create(target)));
     }
 
     /**
@@ -604,7 +590,7 @@ public abstract class MDComponent {
         }
     }
 
-    private record ParserMatch(ResourceLocation id, int priority, InlineStyleMatch match) {
+    private record ParserMatch(Identifier id, int priority, InlineStyleMatch match) {
         private int start() {
             return this.match.start();
         }
@@ -618,12 +604,7 @@ public abstract class MDComponent {
     }
 
     private enum MarkdownTokenType {
-        IMAGE,
-        LINK,
-        STRIKE,
-        BOLD,
-        ITALIC,
-        AUTOLINK
+        IMAGE, LINK, STRIKE, BOLD, ITALIC, AUTOLINK
     }
 
     private record MarkdownTokenMatch(MarkdownTokenType type, int start, int end, String content) {
@@ -647,7 +628,7 @@ public abstract class MDComponent {
         ParserMatch earliest = null;
         Registry<MDInlineStyleParser> registry = AgeratumRegistries.INLINE_STYLE_PARSER_REGISTRY;
         for (MDInlineStyleParser parser : registry) {
-            ResourceLocation parserId = registry.getKey(parser);
+            Identifier parserId = registry.getKey(parser);
             if (parserId == null) {
                 continue;
             }
@@ -656,9 +637,9 @@ public abstract class MDComponent {
                 continue;
             }
 
-            if (earliest == null
-                || match.start() < earliest.start()
-                || (match.start() == earliest.start() && compareInlineStyleParser(parserId, parser.priority(), earliest) < 0)) {
+            if (earliest == null || match.start() < earliest.start() || (
+                match.start() == earliest.start() && compareInlineStyleParser(parserId, parser.priority(), earliest) < 0
+            )) {
                 earliest = new ParserMatch(parserId, parser.priority(), match);
             }
         }
@@ -668,7 +649,7 @@ public abstract class MDComponent {
     private static @Nullable InlineComponentMatch findNextInlineComponent(String text, int pos, Style parentStyle) {
         Matcher matcher = INLINE_COMPONENT_TAG_PATTERN.matcher(text);
         while (matcher.find(pos)) {
-            ResourceLocation id = parseInlineComponentId(matcher.group(1));
+            Identifier id = parseInlineComponentId(matcher.group(1));
             if (id == null) {
                 pos = matcher.start() + 1;
                 continue;
@@ -689,16 +670,16 @@ public abstract class MDComponent {
         return null;
     }
 
-    private static @Nullable ResourceLocation parseInlineComponentId(String idText) {
+    private static @Nullable Identifier parseInlineComponentId(String idText) {
         String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
         try {
-            return ResourceLocation.parse(normalized);
+            return Identifier.parse(normalized);
         } catch (RuntimeException exception) {
             return null;
         }
     }
 
-    private static int compareInlineStyleParser(ResourceLocation parserId, int priority, ParserMatch current) {
+    private static int compareInlineStyleParser(Identifier parserId, int priority, ParserMatch current) {
         int priorityCompare = Integer.compare(priority, current.priority());
         if (priorityCompare != 0) {
             return priorityCompare;
@@ -748,9 +729,47 @@ public abstract class MDComponent {
         return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
     }
 
-    protected void renderTooltip(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+    protected void extractTooltipRenderState(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
+        }
+    }
+
+    @Nullable
+    public static Style componentStyleAtWidth(StringSplitter stringSplitter, FormattedCharSequence content, int maxWidth) {
+        WidthLimitedCharSink stringsplitter$widthlimitedcharsink = new WidthLimitedCharSink(stringSplitter, maxWidth);
+        MutableObject<Style> mutableobject = new MutableObject<>();
+        content.accept((positionInCurrentSequence, style, codePoint) -> {
+            if (!stringsplitter$widthlimitedcharsink.accept(positionInCurrentSequence, style, codePoint)) {
+                mutableobject.setValue(style);
+                return false;
+            } else {
+                return true;
+            }
+        });
+        return mutableobject.get();
+    }
+
+    private static class WidthLimitedCharSink implements FormattedCharSink {
+        StringSplitter stringSplitter;
+        private float maxWidth;
+        @Getter
+        private int position;
+
+        public WidthLimitedCharSink(StringSplitter stringSplitter, float maxWidth) {
+            this.stringSplitter = stringSplitter;
+            this.maxWidth = maxWidth;
+        }
+
+        @Override
+        public boolean accept(int positionInCurrentSequence, Style style, int codePoint) {
+            this.maxWidth = this.maxWidth - ((StringSplitterAccessor) this.stringSplitter).widthProvider().getWidth(codePoint, style);
+            if (this.maxWidth >= 0.0F) {
+                this.position = positionInCurrentSequence + Character.charCount(codePoint);
+                return true;
+            } else {
+                return false;
+            }
         }
     }
 }

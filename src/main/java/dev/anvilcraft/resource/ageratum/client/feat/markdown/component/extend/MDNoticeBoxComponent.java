@@ -1,13 +1,13 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +54,7 @@ public class MDNoticeBoxComponent extends MDComponent {
     }
 
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -62,7 +62,7 @@ public class MDNoticeBoxComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         if (this.contentComponents.isEmpty()) {
             return;
         }
@@ -77,18 +77,18 @@ public class MDNoticeBoxComponent extends MDComponent {
         guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
 
         // 绘制内容
-        PoseStack pose = guiGraphics.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = guiGraphics.pose();
+        pose.pushMatrix();
         int translateX = PADDING + BORDER_WIDTH;
-        pose.translate(translateX, PADDING, 0);
+        pose.translate(translateX, PADDING);
 
         for (MDComponent component : this.contentComponents) {
-            component.render(context.child(contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING, 1.0f));
+            component.extractRenderState(context.child(contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING, 1.0f));
             int componentHeight = component.getHeight(minecraft, contentWidth, Integer.MAX_VALUE);
-            pose.translate(0, componentHeight, 0);
+            pose.translate(0, componentHeight);
         }
 
-        pose.popPose();
+        pose.popMatrix();
     }
 
     @Override

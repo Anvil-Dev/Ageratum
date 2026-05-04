@@ -1,10 +1,8 @@
 dependencies {
-    implementation libs.anvillib.config
-    jarJar libs.anvillib.config
+    implementation libs.bundles.anvillib
+    jarJar libs.bundles.anvillib
     implementation(libs.jhighlight) { transitive = false }
-    additionalRuntimeClasspath libs.jhighlight
     jarJar libs.jhighlight
     implementation(libs.jsoup) { transitive = false }
-    additionalRuntimeClasspath libs.jsoup
     jarJar(libs.jsoup)
 }

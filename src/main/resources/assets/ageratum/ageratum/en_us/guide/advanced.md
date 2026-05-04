@@ -82,7 +82,7 @@ Ageratum supports multiple languages:
 [with anchor](page#anchor)
 ```
 
-### ResourceLocation Syntax
+### Identifier Syntax
 
 Full format: `namespace:ageratum/en_us/path/file`
 

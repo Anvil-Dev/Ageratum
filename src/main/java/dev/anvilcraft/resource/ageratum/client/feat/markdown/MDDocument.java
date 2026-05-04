@@ -2,7 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
 /**
  * Markdown 文档模型，包含 front matter 与渲染组件。
  */
-public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, Object> frontMatter, List<MDComponent> components) {
+public record MDDocument(@Nullable Identifier sourceLocation, Map<String, Object> frontMatter, List<MDComponent> components) {
 
     public MDDocument {
         frontMatter = freezeMap(frontMatter);

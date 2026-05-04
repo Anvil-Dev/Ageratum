@@ -9,7 +9,11 @@
   ],
   "client": [
     "GlDebugMixin",
-    "GuiGraphicsMixin"
+    "GuiGraphicsExtractorMixin",
+    "MouseHandlerMixin",
+    "accessor.ClientClockManager$ClockInstanceAccessor",
+    "accessor.ClientClockManagerAccessor",
+    "accessor.StringSplitterAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

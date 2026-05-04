@@ -12,17 +12,17 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -31,16 +31,16 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 public class MDItemComponent extends MDImageComponent {
-    public static final ResourceLocation SLOT_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/slot.png");
+    public static final Identifier SLOT_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/slot.png");
     protected final int width = 32;
     protected final int height = 32;
     protected @Nullable ItemStack itemStack = null;
-    protected final ResourceLocation itemLoc;
+    protected final Identifier itemLoc;
     protected final int count;
     protected final @Nullable JsonElement components;
     protected final boolean showText;
 
-    public MDItemComponent(ResourceLocation itemLoc, int count, @Nullable JsonElement components, boolean showText) {
+    public MDItemComponent(Identifier itemLoc, int count, @Nullable JsonElement components, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.itemLoc = itemLoc;
         this.count = count;
@@ -49,26 +49,26 @@ public class MDItemComponent extends MDImageComponent {
     }
 
     @Override
-    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
+    protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         this.renderItem(context, mouseX, mouseY);
     }
 
     private void renderItem(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         ItemStack itemStack = this.getItemStack();
         Font font = context.minecraft().font;
         if (itemStack == null) return;
 
-        graphics.renderItem(itemStack, 8, 8);
-        graphics.renderItemDecorations(font, itemStack, 8, 8);
-        this.renderTooltip(context, itemStack, 8, 8, mouseX, mouseY);
+        graphics.item(itemStack, 8, 8);
+        graphics.itemDecorations(font, itemStack, 8, 8);
+        this.extractTooltipRenderState(context, itemStack, 8, 8, mouseX, mouseY);
 
         if (this.showText) {
             Component hoverName = itemStack.getHoverName();
             int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.text(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
 
@@ -77,7 +77,7 @@ public class MDItemComponent extends MDImageComponent {
         if (this.itemStack != null) return this.itemStack;
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return null;
-        Optional<HolderLookup.RegistryLookup<Item>> lookup = level.registryAccess().lookup(Registries.ITEM);
+        Optional<Registry<Item>> lookup = level.registryAccess().lookup(Registries.ITEM);
         if (lookup.isEmpty()) return null;
         Optional<Holder.Reference<Item>> itemReference = lookup.get().get(ResourceKey.create(Registries.ITEM, this.itemLoc));
         if (itemReference.isEmpty()) return null;
@@ -116,7 +116,7 @@ public class MDItemComponent extends MDImageComponent {
         if (rawId == null || rawId.isBlank()) {
             return new MDTextComponent("[错误：item 需要 id 参数]");
         }
-        ResourceLocation id = ResourceLocation.parse(rawId);
+        Identifier id = Identifier.parse(rawId);
         int count;
         try {
             count = Integer.parseInt(context.params().getOrDefault("count", "1"));

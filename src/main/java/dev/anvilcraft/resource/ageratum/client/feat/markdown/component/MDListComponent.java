@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 
@@ -28,8 +28,8 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
     private static final String TASK_CHECKED = "☑";
     private static final int INDENT_WIDTH = 10;
     private static final int MARKER_WIDTH = 12;
-    private static final int TASK_UNCHECKED_COLOR = 0x666666;
-    private static final int TASK_CHECKED_COLOR = 0x2E7D32;
+    private static final int TASK_UNCHECKED_COLOR = 0xFF666666;
+    private static final int TASK_CHECKED_COLOR = 0xFF2E7D32;
 
     /**
      * 使用解析后的列表项创建组件。
@@ -69,8 +69,8 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
     }
 
     @Override
-    protected void renderDecoration(
-        GuiGraphics guiGraphics,
+    protected void extractDecorationRenderState(
+        GuiGraphicsExtractor guiGraphics,
         Minecraft minecraft,
         CachedItem<ListItem> cachedItem,
         int y,
@@ -90,7 +90,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         }
 
         ListItem item = cachedItem.item();
-        guiGraphics.drawString(
+        guiGraphics.text(
             minecraft.font,
             marker(item),
             cachedItem.level() * INDENT_WIDTH,
@@ -128,7 +128,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         if (item.kind() == ListKind.TASK) {
             return item.checked() ? TASK_CHECKED_COLOR : TASK_UNCHECKED_COLOR;
         }
-        return 0x000000;
+        return 0xFF000000;
     }
 
     private record PreparedData(List<CachedItem<ListItem>> cachedItems, FormattedText componentText) {

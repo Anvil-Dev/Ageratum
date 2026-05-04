@@ -1,25 +1,22 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.render.TextureSetup;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.state.gui.BlitRenderState;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
-import org.joml.Matrix4f;
+import org.joml.Matrix3x2f;
+import org.joml.Matrix3x2fStack;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,9 +40,9 @@ import javax.annotation.Nullable;
 public class MDImageComponent extends MDComponent {
     private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
     private static final Pattern FALLBACK_IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^)]+)\\)\\s*$");
-    private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
-    private static final Map<ResourceLocation, PreviewImageState> PREVIEW_IMAGE_CACHE = new HashMap<>();
-    protected final ResourceLocation imageLocation;
+    private static final Map<Identifier, Size> IMAGE_SIZE_CACHE = new HashMap<>();
+    private static final Map<Identifier, PreviewImageState> PREVIEW_IMAGE_CACHE = new HashMap<>();
+    protected final Identifier imageLocation;
     protected final boolean shouldScaleUp;
     protected final boolean enableAlignCenter;
     protected float scale = 1.0f;
@@ -53,21 +50,21 @@ public class MDImageComponent extends MDComponent {
     /**
      * 创建图片组件。
      */
-    public MDImageComponent(ResourceLocation imageLocation) {
+    public MDImageComponent(Identifier imageLocation) {
         this(imageLocation, false);
     }
 
     /**
      * 创建图片组件。
      */
-    public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp) {
+    public MDImageComponent(Identifier imageLocation, boolean shouldScaleUp) {
         this(imageLocation, shouldScaleUp, false);
     }
 
     /**
      * 创建图片组件。
      */
-    public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp, boolean enableAlignCenter) {
+    public MDImageComponent(Identifier imageLocation, boolean shouldScaleUp, boolean enableAlignCenter) {
         super(FormattedText.EMPTY);
         this.imageLocation = imageLocation;
         this.shouldScaleUp = shouldScaleUp;
@@ -77,7 +74,7 @@ public class MDImageComponent extends MDComponent {
     /**
      * 尝试将一行文本解析为图片组件。
      */
-    public static @Nullable MDImageComponent parse(ResourceLocation sourceLocation, String text) {
+    public static @Nullable MDImageComponent parse(Identifier sourceLocation, String text) {
         Matcher matcher = IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return MDImageComponent.fallbackParse(sourceLocation, text);
@@ -88,14 +85,14 @@ public class MDImageComponent extends MDComponent {
             file = file.substring(1);
         }
         try {
-            ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
+            Identifier imageLocation = Identifier.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
             return new MDImageComponent(imageLocation);
         } catch (RuntimeException exception) {
             return null;
         }
     }
 
-    public static @Nullable MDImageComponent fallbackParse(ResourceLocation sourceLocation, String text) {
+    public static @Nullable MDImageComponent fallbackParse(Identifier sourceLocation, String text) {
         Matcher matcher = FALLBACK_IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return null;
@@ -109,7 +106,7 @@ public class MDImageComponent extends MDComponent {
         }
     }
 
-    private static String getParsedPath(ResourceLocation sourceLocation, String path) {
+    private static String getParsedPath(Identifier sourceLocation, String path) {
         String[] splitPath = path.split("/");
         String locationPath = sourceLocation.getPath();
         LinkedList<String> splitLocationPathList = new LinkedList<>(List.of(locationPath.split("/")));
@@ -135,7 +132,7 @@ public class MDImageComponent extends MDComponent {
      * 按缩放后的尺寸渲染图片。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -143,52 +140,64 @@ public class MDImageComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         Size size = this.resolveSize(minecraft);
         Size renderSize = this.computeRenderSize(size, maxX, maxY);
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {
             return;
         }
-        PoseStack pose = guiGraphics.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = guiGraphics.pose();
+        pose.pushMatrix();
         if (this.enableAlignCenter) {
             float translateX = (maxX - renderSize.width()) / 2.0f;
-            pose.translate(translateX, 0, 0);
+            pose.translate(translateX, 0);
             mouseX -= translateX;
         }
-        pose.scale(renderSize.scale(), renderSize.scale(), renderSize.scale());
-        this.renderContent(context, size, mouseX / renderSize.scale(), mouseY / renderSize.scale());
-        pose.popPose();
+        pose.scale(renderSize.scale(), renderSize.scale());
+        this.extractContentRenderState(context, size, mouseX / renderSize.scale(), mouseY / renderSize.scale());
+        pose.popMatrix();
     }
 
-    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
+    protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 
     protected void innerBlit(
-        GuiGraphics guiGraphics,
-        ResourceLocation atlasLocation,
+        GuiGraphicsExtractor guiGraphics,
+        Identifier atlasLocation,
         int width,
         int height,
         int textureWidth,
         int textureHeight
     ) {
+        AbstractTexture texture = Minecraft.getInstance().getTextureManager().getTexture(atlasLocation);
         float minU = ((float) 0.0 + 0.0F) / (float) textureWidth;
         float maxU = ((float) 0.0 + (float) width) / (float) textureWidth;
         float minV = (0.0F + 0.0F) / (float) textureHeight;
         float maxV = (0.0F + (float) height) / (float) textureHeight;
-        RenderSystem.enableBlend();
-        RenderSystem.setShaderTexture(0, atlasLocation);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        Matrix4f matrix4f = guiGraphics.pose().last().pose();
-        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        bufferbuilder.addVertex(matrix4f, (float) 0, (float) 0, (float) 0).setUv(minU, minV);
-        bufferbuilder.addVertex(matrix4f, (float) 0, (float) height, (float) 0).setUv(minU, maxV);
-        bufferbuilder.addVertex(matrix4f, (float) width, (float) height, (float) 0).setUv(maxU, maxV);
-        bufferbuilder.addVertex(matrix4f, (float) width, (float) 0, (float) 0).setUv(maxU, minV);
-        BufferUploader.drawWithShader(bufferbuilder.buildOrThrow());
-        RenderSystem.disableBlend();
+        guiGraphics.submitGuiElementRenderState(new BlitRenderState(
+            RenderPipelines.GUI_TEXTURED,
+            TextureSetup.singleTexture(texture.getTextureView(), texture.getSampler()),
+            new Matrix3x2f(guiGraphics.pose()),
+            0, 0,
+            width, height,
+            minU, maxU,
+            minV, maxV,
+            0xFFFFFFFF,
+            guiGraphics.peekScissorStack()
+        ));
+//        RenderSystem.enableBlend();
+//        RenderSystem.setShaderTexture(0, atlasLocation);
+//        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+//        Matrix4f matrix4f = guiGraphics.pose().last().pose();
+//        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+//        bufferbuilder.addVertex(matrix4f, (float) 0, (float) 0, (float) 0).setUv(minU, minV);
+//        bufferbuilder.addVertex(matrix4f, (float) 0, (float) height, (float) 0).setUv(minU, maxV);
+//        bufferbuilder.addVertex(matrix4f, (float) width, (float) height, (float) 0).setUv(maxU, maxV);
+//        bufferbuilder.addVertex(matrix4f, (float) width, (float) 0, (float) 0).setUv(maxU, minV);
+//        BufferUploader.drawWithShader(bufferbuilder.buildOrThrow());
+//        RenderSystem.disableBlend();
     }
 
     @Override
@@ -284,7 +293,7 @@ public class MDImageComponent extends MDComponent {
         try {
             NativeImage image = NativeImage.read(Files.newInputStream(imagePath));
             Size size = new Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()), 1.0f);
-            minecraft.getTextureManager().register(this.getImageLocation(), new DynamicTexture(image));
+            minecraft.getTextureManager().register(this.getImageLocation(), new DynamicTexture(() -> "image", image));
             PREVIEW_IMAGE_CACHE.put(this.getImageLocation(), new PreviewImageState(modifiedMillis, fileSize, size));
             return size;
         } catch (IOException exception) {

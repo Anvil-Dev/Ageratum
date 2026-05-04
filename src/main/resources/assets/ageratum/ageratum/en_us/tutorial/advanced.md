@@ -22,7 +22,7 @@ public class MyCustomComponent extends MDComponent {
     }
     
     @Override
-    public void render(GuiGraphics guiGraphics, Minecraft minecraft, int maxX, int maxY) {
+    public void render(GuiGraphicsExtractor guiGraphics, Minecraft minecraft, int maxX, int maxY) {
         // Custom rendering logic
     }
 }
@@ -89,7 +89,7 @@ ageratum/
 
 ### Check Document Location
 
-Use commands to get the current document's ResourceLocation:
+Use commands to get the current document's Identifier:
 
 ```
 /say ageratum:en_us/guide/index

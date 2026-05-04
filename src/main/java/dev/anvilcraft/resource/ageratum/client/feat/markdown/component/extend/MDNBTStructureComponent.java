@@ -6,16 +6,14 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
-import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
@@ -23,13 +21,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraft.world.phys.BlockHitResult;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
@@ -52,7 +49,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     private static final float ROTATE_YAW_SENSITIVITY = 0.8f;
     private static final float ROTATE_PITCH_SENSITIVITY = 0.6f;
     private static final float PAN_SENSITIVITY = 1.0f;
-    private static final ResourceLocation BUTTON_PROJECTION_LOCATION = Ageratum.location("textures/gui/guide/button_projection.png");
+    private static final Identifier BUTTON_PROJECTION_LOCATION = Ageratum.location("textures/gui/guide/button_projection.png");
 
     private final StructureTarget target;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
@@ -91,36 +88,37 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         if (this.previewLevel == null) {
             this.previewLevel = this.prepare(minecraft.level, this.target);
             this.resetLayerPreview();
         }
         if (this.previewLevel == null) {
-            super.render(context.child());
+            super.extractRenderState(context.child());
             return;
         }
 
         this.ensureLayerPreviewInitialized();
 
         int height = this.getHeight(minecraft, maxX, context.maxY()); // 确保 scale 计算正确
-        graphics.renderOutline(0, 0, maxX, height, 0xAA000000);
+        graphics.outline(0, 0, maxX, height, 0xAA000000);
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
         this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
         this.cameraRig.setZoom(2.0f);
         this.cameraRig.setOffsetX(this.panOffsetX);
         this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
-        StructurePreviewRenderer.getInstance().render(
-            this.previewLevel,
-            this.cameraRig,
-            graphics.bufferSource(),
-            this.visibleMinY,
-            this.visibleMinY + this.visibleLayerCount
-        );
+        // TODO
+//        StructurePreviewRenderer.getInstance().render(
+//            this.previewLevel,
+//            this.cameraRig,
+//            graphics.bufferSource(),
+//            this.visibleMinY,
+//            this.visibleMinY + this.visibleLayerCount
+//        );
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
@@ -131,9 +129,10 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void renderButton(MDRenderContext context) {
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
         graphics.blit(
+            RenderPipelines.GUI_TEXTURED,
             BUTTON_PROJECTION_LOCATION,
             context.maxX() - 21,
             5,
@@ -190,7 +189,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
-        if (!Screen.hasControlDown() || scrollY == 0.0d) {
+        if (/*TODO !Screen.hasControlDown() ||*/ scrollY == 0.0d) {
             return false;
         }
 
@@ -204,6 +203,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != 0 && button != 1) {
             return false;
         }
+        /* TODO
         if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
             if (this.structureTemplateCache != null && minecraft.cameraEntity != null) {
                 BlockPos blockPos;
@@ -217,6 +217,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
             return true;
         }
+         */
         this.dragButton = button;
         return true;
     }
@@ -289,7 +290,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.layerPreviewInitialized = false;
     }
 
-    private void renderLayerIndicator(MDRenderContext context, GuiGraphics graphics) {
+    private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
         String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
         int padding = 3;
         int x = 4;
@@ -298,7 +299,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         int height = context.minecraft().font.lineHeight + padding * 2;
 
         graphics.fill(x, y, x + width, y + height, 0x88000000);
-        graphics.drawString(context.minecraft().font, layerLabel, x + padding, y + padding, 0xFFFFFF, false);
+        graphics.text(context.minecraft().font, layerLabel, x + padding, y + padding, 0xFFFFFF, false);
     }
 
     private static float clamp(float value, float min, float max) {
@@ -326,7 +327,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
 
             StructureTemplate template = new StructureTemplate();
-            HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
+            HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
             CompoundTag root = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
             template.load(blocks, root);
             Vec3i size = template.getSize();
@@ -371,7 +372,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     /**
      * 生成结构文件在 classpath 中的回退搜索路径。
      */
-    private static List<String> candidateResourcePaths(ResourceLocation location) {
+    private static List<String> candidateResourcePaths(Identifier location) {
         String normalizedPath = normalizeStructurePath(location.getPath());
         return List.of(
             "data/" + location.getNamespace() + "/structure/" + normalizedPath + ".nbt",
@@ -394,7 +395,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         return path.endsWith(".nbt") ? path : path + ".nbt";
     }
 
-    private static String getCurrentDirectoryPath(ResourceLocation location) {
+    private static String getCurrentDirectoryPath(Identifier location) {
         String currentFile = location.getPath();
         int slash = currentFile.lastIndexOf('/');
         if (slash < 0) {
@@ -403,14 +404,14 @@ public final class MDNBTStructureComponent extends MDComponent {
         return currentFile.substring(0, slash);
     }
 
-    public record StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths) {
+    public record StructureTarget(Identifier location, String displayPath, List<String> previewCandidatePaths) {
         /**
          * 基于 markdown 源文档位置解析显式或相对的结构引用。
          */
-        public static StructureTarget resolve(ResourceLocation sourceLocation, String rawTarget) {
+        public static StructureTarget resolve(Identifier sourceLocation, String rawTarget) {
             String trimmed = rawTarget.trim();
             if (trimmed.contains(":")) {
-                ResourceLocation location = ResourceLocation.parse(trimmed);
+                Identifier location = Identifier.parse(trimmed);
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
                                             ? List.of(ensureNbtExtension(RelativePathResolver.resolveWithinBase("", location.getPath())))
                                             : List.of();
@@ -418,7 +419,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
 
             String resolvedPath = RelativePathResolver.resolveWithinBase(getCurrentDirectoryPath(sourceLocation), trimmed);
-            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
+            Identifier location = Identifier.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
             List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
                                         ? List.of(ensureNbtExtension(resolvedPath))
                                         : List.of();

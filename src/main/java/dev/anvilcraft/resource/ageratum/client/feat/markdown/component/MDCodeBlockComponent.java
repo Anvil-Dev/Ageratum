@@ -5,7 +5,7 @@ import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.MutableComponent;
@@ -14,6 +14,7 @@ import net.minecraft.util.FormattedCharSequence;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.codelibs.jhighlight.renderer.Renderer;
 import org.codelibs.jhighlight.renderer.XhtmlRendererFactory;
+import org.joml.Matrix3x2fStack;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -214,23 +215,23 @@ public class MDCodeBlockComponent extends MDComponent {
      * 渲染代码块主体与行号栏。
      */
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         int blockHeight = this.getHeight(minecraft, maxX, maxY);
         guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
-        guiGraphics.renderOutline(0, 0, maxX, blockHeight, BORDER_COLOR);
+        guiGraphics.outline(0, 0, maxX, blockHeight, BORDER_COLOR);
         int gutterWidth = this.getGutterWidth(minecraft, this.codeLines.size());
         int contentWidth = this.getContentWidth(minecraft, maxX);
 
         if (AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
             guiGraphics.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), GUTTER_COLOR);
-            guiGraphics.vLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), GUTTER_LINE_COLOR);
+            guiGraphics.verticalLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), GUTTER_LINE_COLOR);
         }
-        PoseStack pose = guiGraphics.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = guiGraphics.pose();
+        pose.pushMatrix();
         context.enableScissor(1, 1, maxX - 1, blockHeight - 1);
         int y = 0;
         int lineNumber = 1;
@@ -270,7 +271,7 @@ public class MDCodeBlockComponent extends MDComponent {
                 String lineStr = String.valueOf(lineNumber);
                 int lineNumX = PADDING + gutterWidth - minecraft.font.width(lineStr) - 1;
                 int lineNumY = PADDING + y;
-                guiGraphics.drawString(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
+                guiGraphics.text(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
             }
 
             if (split.isEmpty()) {
@@ -281,12 +282,12 @@ public class MDCodeBlockComponent extends MDComponent {
                     strX = PADDING + offsetX;
                 }
                 for (FormattedCharSequence sequence : split) {
-                    guiGraphics.drawString(
+                    guiGraphics.text(
                         minecraft.font,
                         sequence,
                         strX,
                         PADDING + y,
-                        0x000000,
+                        0xFF000000,
                         false
                     );
                     y += minecraft.font.lineHeight;
@@ -295,7 +296,7 @@ public class MDCodeBlockComponent extends MDComponent {
             lineNumber++;
         }
         context.disableScissor();
-        pose.popPose();
+        pose.popMatrix();
     }
 
     /**

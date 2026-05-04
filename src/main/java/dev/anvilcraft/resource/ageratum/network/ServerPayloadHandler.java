@@ -18,8 +18,7 @@ public class ServerPayloadHandler {
     public static void handleShareGuide(ShareGuidePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player)) return;
-            MinecraftServer server = player.getServer();
-            if (server == null) return;
+            MinecraftServer server = player.level().getServer();
             PlayerList playerList = server.getPlayerList();
             List<ServerPlayer> players = playerList.getPlayers();
             for (ServerPlayer sp : players) {
@@ -46,12 +45,8 @@ public class ServerPayloadHandler {
                         .withStyle(
                             Style.EMPTY
                                 .applyFormats(ChatFormatting.GREEN)
-                                .withClickEvent(
-                                    new ClickEvent(ClickEvent.Action.RUN_COMMAND, command)
-                                )
-                                .withHoverEvent(
-                                    new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover)
-                                )
+                                .withClickEvent(new ClickEvent.SuggestCommand(command))
+                                .withHoverEvent(new HoverEvent.ShowText(hover))
                         )
                 );
                 sp.sendSystemMessage(component);

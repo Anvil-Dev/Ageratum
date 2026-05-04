@@ -4,22 +4,20 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Either;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,11 +29,11 @@ public final class BoundItemGuideNavigator {
     private static final long HOVER_STALE_MS = 200L;
 
     @Nullable
-    private static ResourceLocation hoveredDocumentLocation;
+    private static Identifier hoveredDocumentLocation;
     private static long hoverSeenAtMs;
 
     @Nullable
-    private static ResourceLocation holdingDocumentLocation;
+    private static Identifier holdingDocumentLocation;
     private static long holdStartAtMs = -1L;
     private static boolean openedDuringCurrentHold;
 
@@ -52,14 +50,14 @@ public final class BoundItemGuideNavigator {
 
         Minecraft minecraft = Minecraft.getInstance();
         String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-        Optional<ResourceLocation> targetDocument = GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode);
+        Optional<Identifier> targetDocument = GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode);
         if (targetDocument.isEmpty()) {
             hoveredDocumentLocation = null;
             return;
         }
 
         long now = System.currentTimeMillis();
-        ResourceLocation documentLocation = targetDocument.get();
+        Identifier documentLocation = targetDocument.get();
         hoveredDocumentLocation = documentLocation;
         hoverSeenAtMs = now;
 
@@ -122,7 +120,7 @@ public final class BoundItemGuideNavigator {
         }
     }
 
-    private static double getCurrentProgressPercent(long now, ResourceLocation documentLocation, boolean wDown) {
+    private static double getCurrentProgressPercent(long now, Identifier documentLocation, boolean wDown) {
         if (!wDown || holdStartAtMs < 0L || !documentLocation.equals(holdingDocumentLocation)) {
             return 0;
         }
@@ -130,16 +128,8 @@ public final class BoundItemGuideNavigator {
         return Math.min(100L, (double) elapsed / HOLD_DURATION_MS);
     }
 
-    public static final KeyMapping W_KEY_MAPPING = new KeyMapping("key.ageratum.more_info", GLFW.GLFW_KEY_W, "key.categories.ageratum");
-
     private static boolean isWDown(Minecraft minecraft) {
-        long window = minecraft.getWindow().getWindow();
-        return InputConstants.isKeyDown(window, W_KEY_MAPPING.getKey().getValue());
-    }
-
-    @SubscribeEvent
-    public static void onKetReg(RegisterKeyMappingsEvent event) {
-        event.register(W_KEY_MAPPING);
+        return InputConstants.isKeyDown(minecraft.getWindow(), AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue());
     }
 
     private static void resetHoldState() {
