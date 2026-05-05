@@ -100,6 +100,8 @@ public class MDHeaderComponent extends MDComponent {
                 scale
             )
         );
+        int height = super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY));
+        pose.translate(0, height, 0);
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
             guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
