@@ -23,7 +23,7 @@
   "key.ageratum.structure_projection.layer_down": "投影减少显示层数",
   "key.ageratum.structure_projection.layer_up": "投影增加显示层数",
   "key.ageratum.structure_projection.remove": "移除结构投影",
-  "key.categories.ageratum": "藿香",
+  "key.category.ageratum.key": "藿香",
   "system.ageratum.share.button": "[点击打开]",
   "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南：",
   "tooltip.ageratum.bind_item_hold": "按住 %s 寻思"

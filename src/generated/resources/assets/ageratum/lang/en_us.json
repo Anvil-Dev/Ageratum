@@ -23,7 +23,7 @@
   "key.ageratum.structure_projection.layer_down": "Decrease Projection Layers",
   "key.ageratum.structure_projection.layer_up": "Increase Projection Layers",
   "key.ageratum.structure_projection.remove": "Remove Structure Projection",
-  "key.categories.ageratum": "Ageratum",
+  "key.category.ageratum.key": "Ageratum",
   "system.ageratum.share.button": "[CLICK TO OPEN]",
   "system.ageratum.share.tip": "Player %s has shared a guide with you:",
   "tooltip.ageratum.bind_item_hold": "Hold %s to get more info"
