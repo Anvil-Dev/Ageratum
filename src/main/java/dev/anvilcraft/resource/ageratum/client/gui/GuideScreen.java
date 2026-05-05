@@ -362,7 +362,7 @@ public class GuideScreen extends Screen {
     protected void init() {
         if (this.minecraft != null) {
             Window window = this.minecraft.getWindow();
-            int calculateScale = window.calculateScale(1, true);
+            int calculateScale = GuideScreen.calculateScale(window, 1, true);
             this.width = window.getWidth() / calculateScale;
             this.height = window.getHeight() / calculateScale;
             this.scale = window.getGuiScale() / calculateScale;
@@ -407,6 +407,18 @@ public class GuideScreen extends Screen {
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
         this.refreshBookmarkScrollState();
+    }
+
+    public static int calculateScale(Window window, int guiScale, boolean forceUnicode) {
+        int calculateScale = window.calculateScale(guiScale, forceUnicode);
+        calculateScale *= AgeratumClient.CONFIG.scale;
+        if (window.getWidth() > 1920 && window.getHeight() > 1080) {
+            double widthScale = window.getWidth() / 1920d;
+            double heightScale = window.getHeight() / 1080d;
+            int scale = (int) Math.round(Math.min(widthScale, heightScale));
+            if (scale > 1) calculateScale *= scale;
+        }
+        return calculateScale;
     }
 
     private int getLabelLeftBound() {

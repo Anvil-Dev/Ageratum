@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client;
 
 
+import dev.anvilcraft.lib.v2.config.BoundedDiscrete;
 import dev.anvilcraft.lib.v2.config.Comment;
 import dev.anvilcraft.lib.v2.config.Config;
 import dev.anvilcraft.resource.ageratum.Ageratum;
@@ -28,4 +29,8 @@ public class AgeratumClientConfig {
 
     @Comment("Share your guide only with player from the same team")
     public boolean shareGuideOnlyInTeam = false;
+
+    @Comment("The scaling ratio of the interface")
+    @BoundedDiscrete(min = 1, max = 4)
+    public int scale = 1;
 }

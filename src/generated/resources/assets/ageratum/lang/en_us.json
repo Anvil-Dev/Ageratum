@@ -7,6 +7,8 @@
   "ageratum.configuration.enable_preview.tooltip": "Whether to enable preview mode (enabling it will allow real-time previews of changes to documents in the specified path)",
   "ageratum.configuration.preview_path": "Preview Path",
   "ageratum.configuration.preview_path.tooltip": "Preview mode path",
+  "ageratum.configuration.scale": "Scale",
+  "ageratum.configuration.scale.tooltip": "The scaling ratio of the interface",
   "ageratum.configuration.section.ageratum.client.toml": "Ageratum Client Configuration",
   "ageratum.configuration.section.ageratum.client.toml.title": "Ageratum Client Configuration",
   "ageratum.configuration.share_guide_only_in_team": "Share Guide Only In Team",
