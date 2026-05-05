@@ -92,7 +92,6 @@ public abstract class MDComponent {
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
             guiGraphics.text(minecraft.font, sequence, 0, 0, 0xFF000000, false);
-            pose.translate(0, minecraft.font.lineHeight);
             maxY -= minecraft.font.lineHeight;
         }
     }
@@ -119,7 +118,7 @@ public abstract class MDComponent {
      * 计算组件在指定宽度下的渲染高度。
      */
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        return minecraft.font.wordWrapHeight(this.text, maxX);
+        return minecraft.font.split(this.text, maxX).size() * minecraft.font.lineHeight;
     }
 
     /**

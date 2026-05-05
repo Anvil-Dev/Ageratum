@@ -12,7 +12,7 @@ Add Ageratum to your `build.gradle`:
 repositories {
     maven {
         name = "Ageratum"
-        url = "https://maven.anvilcraft.dev/releases"
+        url = "https://server.cjsah.net:1002/maven"
     }
 }
 
