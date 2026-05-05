@@ -137,7 +137,7 @@ public class SandboxRenderLevel extends Level {
             lookup -> lookup.get(WorldClocks.OVERWORLD)
         );
         if (reference.isPresent()) {
-            ClientClockManager.ClockInstance clockInstance = ((ClientClockManagerAccessor) clockManager).clocks().get(reference.get());
+            ClientClockManager.ClockInstance clockInstance = ((ClientClockManagerAccessor) clockManager).invokeGetInstance(reference.get());
             ((ClientClockManager$ClockInstanceAccessor) clockInstance).totalTicks(6000L);
         }
         return clockManager;
