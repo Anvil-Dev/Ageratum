@@ -7,6 +7,8 @@
   "ageratum.configuration.enable_preview.tooltip": "是否启用预览模式（启用该模式后，可以实时查看指定路径下文档的更改情况）",
   "ageratum.configuration.preview_path": "预览路径",
   "ageratum.configuration.preview_path.tooltip": "用于设置预览模式的路径",
+  "ageratum.configuration.scale": "缩放",
+  "ageratum.configuration.scale.tooltip": "界面的缩放比例",
   "ageratum.configuration.section.ageratum.client.toml": "藿香 客户端配置",
   "ageratum.configuration.section.ageratum.client.toml.title": "藿香 客户端配置",
   "ageratum.configuration.share_guide_only_in_team": "仅在队伍内分享指南",
