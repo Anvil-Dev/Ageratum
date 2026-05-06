@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.structure;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
@@ -70,20 +71,20 @@ public final class StructureProjectionManager {
         return activeProjection != null;
     }
 
-    public static boolean handleMouseScroll(double scrollY) {
+    public static boolean handleMouseScroll(InputEvent.MouseScrollingEvent event) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
-        if (projection == null || scrollY == 0.0d || minecraft.player == null || minecraft.level == null) {
+        if (projection == null || event.getScrollDeltaY() == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
-        if (minecraft.screen != null /*TODO || !Screen.hasControlDown()*/ || projection.isNotInLevel(minecraft.level)) {
+        if (minecraft.screen != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
             return false;
         }
         if (!projection.canMoveWith(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
             return false;
         }
 
-        projection.moveAlongView(minecraft.player.getViewVector(1.0f), scrollY > 0.0d ? 1 : -1);
+        projection.moveAlongView(minecraft.player.getViewVector(1.0f), event.getScrollDeltaY() > 0.0d ? 1 : -1);
         return true;
     }
 
@@ -93,7 +94,7 @@ public final class StructureProjectionManager {
      */
     @SubscribeEvent
     public static void onMouseScrolling(InputEvent.MouseScrollingEvent event) {
-        if (handleMouseScroll(event.getScrollDeltaY())) {
+        if (handleMouseScroll(event)) {
             event.setCanceled(true);
         }
     }

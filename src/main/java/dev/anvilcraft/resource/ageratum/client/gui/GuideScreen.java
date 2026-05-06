@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
@@ -32,6 +33,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
@@ -510,7 +512,7 @@ public class GuideScreen extends Screen {
                 return true;
             }
         }
-        if (button == 1 && this.hasControlDown() && this.mouseInBookmarkRange(mouseX, mouseY)) {
+        if (button == 1 && event.hasControlDown() && this.mouseInBookmarkRange(mouseX, mouseY)) {
             if (this.tryRemoveBookmarkAt(mouseX, mouseY)) {
                 return true;
             }
@@ -543,10 +545,6 @@ public class GuideScreen extends Screen {
             }
         }
         return super.mouseClicked(event, doubleClick);
-    }
-
-    private boolean hasControlDown() {
-        return true;
     }
 
     @Override
@@ -602,6 +600,15 @@ public class GuideScreen extends Screen {
             }
         }
         return super.mouseReleased(new MouseButtonEvent(mouseX, mouseY, event.buttonInfo()));
+    }
+
+    public static boolean hasControlDown() {
+        if (Util.getPlatform() == Util.OS.OSX) {
+            return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_SUPER)
+                   || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_SUPER);
+        }
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL)
+               || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_CONTROL);
     }
 
     /**
