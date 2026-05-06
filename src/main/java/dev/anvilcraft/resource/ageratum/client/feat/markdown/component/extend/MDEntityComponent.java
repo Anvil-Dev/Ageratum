@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -81,12 +82,12 @@ public final class MDEntityComponent extends MDComponent {
             graphics.text(minecraft.font, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
         }
 
-        context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
+//        context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         MDEntityComponent.renderEntity(context, graphics, x1, y1, x2, y2, this.getScale(entity, context.scale()), entity);
         pose.popMatrix();
-        context.disableScissor();
+//        context.disableScissor();
     }
 
     private int getContentWidth(int maxX) {
@@ -150,6 +151,18 @@ public final class MDEntityComponent extends MDComponent {
             living.yHeadRotO = living.getYRot();
         }
         Vector3f translate = new Vector3f(0.0F, entity.getBbHeight() / 2.0F, entity.getBbWidth() / -2.0F);
+        EntityRenderState entityRenderState = context.minecraft().getEntityRenderDispatcher().extractEntity(entity, 0);
+        graphics.entity(
+            entityRenderState,
+            scale,
+            translate,
+            pose,
+            new Quaternionf(),
+            (int) centerX,
+            context.offsetY(),
+            (int) (200 + centerX),
+            200 + context.offsetY()
+        );
         /*TODO
         MDEntityComponent.renderEntity(
             graphics,

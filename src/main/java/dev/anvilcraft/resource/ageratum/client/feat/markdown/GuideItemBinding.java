@@ -7,19 +7,27 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.StringReader;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.math.BigDecimal;
@@ -85,6 +93,51 @@ public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents
         }
 
         return isJsonSubset(requiredComponents, actualComponents);
+    }
+
+    /**
+     * 根据当前绑定规则构造一个用于查找文档绑定的物品栈。
+     *
+     * <p>会尽量复用绑定里声明的数据组件；若组件无法解析，则返回空。</p>
+     */
+    public Optional<ItemStack> createItemStack() {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return Optional.empty();
+        }
+
+        Optional<Registry<Item>> lookup = level.registryAccess().lookup(Registries.ITEM);
+        if (lookup.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Optional<Holder.Reference<Item>> itemReference = lookup.get().get(ResourceKey.create(Registries.ITEM, this.itemId));
+        if (itemReference.isEmpty()) {
+            return Optional.empty();
+        }
+
+        ItemStack stack = itemReference.get().value().getDefaultInstance();
+        if (this.rawComponents == null) {
+            return Optional.of(stack);
+        }
+
+        JsonObject componentObject = this.parseRequiredComponentsAsJsonObject();
+        if (componentObject == null) {
+            return Optional.empty();
+        }
+
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        DataResult<Pair<DataComponentMap, JsonElement>> decoded = DataComponentMap.CODEC.decode(ops, componentObject);
+        if (decoded.isError()) {
+            return Optional.empty();
+        }
+
+        applyComponents(stack, decoded.getOrThrow().getFirst());
+        return Optional.of(stack);
+    }
+
+    public Optional<Identifier> resolveFirstDocument(@Nullable String languageCode) {
+        return this.createItemStack().flatMap(stack -> GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode));
     }
 
     private @Nullable JsonObject parseRequiredComponentsAsJsonObject() {
@@ -205,6 +258,13 @@ public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents
         }
         HolderLookup.Provider registries = level.registryAccess();
         return RegistryOps.create(JsonOps.INSTANCE, registries);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void applyComponents(ItemStack stack, DataComponentMap components) {
+        for (TypedDataComponent<?> component : components) {
+            stack.set((DataComponentType<T>) component.type(), (T) component.value());
+        }
     }
 
     private static boolean isJsonSubset(@Nullable JsonElement required, @Nullable JsonElement actual) {
