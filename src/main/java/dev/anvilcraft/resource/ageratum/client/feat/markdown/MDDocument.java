@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import net.minecraft.resources.Identifier;
@@ -167,8 +168,8 @@ public record MDDocument(@Nullable Identifier sourceLocation, Map<String, Object
         if (slashIndex >= 0) {
             normalized = normalized.substring(slashIndex + 1);
         }
-        if (normalized.toLowerCase(Locale.ROOT).endsWith(".md")) {
-            normalized = normalized.substring(0, normalized.length() - 3);
+        if (normalized.toLowerCase(Locale.ROOT).endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+            normalized = normalized.substring(0, normalized.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
         }
         return normalized.isBlank() ? "Untitled" : normalized;
     }

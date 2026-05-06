@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -24,16 +25,15 @@ import javax.annotation.Nullable;
  * <p>该类为纯工具类，不可实例化。</p>
  */
 public final class GuideDocumentLoader {
-
     /**
      * Markdown 文档在各命名空间内的根目录名称。
      */
-    private static final String GUIDE_ROOT = "ageratum";
+    private static final String GUIDE_ROOT = AgeratumConstants.Guide.ROOT_FOLDER;
 
     /**
      * 默认语言目录。
      */
-    public static final String DEFAULT_LANGUAGE_CODE = "en_us";
+    public static final String DEFAULT_LANGUAGE_CODE = AgeratumConstants.I18n.DEFAULT_LANGUAGE_CODE;
 
     /**
      * 工具类，禁止实例化。
@@ -164,7 +164,8 @@ public final class GuideDocumentLoader {
         String rootDirectory = rootPrefix.substring(0, rootPrefix.length() - 1);
         Map<Identifier, Resource> files = resourceManager.listResources(
             rootDirectory,
-            location -> location.getPath().startsWith(rootPrefix) && location.getPath().endsWith(".md")
+            location -> location.getPath().startsWith(rootPrefix)
+                        && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
         );
         Set<String> namespaces = new TreeSet<>();
         for (Identifier location : files.keySet()) {
@@ -179,14 +180,17 @@ public final class GuideDocumentLoader {
             rootDirectory,
             location -> location.getNamespace().equals(namespace)
                         && location.getPath().startsWith(rootPrefix)
-                        && location.getPath().endsWith(".md")
+                        && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
         );
         List<String> result = new ArrayList<>();
         for (Identifier location : files.keySet()) {
             String path = location.getPath();
             String relativePath = path.substring(rootPrefix.length());
-            if (relativePath.endsWith(".md")) {
-                relativePath = relativePath.substring(0, relativePath.length() - 3);
+            if (relativePath.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+                relativePath = relativePath.substring(
+                    0,
+                    relativePath.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length()
+                );
             }
             result.add(relativePath);
         }
@@ -211,7 +215,7 @@ public final class GuideDocumentLoader {
         String file = fileArgument;
         // 缺省：使用首页文档
         if (file == null || file.isBlank()) {
-            file = "index";
+            file = AgeratumConstants.Guide.INDEX_FILE;
         }
         // 统一路径分隔符，去除开头斜杠
         file = file.trim().replace('\\', '/');
@@ -219,8 +223,8 @@ public final class GuideDocumentLoader {
             file = file.substring(1);
         }
         // 补全 .md 后缀
-        if (!file.endsWith(".md")) {
-            file += ".md";
+        if (!file.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+            file += AgeratumConstants.Guide.MARKDOWN_EXTENSION;
         }
         return file;
     }

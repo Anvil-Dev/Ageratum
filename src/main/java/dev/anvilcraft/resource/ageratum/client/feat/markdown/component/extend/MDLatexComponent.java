@@ -1,6 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -28,7 +30,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -36,12 +37,11 @@ import javax.annotation.Nullable;
  */
 @Slf4j
 public class MDLatexComponent extends MDImageComponent {
-    private static final Pattern LEGACY_LATEX_LINE_PATTERN = Pattern.compile("^\\s*\\[(?:tex|latex|formula)([:;,!+])([^]]+)]\\s*$");
-    private static final String LATEX_API_URL = "https://latex.codecogs.com/png.latex?";
-    private static final int MIN_LATEX_HEIGHT = 11;
-    private static final float DEFAULT_SCALE = 0.1f;
-    private static final float MIN_SCALE = 0.5f;
-    private static final float MAX_SCALE = 2.0f;
+    private static final String LATEX_API_URL = AgeratumConstants.LaTeX.LATEX_API_URL;
+    private static final int MIN_LATEX_HEIGHT = AgeratumConstants.LaTeX.MIN_LATEX_HEIGHT;
+    private static final float DEFAULT_SCALE = AgeratumConstants.LaTeX.Scale.DEFAULT;
+    private static final float MIN_SCALE = AgeratumConstants.LaTeX.Scale.MIN;
+    private static final float MAX_SCALE = AgeratumConstants.LaTeX.Scale.MAX;
     private static final MDImageComponent.Size PLACEHOLDER_SIZE = new MDImageComponent.Size(16, 16, 1.0f);
     private static final Map<String, LatexTextureState> TEXTURE_STATES = new ConcurrentHashMap<>();
 
@@ -145,8 +145,8 @@ public class MDLatexComponent extends MDImageComponent {
             try {
                 Files.createDirectories(state.cacheFile.getParent());
                 URLConnection connection = URI.create(state.url).toURL().openConnection();
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(10000);
+                connection.setConnectTimeout(AgeratumConstants.LaTeX.Network.CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(AgeratumConstants.LaTeX.Network.READ_TIMEOUT_MS);
                 try (InputStream inputStream = connection.getInputStream()) {
                     Files.copy(inputStream, state.cacheFile, StandardCopyOption.REPLACE_EXISTING);
                 }
@@ -164,7 +164,11 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static Path getCacheDir() {
-        return FMLLoader.getCurrent().getGameDir().resolve("config").resolve("ageratum").resolve("cache").resolve("latex");
+        return FMLLoader.getCurrent().getGameDir()
+            .resolve("config")
+            .resolve(AgeratumConstants.Guide.ROOT_FOLDER)
+            .resolve("cache")
+            .resolve("latex");
     }
 
     private static String sha1Hex(String text) {
@@ -194,12 +198,12 @@ public class MDLatexComponent extends MDImageComponent {
 
     private static int parseDpi(@Nullable String rawDpi) {
         if (rawDpi == null || rawDpi.isBlank()) {
-            return 150;
+            return AgeratumConstants.LaTeX.Dpi.DEFAULT;
         }
         try {
-            return Math.clamp(Integer.parseInt(rawDpi), 72, 600);
+            return Math.clamp(Integer.parseInt(rawDpi), AgeratumConstants.LaTeX.Dpi.MIN, AgeratumConstants.LaTeX.Dpi.MAX);
         } catch (NumberFormatException exception) {
-            return 150;
+            return AgeratumConstants.LaTeX.Dpi.DEFAULT;
         }
     }
 
@@ -229,14 +233,14 @@ public class MDLatexComponent extends MDImageComponent {
     private static MDComponent createFromFormula(String formula, float scale, int dpi, String color, boolean center) {
         String url = buildUrl(formula, dpi, color);
         String key = sha1Hex("formula=" + formula + "&dpi=" + dpi + "&color=" + color);
-        Identifier textureLocation = Identifier.fromNamespaceAndPath("ageratum", "latex/" + key);
+        Identifier textureLocation = Identifier.fromNamespaceAndPath(Ageratum.MOD_ID, "latex/" + key);
         Path cacheFile = getCacheDir().resolve(key + ".png");
         TEXTURE_STATES.computeIfAbsent(key, ignored -> new LatexTextureState(textureLocation, cacheFile, url));
         return new MDLatexComponent(key, textureLocation, formula, scale, center);
     }
 
     public static @Nullable MDComponent parseLegacyLine(String text) {
-        Matcher matcher = LEGACY_LATEX_LINE_PATTERN.matcher(text);
+        Matcher matcher = AgeratumConstants.Patterns.LEGACY_LATEX_LINE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return null;
         }

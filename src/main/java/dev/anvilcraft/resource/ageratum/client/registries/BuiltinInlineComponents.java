@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideItemBinding;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import net.minecraft.client.Minecraft;
@@ -25,11 +26,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * 内置行内组件注册。
  */
 public final class BuiltinInlineComponents {
-    /**
-     * 链接颜色，与 MDComponent 中的 LINK_COLOR 保持一致。
-     */
-    private static final int LINK_COLOR = 0x66ccff;
-
     /**
      * 翻译组件：{@code <translate key="..." fallback="..."/>}。
      */
@@ -94,7 +90,7 @@ public final class BuiltinInlineComponents {
                 AtomicReference<MutableComponent> displayText = new AtomicReference<>(Component.translatable(item.getDescriptionId()));
                 AtomicReference<Style> linkStyle = new AtomicReference<>(
                     context.baseStyle()
-                        .withColor(LINK_COLOR)
+                        .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
                         .withUnderlined(true)
                 );
                 if (binding != null) {

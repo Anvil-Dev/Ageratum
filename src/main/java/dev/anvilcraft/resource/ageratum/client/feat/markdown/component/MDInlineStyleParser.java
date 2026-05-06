@@ -60,10 +60,10 @@ public interface MDInlineStyleParser {
     /**
      * 创建一个能够直接生成内联内容 {@link net.minecraft.network.chat.FormattedText} 的解析器工厂。
      *
-     * @param priority 解析优先级
+     * @param priority       解析优先级
      * @param openTagPattern 开始标签正则
-     * @param closeTag 结束标签字面串
-     * @param textFactory 工厂函数： (innerText, parentStyle, matcher) -> FormattedText
+     * @param closeTag       结束标签字面串
+     * @param textFactory    工厂函数： (innerText, parentStyle, matcher) -> FormattedText
      */
     static MDInlineStyleParser create(
         int priority,

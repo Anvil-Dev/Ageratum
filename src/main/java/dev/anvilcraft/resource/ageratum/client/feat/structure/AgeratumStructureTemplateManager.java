@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.structure;
 
 import com.mojang.logging.LogUtils;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -42,7 +43,7 @@ public final class AgeratumStructureTemplateManager {
     /**
      * 在 {@code assets/<namespace>/} 下扫描结构文件的目录名。
      */
-    public static final String ASSET_FOLDER = "ageratum";
+    public static final String ASSET_FOLDER = AgeratumConstants.Guide.ROOT_FOLDER;
 
     /**
      * 原始 NBT 数据，在资源重载时以原子方式整体替换。

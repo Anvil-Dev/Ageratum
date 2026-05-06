@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.network;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.network.ClientPayloadHandler;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,7 +16,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  */
 @EventBusSubscriber(modid = Ageratum.MOD_ID)
 public final class AgeratumNetwork {
-    public static final String NETWORK_VERSION = "1";
+    public static final String NETWORK_VERSION = AgeratumConstants.Network.PROTOCOL_VERSION;
 
     private AgeratumNetwork() {
     }

@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -9,7 +10,6 @@ import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2fStack;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -19,7 +19,6 @@ import javax.annotation.Nullable;
  */
 @Getter
 public class MDHeaderComponent extends MDComponent {
-    private static final Pattern HEADER_PATTERN = Pattern.compile("^\\s{0,3}(#{1,6})\\s+(.+?)\\s*#*\\s*$");
     /**
      * 标题级别（1-6）。
      */
@@ -40,7 +39,7 @@ public class MDHeaderComponent extends MDComponent {
      * 尝试从单行文本解析标题组件。
      */
     public static @Nullable MDHeaderComponent parse(Identifier sourceLocation, String text) {
-        Matcher matcher = HEADER_PATTERN.matcher(text);
+        Matcher matcher = AgeratumConstants.Patterns.HEADER_PATTERN.matcher(text);
         if (!matcher.matches()) return null;
         int level = matcher.group(1).length();
         String headerText = matcher.group(2).trim();

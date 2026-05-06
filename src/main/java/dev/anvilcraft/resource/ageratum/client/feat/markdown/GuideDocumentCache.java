@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import com.mojang.logging.LogUtils;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -33,7 +34,7 @@ import javax.annotation.Nullable;
 @SuppressWarnings("unused")
 public final class GuideDocumentCache {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String GUIDE_ROOT = "ageratum";
+    private static final String GUIDE_ROOT = AgeratumConstants.Guide.ROOT_FOLDER;
 
     private static volatile Map<Identifier, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
     private static volatile Map<NavigationTreeKey, NavigationTree> NAVIGATION_TREE_CACHE = Map.of();
@@ -46,7 +47,8 @@ public final class GuideDocumentCache {
                 MarkdownParser parser = new MarkdownParser();
                 Map<Identifier, Resource> resources = resourceManager.listResources(
                     GUIDE_ROOT,
-                    location -> location.getPath().startsWith(GUIDE_ROOT + "/") && location.getPath().endsWith(".md")
+                    location -> location.getPath().startsWith(GUIDE_ROOT + "/")
+                                && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
                 Map<Identifier, MDDocument> prepared = new HashMap<>();
                 Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
@@ -116,11 +118,13 @@ public final class GuideDocumentCache {
         }
         String languageCode = withoutRoot.substring(0, slash);
         String relativePathWithExt = withoutRoot.substring(slash + 1);
-        if (!relativePathWithExt.endsWith(".md")) {
+        if (!relativePathWithExt.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
             return;
         }
 
-        String fileArgument = relativePathWithExt.substring(0, relativePathWithExt.length() - 3).replace('\\', '/');
+        String fileArgument = relativePathWithExt
+            .substring(0, relativePathWithExt.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length())
+            .replace('\\', '/');
         if (fileArgument.isBlank()) {
             return;
         }
@@ -297,7 +301,7 @@ public final class GuideDocumentCache {
             }
             String fileName = segments[segments.length - 1];
             NavigationDocument document = new NavigationDocument(fileArgument, title, location);
-            if ("index".equalsIgnoreCase(fileName)) {
+            if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(fileName)) {
                 current.indexDocument = document;
             } else {
                 current.documents.add(document);

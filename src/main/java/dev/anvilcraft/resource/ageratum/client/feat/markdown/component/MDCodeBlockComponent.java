@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;

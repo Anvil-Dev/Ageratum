@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -44,12 +44,12 @@ import javax.annotation.Nullable;
  */
 @Slf4j
 public final class MDNBTStructureComponent extends MDComponent {
-    private static final float MIN_ZOOM = 0.2f;
-    private static final float MAX_ZOOM = 8.0f;
-    private static final float ROTATE_YAW_SENSITIVITY = 0.8f;
-    private static final float ROTATE_PITCH_SENSITIVITY = 0.6f;
-    private static final float PAN_SENSITIVITY = 1.0f;
-    private static final Identifier BUTTON_PROJECTION_LOCATION = Ageratum.location("textures/gui/guide/button_projection.png");
+    private static final float MIN_ZOOM = AgeratumConstants.Structure.Camera.MIN_ZOOM;
+    private static final float MAX_ZOOM = AgeratumConstants.Structure.Camera.MAX_ZOOM;
+    private static final float ROTATE_YAW_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_YAW;
+    private static final float ROTATE_PITCH_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_PITCH;
+    private static final float PAN_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.PAN;
+    private static final Identifier BUTTON_PROJECTION_LOCATION = AgeratumConstants.Structure.Textures.BUTTON_PROJECTION;
 
     private final StructureTarget target;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
@@ -57,7 +57,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     private @Nullable StructureTemplate structureTemplateCache = null;
     private float panOffsetX;
     private float panOffsetY;
-    private int dragButton = -1;
+    private int dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
     private int visibleMinY;
     private int totalLayerCount = 1;
     private int visibleLayerCount = 1;
@@ -134,28 +134,20 @@ public final class MDNBTStructureComponent extends MDComponent {
         graphics.blit(
             RenderPipelines.GUI_TEXTURED,
             BUTTON_PROJECTION_LOCATION,
-            context.maxX() - 21,
-            5,
+            context.maxX() - AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_RIGHT_MARGIN,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_TOP_MARGIN,
             0,
             0,
-            isHover ? 16 : 0,
-            16,
-            16,
-            16,
+            isHover ? AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT : 0,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
             32
         );
     }
 
     @Override
-    public boolean keyPressed(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int keyCode,
-        int scanCode,
-        int modifiers,
-        int maxX
-    ) {
+    public boolean keyPressed(Minecraft minecraft, double mouseX, double mouseY, int keyCode, int scanCode, int modifiers, int maxX) {
         if (this.previewLevel == null) {
             return false;
         }
@@ -207,7 +199,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
             if (this.structureTemplateCache != null && minecraft.cameraEntity != null) {
                 BlockPos blockPos;
-                if(minecraft.hitResult instanceof BlockHitResult hitResult) {
+                if (minecraft.hitResult instanceof BlockHitResult hitResult) {
                     blockPos = hitResult.getBlockPos().relative(hitResult.getDirection());
                 } else {
                     blockPos = minecraft.cameraEntity.getOnPos().above();
@@ -223,15 +215,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     @Override
-    public boolean mouseDragged(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int button,
-        double dragX,
-        double dragY,
-        int maxX
-    ) {
+    public boolean mouseDragged(Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX) {
         if (button != this.dragButton) {
             return false;
         }
@@ -257,7 +241,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != this.dragButton) {
             return false;
         }
-        this.dragButton = -1;
+        this.dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
         return true;
     }
 
@@ -292,14 +276,21 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
         String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
-        int padding = 3;
+        int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
         int x = 4;
         int y = 4;
         int width = context.minecraft().font.width(layerLabel) + padding * 2;
         int height = context.minecraft().font.lineHeight + padding * 2;
 
-        graphics.fill(x, y, x + width, y + height, 0x88000000);
-        graphics.text(context.minecraft().font, layerLabel, x + padding, y + padding, 0xFFFFFF, false);
+        graphics.fill(x, y, x + width, y + height, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
+        graphics.text(
+            context.minecraft().font,
+            layerLabel,
+            x + padding,
+            y + padding,
+            AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_TEXT,
+            false
+        );
     }
 
     private static float clamp(float value, float min, float max) {
@@ -307,7 +298,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     public int scale(int maxX, int value) {
-        float scale = 330.f / maxX;
+        float scale = AgeratumConstants.Structure.Render.SCREEN_WIDTH_SCALE / maxX;
         return Math.round(value * scale);
     }
 
@@ -332,8 +323,8 @@ public final class MDNBTStructureComponent extends MDComponent {
             template.load(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
-            this.contentHeight = (int) (20d * Math.sqrt(BlockPos.ZERO.distSqr(size)));
-            this.bottomHeight = (int) (18d * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
+            this.contentHeight = (int) (AgeratumConstants.Structure.Render.CONTENT_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(size)));
+            this.bottomHeight = (int) (AgeratumConstants.Structure.Render.BOTTOM_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
             this.structureTemplateCache = template;
             return StructureSandboxFactory.create(clientLevel, template, pos);
         } catch (Exception exception) {

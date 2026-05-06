@@ -4,6 +4,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
@@ -46,7 +47,6 @@ public class AgeratumClient {
      * 模组日志记录器。
      */
     private static final Logger LOGGER = LogUtils.getLogger();
-    public static final String PREVIEW_NAMESPACE = "ageratum_review";
 
     public static final AgeratumClientConfig CONFIG = ConfigManager.register(Ageratum.MOD_ID, AgeratumClientConfig::new);
 
@@ -122,9 +122,7 @@ public class AgeratumClient {
                 fileArgument
             );
             if (resolved.isEmpty()) {
-                context.getSource().sendFailure(Component.literal(
-                    "Guide file not found for language '" + languageCode + "'."
-                ));
+                context.getSource().sendFailure(Component.literal("Guide file not found for language '" + languageCode + "'."));
                 return 0;
             }
             documentLocation = resolved.get();
@@ -133,11 +131,8 @@ public class AgeratumClient {
             return 0;
         }
         if (!openGuideOnClient(documentLocation, anchor, List.of())) {
-            context.getSource().sendFailure(
-                Component.literal(
-                    "Guide file not found: assets/" + documentLocation.getNamespace() + "/" + documentLocation.getPath()
-                )
-            );
+            context.getSource()
+                .sendFailure(Component.literal("Guide file not found: assets/" + documentLocation.getNamespace() + "/" + documentLocation.getPath()));
             return 0;
         }
         return 1;
@@ -280,12 +275,12 @@ public class AgeratumClient {
     }
 
     public static boolean isPreviewLocation(Identifier location) {
-        return PREVIEW_NAMESPACE.equals(location.getNamespace());
+        return AgeratumConstants.Preview.NAMESPACE.equals(location.getNamespace());
     }
 
     public static Identifier toPreviewLocation(@Nullable String fileArgument) {
         String normalized = normalizePreviewFileArgument(fileArgument);
-        return Identifier.fromNamespaceAndPath(PREVIEW_NAMESPACE, normalized);
+        return Ageratum.location(normalized);
     }
 
     public static Path getPreviewRootPath() {
@@ -294,8 +289,8 @@ public class AgeratumClient {
 
     public static Path resolvePreviewDocumentPath(Identifier location) {
         String path = location.getPath();
-        if (!path.endsWith(".md")) {
-            path += ".md";
+        if (!path.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+            path += AgeratumConstants.Guide.MARKDOWN_EXTENSION;
         }
         return resolvePreviewPath(path);
     }
@@ -307,14 +302,14 @@ public class AgeratumClient {
     private static String normalizePreviewFileArgument(@Nullable String fileArgument) {
         String file = fileArgument;
         if (file == null || file.isBlank()) {
-            file = "index";
+            file = AgeratumConstants.Guide.INDEX_FILE;
         }
         file = file.trim().replace('\\', '/');
         while (file.startsWith("/")) {
             file = file.substring(1);
         }
-        if (file.endsWith(".md")) {
-            file = file.substring(0, file.length() - 3);
+        if (file.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+            file = file.substring(0, file.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
         }
         String[] segments = file.split("/");
         List<String> normalizedSegments = new java.util.ArrayList<>();
@@ -331,7 +326,7 @@ public class AgeratumClient {
             normalizedSegments.add(segment.toLowerCase(Locale.ROOT));
         }
         if (normalizedSegments.isEmpty()) {
-            return "index";
+            return AgeratumConstants.Guide.INDEX_FILE;
         }
         return String.join("/", normalizedSegments);
     }

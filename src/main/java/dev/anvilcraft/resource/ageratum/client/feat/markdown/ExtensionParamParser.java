@@ -1,9 +1,10 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -13,8 +14,6 @@ import javax.annotation.Nullable;
  * 支持无引号、双引号和单引号三种参数值格式。</p>
  */
 public final class ExtensionParamParser {
-    private static final Pattern PARAM_PAIR_PATTERN = Pattern.compile("([a-zA-Z0-9_.-]+)=(\"[^\"]*\"|'[^']*'|\\S+)");
-
     private ExtensionParamParser() {
     }
 
@@ -38,7 +37,7 @@ public final class ExtensionParamParser {
         }
 
         Map<String, String> result = new LinkedHashMap<>();
-        Matcher matcher = PARAM_PAIR_PATTERN.matcher(rawParams);
+        Matcher matcher = AgeratumConstants.Patterns.PARAM_PAIR_PATTERN.matcher(rawParams);
 
         while (matcher.find()) {
             String key = matcher.group(1);

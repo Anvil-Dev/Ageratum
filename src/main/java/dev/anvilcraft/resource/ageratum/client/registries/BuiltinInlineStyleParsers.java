@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
 import net.minecraft.ChatFormatting;
@@ -14,7 +15,6 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 import java.net.URI;
 import java.util.List;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -22,21 +22,13 @@ import javax.annotation.Nullable;
  */
 @SuppressWarnings("unused")
 public final class BuiltinInlineStyleParsers {
-    private static final Pattern COLOR_TAG_PATTERN = Pattern.compile("<color=(#?[0-9a-zA-Z_]+)>");
-    private static final Pattern OBFUSCATED_TAG_PATTERN = Pattern.compile("<o>");
-    private static final Pattern HOVER_TAG_PATTERN = Pattern.compile("<hover\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern CLICK_TAG_PATTERN = Pattern.compile("<click\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern GRADIENT_TAG_PATTERN = Pattern.compile("<gradient\\b([^>]*)>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TAG_ATTRIBUTE_PATTERN = Pattern.compile("([a-zA-Z_:][-a-zA-Z0-9_:.]*)\\s*=\\s*\"([^\"]*)\"");
-
     /**
      * 颜色标签：{@code <color=#RRGGBB>...</color>}。
      */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> COLOR = AgeratumRegistries.INLINE_STYLE_PARSERS.register(
-        "color",
-        () -> MDInlineStyleParser.create(
+        "color", () -> MDInlineStyleParser.create(
             0,
-            COLOR_TAG_PATTERN,
+            AgeratumConstants.Patterns.COLOR_TAG_PATTERN,
             "</color>",
             (parentStyle, matcher) -> parentStyle.withColor(parseColor(matcher.group(1)))
         )
@@ -47,7 +39,12 @@ public final class BuiltinInlineStyleParsers {
      */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> OBFUSCATED = AgeratumRegistries.INLINE_STYLE_PARSERS.register(
         "obfuscated",
-        () -> MDInlineStyleParser.create(0, OBFUSCATED_TAG_PATTERN, "</o>", (parentStyle, matcher) -> parentStyle.withObfuscated(true))
+        () -> MDInlineStyleParser.create(
+            0,
+            AgeratumConstants.Patterns.OBFUSCATED_TAG_PATTERN,
+            "</o>",
+            (parentStyle, matcher) -> parentStyle.withObfuscated(true)
+        )
     );
 
     /**
@@ -55,7 +52,7 @@ public final class BuiltinInlineStyleParsers {
      */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> HOVER = AgeratumRegistries.INLINE_STYLE_PARSERS.register(
         "hover", () -> MDInlineStyleParser.create(
-            0, HOVER_TAG_PATTERN, "</hover>", (parentStyle, matcher) -> {
+            0, AgeratumConstants.Patterns.HOVER_TAG_PATTERN, "</hover>", (parentStyle, matcher) -> {
                 String rawAttributes = matcher.group(1);
                 String hoverType = getTagAttribute(rawAttributes, "type");
                 String hoverData = getTagAttribute(rawAttributes, "data");
@@ -92,7 +89,7 @@ public final class BuiltinInlineStyleParsers {
      */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> CLICK = AgeratumRegistries.INLINE_STYLE_PARSERS.register(
         "click", () -> MDInlineStyleParser.create(
-            0, CLICK_TAG_PATTERN, "</click>", (parentStyle, matcher) -> {
+            0, AgeratumConstants.Patterns.CLICK_TAG_PATTERN, "</click>", (parentStyle, matcher) -> {
                 String rawAttributes = matcher.group(1);
                 String clickType = getTagAttribute(rawAttributes, "type");
                 String clickData = getTagAttribute(rawAttributes, "data");
@@ -152,7 +149,7 @@ public final class BuiltinInlineStyleParsers {
      */
     public static final DeferredHolder<MDInlineStyleParser, MDInlineStyleParser> GRADIENT = AgeratumRegistries.INLINE_STYLE_PARSERS.register(
         "gradient", () -> MDInlineStyleParser.create(
-            0, GRADIENT_TAG_PATTERN, "</gradient>", (innerText, parentStyle, matcher) -> {
+            0, AgeratumConstants.Patterns.GRADIENT_TAG_PATTERN, "</gradient>", (innerText, parentStyle, matcher) -> {
                 // Keep nested tags functional by delegating to the default recursive inline parser.
                 if (innerText.indexOf('<') >= 0) {
                     return MDComponent.parseStyledText(innerText, parentStyle);
@@ -207,7 +204,7 @@ public final class BuiltinInlineStyleParsers {
     }
 
     private static @Nullable String getTagAttribute(String rawAttributes, String attributeName) {
-        var matcher = TAG_ATTRIBUTE_PATTERN.matcher(rawAttributes);
+        var matcher = AgeratumConstants.Patterns.TAG_ATTRIBUTE_PATTERN.matcher(rawAttributes);
         while (matcher.find()) {
             if (attributeName.equalsIgnoreCase(matcher.group(1))) {
                 return matcher.group(2);

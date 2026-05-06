@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
@@ -48,14 +49,14 @@ public abstract class MDComponent {
     private static final Pattern ITALIC_UNDERSCORE_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])_([^_\\n]+)_(?![A-Za-z0-9_])");
     private static final Pattern AUTOLINK_URL_PATTERN = Pattern.compile("<(https?://[^>\\s]+)>");
     private static final Pattern AUTOLINK_EMAIL_PATTERN = Pattern.compile("<([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})>");
-    private static final Pattern INLINE_COMPONENT_TAG_PATTERN = Pattern.compile("<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*/>",
+    private static final Pattern INLINE_COMPONENT_TAG_PATTERN = Pattern.compile(
+        "<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*/>",
         Pattern.CASE_INSENSITIVE
     );
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
-    private static final int LINK_COLOR = 0x66ccff;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
@@ -381,7 +382,7 @@ public abstract class MDComponent {
      * 为链接文本构造带点击事件的样式。
      */
     private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
-        Style style = parentStyle.withUnderlined(true).withColor(LINK_COLOR);
+        Style style = parentStyle.withUnderlined(true).withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR);
         if (target == null || target.isBlank()) {
             return style;
         }

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.Window;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
@@ -62,80 +63,36 @@ import javax.annotation.Nullable;
  */
 @SuppressWarnings("unused")
 public class GuideScreen extends Screen {
-    /**
-     * 背景纹理资源位置。
-     */
-    protected static final Identifier GUIDE_LOCATION = Ageratum.location("textures/gui/guide/guide.png");
-    protected static final int GUIDE_IMAGE_SIZE = 512;
-    /**
-     * 背景纹理完整宽度（原始像素）。
-     */
-    protected static final int GUIDE_IMAGE_WIDTH = 360;
-    /**
-     * 背景纹理完整高度（原始像素）。
-     */
-    protected static final int GUIDE_IMAGE_HEIGHT = 232;
-    protected static final Identifier LABEL_PRIMARY_LOCATION = Ageratum.location("textures/gui/guide/label_primary.png");
-    protected static final Identifier LABEL_SECONDARY_LOCATION = Ageratum.location("textures/gui/guide/label_secondary.png");
-    protected static final int LABEL_IMAGE_SIZE = 64;
-    /**
-     * 侧边标签宽度（原始像素）。
-     */
-    protected static final int LABEL_IMAGE_WIDTH = 60;
-    /**
-     * 侧边标签高度（原始像素）。
-     */
-    protected static final int LABEL_IMAGE_HEIGHT = 16;
-    protected static final Identifier BUTTON_DOWN_LOCATION = Ageratum.location("textures/gui/guide/button_down.png");
-    protected static final Identifier BUTTON_UP_LOCATION = Ageratum.location("textures/gui/guide/button_up.png");
-    protected static final Identifier BUTTON_CLOSE_LOCATION = Ageratum.location("textures/gui/guide/button_close.png");
-    protected static final Identifier BUTTON_SHARE_LOCATION = Ageratum.location("textures/gui/guide/button_share.png");
-    protected static final Identifier BUTTON_RETURN_LOCATION = Ageratum.location("textures/gui/guide/button_back.png");
-    protected static final Identifier BUTTON_ADD_LOCATION = Ageratum.location("textures/gui/guide/button_add.png");
-    protected static final Identifier LABEL_BOOKMARK_LOCATION = Ageratum.location("textures/gui/guide/label_bookmark.png");
-    protected static final int BUTTON_IMAGE_SIZE = 32;
-    /**
-     * 侧边标签宽度（原始像素）。
-     */
-    protected static final int BUTTON_IMAGE_WIDTH = 32;
-    /**
-     * 侧边标签高度（原始像素）。
-     */
-    protected static final int BUTTON_IMAGE_HEIGHT = 16;
-    protected static final int CLOSE_BUTTON_X_OFFSET = -5;
-    /**
-     * 书签悬停时向右滑出的距离（屏幕像素）。
-     */
-    protected static final int BOOKMARK_HOVER_SHIFT = 5;
-
-    protected static final int MIN_HORIZONTAL_MARGIN = 32;
-
-    protected static final int MIN_VERTICAL_MARGIN = 10;
-
-    // ── 纹理与界面尺寸常量（原始像素，使用时除以 2 获得实际屏幕尺寸）──────────
-    /**
-     * 侧边标签行距（屏幕像素）。
-     */
-    protected static final int MIN_LABEL_ROW_MARGIN = 2;
-    /**
-     * 二级标签额外缩进（屏幕像素）。
-     */
-    protected static final int LABEL_LEVEL2_INDENT = 10;
-    /**
-     * 标签悬停时向左滑出的距离（屏幕像素）。
-     */
-    protected static final int LABEL_HOVER_SHIFT = 5;
-
-    // ── 内容区域参数 ────────────────────────────────────────────────────────────
-    /**
-     * 相邻两个 MDComponent 之间的垂直间距（像素）。
-     */
-    protected static final int CONTENT_ROWS_MARGIN = 5;
-    /**
-     * 每次滚轮事件滚动的像素距离（Markdown 坐标系）。
-     */
-    protected static final float SCROLL_STEP = 16.0f;
-    protected static final long PREVIEW_REFRESH_INTERVAL_MS = 500L;
+    // ...existing texture and size constants, delegated to AgeratumConstants...
+    protected static final Identifier GUIDE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.GUIDE;
+    protected static final int GUIDE_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_SIZE;
+    protected static final int GUIDE_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_WIDTH;
+    protected static final int GUIDE_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_HEIGHT;
+    protected static final Identifier LABEL_PRIMARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_PRIMARY;
+    protected static final Identifier LABEL_SECONDARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_SECONDARY;
+    protected static final int LABEL_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_SIZE;
+    protected static final int LABEL_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_WIDTH;
+    protected static final int LABEL_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_HEIGHT;
+    protected static final Identifier BUTTON_DOWN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_DOWN;
+    protected static final Identifier BUTTON_UP_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_UP;
+    protected static final Identifier BUTTON_CLOSE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_CLOSE;
+    protected static final Identifier BUTTON_SHARE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_SHARE;
+    protected static final Identifier BUTTON_RETURN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_RETURN;
+    protected static final Identifier BUTTON_ADD_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_ADD;
+    protected static final Identifier LABEL_BOOKMARK_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_BOOKMARK;
+    protected static final int BUTTON_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.BUTTON_IMAGE_SIZE;
+    protected static final int BUTTON_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.BUTTON_IMAGE_WIDTH;
+    protected static final int BUTTON_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.BUTTON_IMAGE_HEIGHT;
+    protected static final int CLOSE_BUTTON_X_OFFSET = AgeratumConstants.GuideScreenUI.Layout.CLOSE_BUTTON_X_OFFSET;
+    protected static final int BOOKMARK_HOVER_SHIFT = AgeratumConstants.GuideScreenUI.Layout.BOOKMARK_HOVER_SHIFT;
+    protected static final int MIN_HORIZONTAL_MARGIN = AgeratumConstants.GuideScreenUI.Layout.MIN_HORIZONTAL_MARGIN;
+    protected static final int MIN_VERTICAL_MARGIN = AgeratumConstants.GuideScreenUI.Layout.MIN_VERTICAL_MARGIN;
+    protected static final int MIN_LABEL_ROW_MARGIN = AgeratumConstants.GuideScreenUI.Layout.MIN_LABEL_ROW_MARGIN;
+    protected static final int LABEL_LEVEL2_INDENT = AgeratumConstants.GuideScreenUI.Layout.LABEL_LEVEL2_INDENT;
+    protected static final int LABEL_HOVER_SHIFT = AgeratumConstants.GuideScreenUI.Layout.LABEL_HOVER_SHIFT;
+    protected static final int CONTENT_ROWS_MARGIN = AgeratumConstants.GuideScreenUI.Layout.CONTENT_ROWS_MARGIN;
+    protected static final float SCROLL_STEP = AgeratumConstants.GuideScreenUI.Interaction.SCROLL_STEP;
+    protected static final long PREVIEW_REFRESH_INTERVAL_MS = AgeratumConstants.GuideScreenUI.Interaction.PREVIEW_REFRESH_INTERVAL_MS;
 
     /**
      * Markdown 解析器实例。
@@ -406,9 +363,9 @@ public class GuideScreen extends Screen {
     public static int calculateScale(Window window, int guiScale, boolean forceUnicode) {
         int calculateScale = window.calculateScale(guiScale, forceUnicode);
         calculateScale *= AgeratumClient.CONFIG.scale;
-        if (window.getWidth() > 1920 && window.getHeight() > 1080) {
-            double widthScale = window.getWidth() / 1920d;
-            double heightScale = window.getHeight() / 1080d;
+        if (window.getWidth() > AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_WIDTH && window.getHeight() > AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_HEIGHT) {
+            double widthScale = window.getWidth() / (double) AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_WIDTH;
+            double heightScale = window.getHeight() / (double) AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_HEIGHT;
             int scale = (int) Math.round(Math.min(widthScale, heightScale));
             if (scale > 1) calculateScale *= scale;
         }
@@ -471,7 +428,14 @@ public class GuideScreen extends Screen {
 
     @Override
     public void extractTransparentBackground(GuiGraphicsExtractor guiGraphics) {
-        guiGraphics.fillGradient(0, 0, this.width + 10, this.height + 10, -1072689136, -804253680);
+        guiGraphics.fillGradient(
+            0,
+            0,
+            this.width + AgeratumConstants.GuideScreenUI.Positions.BACKGROUND_EXTRA_PADDING,
+            this.height + AgeratumConstants.GuideScreenUI.Positions.BACKGROUND_EXTRA_PADDING,
+            AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_1,
+            AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_2
+        );
     }
 
     /**
@@ -865,12 +829,22 @@ public class GuideScreen extends Screen {
                 LABEL_IMAGE_SIZE
             );
             pose.popMatrix();
-            int textColor = isActive ? 0xFF8B5A2B : (entry.clickable ? 0xFF5D4630 : 0xFF3f3f3f);
+            int textColor = isActive
+                            ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE
+                            : (
+                                entry.clickable
+                                ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE
+                                : AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED
+                            );
             guiGraphics.text(
                 this.font,
                 this.fitLabelTitle(entry.title),
-                originX + (entry.level == 1 ? 10 : 5),
-                originY + 4,
+                originX + (
+                    entry.level == 1
+                    ? AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT
+                    : AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2
+                ),
+                originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
                 textColor,
                 false
             );
@@ -896,7 +870,7 @@ public class GuideScreen extends Screen {
             BUTTON_IMAGE_SIZE
         );
         if (!this.preview) {
-            originY += BUTTON_IMAGE_HEIGHT + 10;
+            originY += BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
             guiGraphics.blit(
                 RenderPipelines.GUI_TEXTURED,
@@ -941,7 +915,7 @@ public class GuideScreen extends Screen {
     }
 
     public int getLabelBaseX() {
-        return -30;
+        return AgeratumConstants.GuideScreenUI.Positions.LABEL_BASE_X;
     }
 
     private int getLabelStartY() {
@@ -970,7 +944,7 @@ public class GuideScreen extends Screen {
             return true;
         }
         if (!this.preview) {
-            int shareButtonY = closeButtonY + BUTTON_IMAGE_HEIGHT + 10;
+            int shareButtonY = closeButtonY + BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
             if (this.mouseInRange(closeButtonX, shareButtonY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
                 this.onShare();
                 return true;
@@ -1015,7 +989,7 @@ public class GuideScreen extends Screen {
             return;
         }
 
-        int arrowX = this.getLabelBaseX() + 5;
+        int arrowX = this.getLabelBaseX() + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2;
         int arrowUpY = this.getArrowUpY();
         int arrowDownY = this.getArrowDownY();
         Matrix3x2fStack pose = guiGraphics.pose();
@@ -1088,12 +1062,17 @@ public class GuideScreen extends Screen {
     }
 
     private int getBookmarkViewportTopY() {
-        return this.getAddButtonY() + (BUTTON_IMAGE_HEIGHT + 10) * 2;
+        return this.getAddButtonY() + (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING) * 2;
     }
 
     private int getBookmarkViewportBottomY() {
-        int bottom = this.hasReturnButton() ? this.getReturnButtonY() - 10 : this.getContentStartY() + this.getContentHeight();
-        return Math.max(this.getBookmarkViewportTopY() + this.labelHeight, bottom - (BUTTON_IMAGE_HEIGHT + 10));
+        int bottom = this.hasReturnButton()
+                     ? this.getReturnButtonY() - AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING
+                     : this.getContentStartY() + this.getContentHeight();
+        return Math.max(
+            this.getBookmarkViewportTopY() + this.labelHeight,
+            bottom - (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING)
+        );
     }
 
     private int getAddButtonX() {
@@ -1101,9 +1080,9 @@ public class GuideScreen extends Screen {
     }
 
     private int getAddButtonY() {
-        int y = this.getCloseButtonY() + BUTTON_IMAGE_HEIGHT + 10; // 关闭按钮之后
+        int y = this.getCloseButtonY() + BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING; // 关闭按钮之后
         if (!this.preview) {
-            y += BUTTON_IMAGE_HEIGHT + 10; // 分享按钮之后
+            y += BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING; // 分享按钮之后
         }
         return y;
     }
@@ -1213,15 +1192,22 @@ public class GuideScreen extends Screen {
                 LABEL_IMAGE_SIZE
             );
             pose.popMatrix();
-            int textColor = 0xFF5D4630;
+            int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
             int width = this.font.width(this.fitLabelTitle(entry.title()));
-            guiGraphics.text(this.font, this.fitLabelTitle(entry.title()), markX + 50 - width, originY + 4, textColor, false);
+            guiGraphics.text(
+                this.font,
+                this.fitLabelTitle(entry.title()),
+                markX + AgeratumConstants.GuideScreenUI.Positions.BOOKMARK_TEXT_BASE_X - width,
+                originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
+                textColor,
+                false
+            );
         }
 
         // ── 渲染书签滚动提示箭头 ───────────────────────────────────────────────
         if (this.maxBookmarkScrollRows > 0) {
             int arrowX = this.getAddButtonX();
-            int arrowUpY = this.getBookmarkViewportTopY() - (BUTTON_IMAGE_HEIGHT + 10);
+            int arrowUpY = this.getBookmarkViewportTopY() - (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING);
             int arrowDownY = this.getBookmarkViewportBottomY();
             pose.pushMatrix();
             pose.scale(labelScale, labelScale);
@@ -1428,7 +1414,7 @@ public class GuideScreen extends Screen {
         PreviewDirectoryNode root = new PreviewDirectoryNode("");
         try (Stream<Path> paths = Files.walk(previewRoot)) {
             paths.filter(Files::isRegularFile)
-                .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".md"))
+                .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION))
                 .forEach(path -> this.insertPreviewDocument(root, previewRoot, path));
         } catch (Exception ignored) {
             this.labelEntries = List.of();
@@ -1459,10 +1445,10 @@ public class GuideScreen extends Screen {
     private void insertPreviewDocument(PreviewDirectoryNode root, Path previewRoot, Path absolutePath) {
         Path relativePath = previewRoot.relativize(absolutePath);
         String normalizedPath = relativePath.toString().replace('\\', '/');
-        if (normalizedPath.length() <= 3 || !normalizedPath.endsWith(".md")) {
+        if (normalizedPath.length() <= AgeratumConstants.Guide.MARKDOWN_EXTENSION.length() || !normalizedPath.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
             return;
         }
-        String fileArgument = normalizedPath.substring(0, normalizedPath.length() - 3);
+        String fileArgument = normalizedPath.substring(0, normalizedPath.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
         if (fileArgument.isBlank()) {
             return;
         }
@@ -1480,7 +1466,7 @@ public class GuideScreen extends Screen {
             location
         );
         String fileName = segments[segments.length - 1];
-        if ("index".equalsIgnoreCase(fileName)) {
+        if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(fileName)) {
             current.indexDocument = document;
         } else {
             current.documents.add(document);
@@ -1522,8 +1508,8 @@ public class GuideScreen extends Screen {
     private String previewTitleFor(String fileArgument) {
         int slash = fileArgument.lastIndexOf('/');
         String name = slash >= 0 ? fileArgument.substring(slash + 1) : fileArgument;
-        if ("index".equalsIgnoreCase(name)) {
-            String directory = slash >= 0 ? fileArgument.substring(0, slash) : "index";
+        if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(name)) {
+            String directory = slash >= 0 ? fileArgument.substring(0, slash) : AgeratumConstants.Guide.INDEX_FILE;
             int dirSlash = directory.lastIndexOf('/');
             String dirName = dirSlash >= 0 ? directory.substring(dirSlash + 1) : directory;
             return this.previewDirectoryTitle(dirName);
@@ -1622,20 +1608,20 @@ public class GuideScreen extends Screen {
     private String getCurrentFileArgument() {
         if (AgeratumClient.isPreviewLocation(this.documentLocation)) {
             String path = this.documentLocation.getPath();
-            if (path.endsWith(".md")) {
-                path = path.substring(0, path.length() - 3);
+            if (path.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+                path = path.substring(0, path.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
             }
             return path;
         }
         String normalizedLanguage = this.currentLanguageCode.trim().toLowerCase(Locale.ROOT).replace('-', '_');
-        String expectedPrefix = "ageratum/" + normalizedLanguage + "/";
+        String expectedPrefix = AgeratumConstants.Guide.ROOT_FOLDER + "/" + normalizedLanguage + "/";
         String path = this.documentLocation.getPath();
         if (!path.startsWith(expectedPrefix)) {
             return "";
         }
         String relative = path.substring(expectedPrefix.length());
-        if (relative.endsWith(".md")) {
-            relative = relative.substring(0, relative.length() - 3);
+        if (relative.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+            relative = relative.substring(0, relative.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
         }
         return relative;
     }
@@ -1674,7 +1660,8 @@ public class GuideScreen extends Screen {
                 resolved = this.resolvePreviewLocation(parsed.getPath(), false);
             } else {
                 // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
-                if (parsed.getPath().startsWith("ageratum/") && parsed.getPath().endsWith(".md")) {
+                if (parsed.getPath().startsWith(AgeratumConstants.Guide.ROOT_FOLDER + "/") && parsed.getPath()
+                    .endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
                     List<Identifier> breadCrumbs = this.breadCrumbs;
                     if (!parsed.equals(this.documentLocation)) {
                         breadCrumbs = new ArrayList<>(this.breadCrumbs);
@@ -2027,11 +2014,11 @@ public class GuideScreen extends Screen {
     }
 
     public int getContentStartX() {
-        return (int) Math.ceil(15 * this.getBgImageScale());
+        return (int) Math.ceil(AgeratumConstants.GuideScreenUI.Positions.CONTENT_START_X_OFFSET * this.getBgImageScale());
     }
 
     public int getContentStartY() {
-        return (int) Math.ceil(18 * this.getBgImageScale());
+        return (int) Math.ceil(AgeratumConstants.GuideScreenUI.Positions.CONTENT_START_Y_OFFSET * this.getBgImageScale());
     }
 
     /**
@@ -2085,7 +2072,7 @@ public class GuideScreen extends Screen {
 
     private String fitLabelTitle(Component title) {
         String text = title.getString();
-        int maxWidth = Math.max(1, this.labelWidth - 6);
+        int maxWidth = Math.max(1, this.labelWidth - AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_MAX_WIDTH_PADDING);
         if (this.font.width(text) <= maxWidth) {
             return text;
         }
