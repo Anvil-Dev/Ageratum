@@ -4,10 +4,10 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponen
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDEntityComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDItemComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNoticeBoxComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRowComponent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 

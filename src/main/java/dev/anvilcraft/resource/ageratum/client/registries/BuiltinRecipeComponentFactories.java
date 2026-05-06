@@ -1,8 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.registries;
 
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDCraftingTableRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDFurnaceRecipeComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDSmithingTableRecipeComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe.MDStonecutterRecipeComponent;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -22,7 +22,7 @@ public class BuiltinRecipeComponentFactories {
             "crafting",
             () -> MDRecipeComponent.RecipeComponentFactory.create(RecipeType.CRAFTING, MDCraftingTableRecipeComponent::new)
         );
-    
+
     /**
      * 锻造台配方渲染工厂（{@code RecipeType.SMITHING}）。
      */

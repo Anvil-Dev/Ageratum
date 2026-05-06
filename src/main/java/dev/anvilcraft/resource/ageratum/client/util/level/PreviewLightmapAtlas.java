@@ -81,8 +81,10 @@ public class PreviewLightmapAtlas implements AutoCloseable {
     }
 
     private static void clampColor(Vector3f vector3f) {
-        vector3f.set(Mth.clamp(vector3f.x, 0.0F, 1.0F), Mth.clamp(vector3f.y, 0.0F, 1.0F),
-            Mth.clamp(vector3f.z, 0.0F, 1.0F));
+        vector3f.set(
+            Mth.clamp(vector3f.x, 0.0F, 1.0F), Mth.clamp(vector3f.y, 0.0F, 1.0F),
+            Mth.clamp(vector3f.z, 0.0F, 1.0F)
+        );
     }
 
     private float notGamma(float value) {

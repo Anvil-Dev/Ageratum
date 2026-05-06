@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCodeBlockComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
@@ -26,7 +27,6 @@ import java.util.TreeSet;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -48,32 +48,6 @@ import javax.annotation.Nullable;
 public class MarkdownParser {
     // ── 块级模式定义 ──────────────────────────────────────────────────
 
-    private static final Pattern ORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)(\\d+)\\.\\s+(.+)$");
-    private static final Pattern TASK_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+\\[([ xX])]\\s+(.+)$");
-    private static final Pattern UNORDERED_LIST_PATTERN = Pattern.compile("^(\\s*)[-+*]\\s+(.+)$");
-    private static final Pattern BLOCKQUOTE_PATTERN = Pattern.compile("^\\s*((?:>\\s*)+)(.*)$");
-    private static final Pattern HORIZONTAL_RULE_PATTERN = Pattern.compile("^\\s*([-*_])(?:\\s*\\1){2,}\\s*$");
-    private static final Pattern SETEXT_H1_PATTERN = Pattern.compile("^=+\\s*$");
-    private static final Pattern SETEXT_H2_PATTERN = Pattern.compile("^-+\\s*$");
-    private static final Pattern CODE_FENCE_PATTERN = Pattern.compile("^(`{3,}|~{3,})(.*)$");
-    private static final Pattern INDENTED_CODE_PATTERN = Pattern.compile("^(?: {4}|\\t)(.*)$");
-    private static final Pattern TABLE_ROW_PATTERN = Pattern.compile("^\\|.*\\|\\s*$");
-    private static final Pattern LINK_REF_DEF_PATTERN = Pattern.compile(
-        "^\\s{0,3}\\[([^]]+)]:\\s*(\\S+)(?:\\s+(?:\"[^\"]*\"|'[^']*'|\\([^)]*\\)))?\\s*$"
-    );
-    private static final Pattern LINK_REF_FULL_PATTERN = Pattern.compile("\\[([^]]+)]\\[([^]]*)]");
-    private static final Pattern LINK_REF_SHORT_PATTERN = Pattern.compile("\\[([^]\\[]+)](?![\\[(])");
-
-    // ── 扩展语法模式定义 ────────────────────────────────────────────────
-
-    private static final Pattern EXTENSION_COLON_OPEN_PATTERN = Pattern.compile(
-        "^:::\\s+((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+(.*))?$",
-        Pattern.CASE_INSENSITIVE
-    );
-    private static final Pattern EXTENSION_TAG_OPEN_PATTERN = Pattern.compile(
-        "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*(/?)>\\s*$",
-        Pattern.CASE_INSENSITIVE
-    );
 
     private final Set<MDComponentParserHolder> mdComponentParserHolders = new TreeSet<>();
 
@@ -177,7 +151,7 @@ public class MarkdownParser {
 
             // ── 围栏代码块内部 ──────────────────────────────────────
             if (codeFence != null) {
-                Matcher closeMatcher = CODE_FENCE_PATTERN.matcher(s.trim());
+                Matcher closeMatcher = AgeratumConstants.Patterns.CODE_FENCE_PATTERN.matcher(s.trim());
                 if (closeMatcher.matches()
                     && closeMatcher.group(1).charAt(0) == codeFence.charAt(0)
                     && closeMatcher.group(1).length() >= codeFence.length()) {
@@ -211,7 +185,7 @@ public class MarkdownParser {
             }
 
             // ── 围栏代码块开启 ──────────────────────────────────────
-            Matcher fenceMatcher = CODE_FENCE_PATTERN.matcher(s.trim());
+            Matcher fenceMatcher = AgeratumConstants.Patterns.CODE_FENCE_PATTERN.matcher(s.trim());
             if (fenceMatcher.matches()) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 inIndentedCode = false;
@@ -221,7 +195,7 @@ public class MarkdownParser {
             }
 
             // ── 缩进代码块 ──────────────────────────────────────────
-            Matcher indentMatcher = INDENTED_CODE_PATTERN.matcher(s);
+            Matcher indentMatcher = AgeratumConstants.Patterns.INDENTED_CODE_PATTERN.matcher(s);
             if (indentMatcher.matches() && paragraphBuilder.isEmpty() && listItems.isEmpty() && quoteLines.isEmpty()) {
                 flushTableComponent(components, tableRows);
                 inIndentedCode = true;
@@ -238,12 +212,12 @@ public class MarkdownParser {
             }
 
             // ── 跳过引用链接定义行 ──────────────────────────────────
-            if (LINK_REF_DEF_PATTERN.matcher(s).matches()) {
+            if (AgeratumConstants.Patterns.LINK_REF_DEF_PATTERN.matcher(s).matches()) {
                 continue;
             }
 
             // ── 块引用 ──────────────────────────────────────────────
-            Matcher quoteMatcher = BLOCKQUOTE_PATTERN.matcher(s);
+            Matcher quoteMatcher = AgeratumConstants.Patterns.BLOCKQUOTE_PATTERN.matcher(s);
             if (quoteMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushListComponent(components, listItems);
@@ -255,7 +229,7 @@ public class MarkdownParser {
             }
 
             // ── 表格行 ──────────────────────────────────────────────
-            if (TABLE_ROW_PATTERN.matcher(s).matches()) {
+            if (AgeratumConstants.Patterns.TABLE_ROW_PATTERN.matcher(s).matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
                 flushListComponent(components, listItems);
@@ -264,7 +238,7 @@ public class MarkdownParser {
             }
 
             // ── 任务列表 ────────────────────────────────────────────
-            Matcher taskMatcher = TASK_LIST_PATTERN.matcher(s);
+            Matcher taskMatcher = AgeratumConstants.Patterns.TASK_LIST_PATTERN.matcher(s);
             if (taskMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
@@ -280,7 +254,7 @@ public class MarkdownParser {
             }
 
             // ── 无序列表 ────────────────────────────────────────────
-            Matcher unorderedMatcher = UNORDERED_LIST_PATTERN.matcher(s);
+            Matcher unorderedMatcher = AgeratumConstants.Patterns.UNORDERED_LIST_PATTERN.matcher(s);
             if (unorderedMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
@@ -292,7 +266,7 @@ public class MarkdownParser {
             }
 
             // ── 有序列表 ────────────────────────────────────────────
-            Matcher orderedMatcher = ORDERED_LIST_PATTERN.matcher(s);
+            Matcher orderedMatcher = AgeratumConstants.Patterns.ORDERED_LIST_PATTERN.matcher(s);
             if (orderedMatcher.matches()) {
                 flushParagraphComponent(components, paragraphBuilder);
                 flushQuoteComponent(components, quoteLines);
@@ -308,8 +282,8 @@ public class MarkdownParser {
             }
 
             // ── Setext 标题（在水平线检查前） ──────────────────────
-            boolean isSetextH1 = SETEXT_H1_PATTERN.matcher(s).matches();
-            boolean isSetextH2 = !isSetextH1 && SETEXT_H2_PATTERN.matcher(s).matches();
+            boolean isSetextH1 = AgeratumConstants.Patterns.SETEXT_H1_PATTERN.matcher(s).matches();
+            boolean isSetextH2 = !isSetextH1 && AgeratumConstants.Patterns.SETEXT_H2_PATTERN.matcher(s).matches();
             if ((isSetextH1 || isSetextH2) && !paragraphBuilder.isEmpty()) {
                 String accumulated = paragraphBuilder.toString();
                 if (accumulated.endsWith("\n")) accumulated = accumulated.substring(0, accumulated.length() - 1);
@@ -329,7 +303,7 @@ public class MarkdownParser {
             }
 
             // ── 水平线 ──────────────────────────────────────────────
-            if (HORIZONTAL_RULE_PATTERN.matcher(s).matches()) {
+            if (AgeratumConstants.Patterns.HORIZONTAL_RULE_PATTERN.matcher(s).matches()) {
                 flushAll(components, paragraphBuilder, quoteLines, listItems, tableRows, indentedCodeBuilder);
                 components.add(new MDHorizontalRuleComponent());
                 continue;
@@ -714,7 +688,7 @@ public class MarkdownParser {
         }
 
         // 尝试冒号语法
-        Matcher colonMatcher = EXTENSION_COLON_OPEN_PATTERN.matcher(trimmed);
+        Matcher colonMatcher = AgeratumConstants.Patterns.EXTENSION_COLON_OPEN_PATTERN.matcher(trimmed);
         if (colonMatcher.matches()) {
             ResourceLocation id = parseExtensionId(colonMatcher.group(1));
             if (id == null) {
@@ -725,7 +699,7 @@ public class MarkdownParser {
         }
 
         // 尝试标签语法
-        Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
+        Matcher tagMatcher = AgeratumConstants.Patterns.EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
         if (tagMatcher.matches()) {
             if (isReservedInlineTag(tagMatcher.group(1))) {
                 return null;
@@ -753,7 +727,7 @@ public class MarkdownParser {
         if (containsInlineClosingTag(trimmed)) {
             return null;
         }
-        Matcher tagMatcher = EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
+        Matcher tagMatcher = AgeratumConstants.Patterns.EXTENSION_TAG_OPEN_PATTERN.matcher(trimmed);
 
         if (tagMatcher.matches()) {
             if (isReservedInlineTag(tagMatcher.group(1))) {
@@ -878,7 +852,7 @@ public class MarkdownParser {
     private static Map<String, String> collectLinkRefs(String[] lines) {
         Map<String, String> refs = new LinkedHashMap<>();
         for (String line : lines) {
-            Matcher m = LINK_REF_DEF_PATTERN.matcher(line);
+            Matcher m = AgeratumConstants.Patterns.LINK_REF_DEF_PATTERN.matcher(line);
             if (m.matches()) {
                 refs.put(m.group(1).toLowerCase(), m.group(2));
             }
@@ -893,12 +867,12 @@ public class MarkdownParser {
         List<String> expandedLines = new ArrayList<>(lines.length);
         String codeFence = null;
         for (String line : lines) {
-            if (LINK_REF_DEF_PATTERN.matcher(line).matches()) {
+            if (AgeratumConstants.Patterns.LINK_REF_DEF_PATTERN.matcher(line).matches()) {
                 expandedLines.add(line);
                 continue;
             }
 
-            Matcher fenceMatcher = CODE_FENCE_PATTERN.matcher(line.trim());
+            Matcher fenceMatcher = AgeratumConstants.Patterns.CODE_FENCE_PATTERN.matcher(line.trim());
             if (codeFence != null) {
                 expandedLines.add(line);
                 if (fenceMatcher.matches()
@@ -922,7 +896,7 @@ public class MarkdownParser {
 
     private static String expandLinkRefsInLine(String markdown, Map<String, String> refs) {
         // 替换 [text][id] → [text](url)
-        Matcher full = LINK_REF_FULL_PATTERN.matcher(markdown);
+        Matcher full = AgeratumConstants.Patterns.LINK_REF_FULL_PATTERN.matcher(markdown);
         StringBuilder sb = new StringBuilder();
         while (full.find()) {
             String text = full.group(1);
@@ -934,7 +908,7 @@ public class MarkdownParser {
         markdown = sb.toString();
 
         // 替换 [id] 快捷引用 → [id](url)
-        Matcher shortcut = LINK_REF_SHORT_PATTERN.matcher(markdown);
+        Matcher shortcut = AgeratumConstants.Patterns.LINK_REF_SHORT_PATTERN.matcher(markdown);
         sb = new StringBuilder();
         while (shortcut.find()) {
             String text = shortcut.group(1);
@@ -1031,4 +1005,6 @@ public class MarkdownParser {
     private record FrontMatterParseResult(Map<String, Object> frontMatter, String body) {
     }
 }
+
+
 

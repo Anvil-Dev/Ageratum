@@ -9,6 +9,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
@@ -21,7 +22,6 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -99,7 +99,7 @@ public class AgeratumCommand {
             source.sendFailure(Component.translatable("commands.ageratum.preview.disable"));
             return 0;
         }
-        ResourceLocation previewLocation = AgeratumClient.toPreviewLocation("index");
+        ResourceLocation previewLocation = AgeratumClient.toPreviewLocation(AgeratumConstants.Guide.INDEX_FILE);
         if (!AgeratumClient.openGuideOnClient(previewLocation, List.of())) {
             source.sendFailure(Component.literal("Preview index.md not found: " + AgeratumClient.resolvePreviewDocumentPath(
                 previewLocation)));
@@ -158,7 +158,7 @@ public class AgeratumCommand {
 
     private static int openGuide(CommandContext<CommandSourceStack> context) {
         String namespace = Ageratum.MOD_ID;
-        String file = "index";
+        String file = AgeratumConstants.Guide.INDEX_FILE;
         try {
             namespace = StringArgumentType.getString(context, "namespace");
         } catch (Exception ignore) {

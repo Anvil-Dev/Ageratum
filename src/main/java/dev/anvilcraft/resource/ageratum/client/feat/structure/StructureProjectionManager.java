@@ -7,7 +7,6 @@ import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -24,10 +23,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
 import java.util.Objects;

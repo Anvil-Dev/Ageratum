@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -41,8 +41,6 @@ import javax.annotation.Nullable;
 @Getter
 @Slf4j
 public class MDImageComponent extends MDComponent {
-    private static final Pattern IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^):]+):([^)]+)\\)\\s*$");
-    private static final Pattern FALLBACK_IMAGE_PATTERN = Pattern.compile("^\\s*!\\[[^]]*]\\(([^)]+)\\)\\s*$");
     private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
     private static final Map<ResourceLocation, PreviewImageState> PREVIEW_IMAGE_CACHE = new HashMap<>();
     protected final ResourceLocation imageLocation;
@@ -78,7 +76,7 @@ public class MDImageComponent extends MDComponent {
      * 尝试将一行文本解析为图片组件。
      */
     public static @Nullable MDImageComponent parse(ResourceLocation sourceLocation, String text) {
-        Matcher matcher = IMAGE_PATTERN.matcher(text);
+        Matcher matcher = AgeratumConstants.Patterns.IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return MDImageComponent.fallbackParse(sourceLocation, text);
         }
@@ -96,7 +94,7 @@ public class MDImageComponent extends MDComponent {
     }
 
     public static @Nullable MDImageComponent fallbackParse(ResourceLocation sourceLocation, String text) {
-        Matcher matcher = FALLBACK_IMAGE_PATTERN.matcher(text);
+        Matcher matcher = AgeratumConstants.Patterns.FALLBACK_IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return null;
         }
@@ -246,7 +244,7 @@ public class MDImageComponent extends MDComponent {
         if (cachedSize != null) {
             return cachedSize;
         }
-        Size size = new Size(16, 16, 1.0f);
+        Size size = new Size(AgeratumConstants.Image.DEFAULT_PLACEHOLDER_WIDTH, AgeratumConstants.Image.DEFAULT_PLACEHOLDER_HEIGHT, 1.0f);
         try {
             Resource resource = minecraft.getResourceManager().getResource(this.getImageLocation()).orElse(null);
             if (resource != null) {
@@ -264,7 +262,7 @@ public class MDImageComponent extends MDComponent {
     private Size resolvePreviewSize(Minecraft minecraft) {
         Path imagePath = AgeratumClient.resolvePreviewAssetPath(this.getImageLocation().getPath());
         if (!Files.isRegularFile(imagePath)) {
-            return new Size(16, 16, 1.0f);
+            return new Size(AgeratumConstants.Image.DEFAULT_PLACEHOLDER_WIDTH, AgeratumConstants.Image.DEFAULT_PLACEHOLDER_HEIGHT, 1.0f);
         }
 
         long modifiedMillis;
@@ -273,7 +271,7 @@ public class MDImageComponent extends MDComponent {
             modifiedMillis = Files.getLastModifiedTime(imagePath).toMillis();
             fileSize = Files.size(imagePath);
         } catch (IOException ignored) {
-            return new Size(16, 16, 1.0f);
+            return new Size(AgeratumConstants.Image.DEFAULT_PLACEHOLDER_WIDTH, AgeratumConstants.Image.DEFAULT_PLACEHOLDER_HEIGHT, 1.0f);
         }
 
         PreviewImageState cached = PREVIEW_IMAGE_CACHE.get(this.getImageLocation());
@@ -289,7 +287,7 @@ public class MDImageComponent extends MDComponent {
             return size;
         } catch (IOException exception) {
             log.debug("Failed to load preview image: {}", imagePath, exception);
-            return new Size(16, 16, 1.0f);
+            return new Size(AgeratumConstants.Image.DEFAULT_PLACEHOLDER_WIDTH, AgeratumConstants.Image.DEFAULT_PLACEHOLDER_HEIGHT, 1.0f);
         }
     }
 

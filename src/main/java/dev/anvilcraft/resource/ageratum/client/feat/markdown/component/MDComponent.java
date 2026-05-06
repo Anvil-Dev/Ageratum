@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
@@ -51,7 +51,6 @@ public abstract class MDComponent {
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
-    private static final int LINK_COLOR = 0x66ccff;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
@@ -101,8 +100,8 @@ public abstract class MDComponent {
      * 子类可以重写此方法以声明固定宽度或最小宽度需求。</p>
      *
      * @param minecraft Minecraft 实例
-     * @param maxX 可用的最大宽度
-     * @param maxY 可用的最大高度
+     * @param maxX      可用的最大宽度
+     * @param maxY      可用的最大高度
      * @return 期望宽度（像素），{@code -1} 表示使用可用空间
      */
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
@@ -394,7 +393,7 @@ public abstract class MDComponent {
      * 为链接文本构造带点击事件的样式。
      */
     private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
-        Style style = parentStyle.withUnderlined(true).withColor(LINK_COLOR);
+        Style style = parentStyle.withUnderlined(true).withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR);
         if (target == null || target.isBlank()) {
             return style;
         }

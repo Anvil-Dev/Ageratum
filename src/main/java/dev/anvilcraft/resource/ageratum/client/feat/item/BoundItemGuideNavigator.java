@@ -5,9 +5,9 @@ import com.mojang.datafixers.util.Either;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
@@ -18,9 +18,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,8 +26,8 @@ import javax.annotation.Nullable;
 
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public final class BoundItemGuideNavigator {
-    private static final long HOLD_DURATION_MS = 1_500L;
-    private static final long HOVER_STALE_MS = 200L;
+    private static final long HOLD_DURATION_MS = AgeratumConstants.ItemBinding.HOLD_DURATION_MS;
+    private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_STALE_MS;
 
     @Nullable
     private static ResourceLocation hoveredDocumentLocation;

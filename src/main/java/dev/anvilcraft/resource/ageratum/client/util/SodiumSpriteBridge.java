@@ -27,7 +27,8 @@ public class SodiumSpriteBridge {
             handle = MethodHandles.lookup().findStatic(
                 Class.forName("me.jellysquid.mods.sodium.client.render.texture.SpriteUtil"),
                 "markSpriteActive",
-                MethodType.methodType(void.class, TextureAtlasSprite.class));
+                MethodType.methodType(void.class, TextureAtlasSprite.class)
+            );
             LOG.info("Loaded Sodium active sprite compat.");
         } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
             if (ModList.get().getModContainerById("sodium").isPresent()) {

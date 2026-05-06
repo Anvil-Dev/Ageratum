@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import net.minecraft.network.chat.FormattedText;
 
 /**

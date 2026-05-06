@@ -3,12 +3,13 @@ package dev.anvilcraft.resource.ageratum.data;
 import dev.anvilcraft.lib.v2.config.ConfigData;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClientConfig;
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 
 public class AgeratumLanguageProvider extends LanguageProvider {
     public AgeratumLanguageProvider(PackOutput output) {
-        super(output, Ageratum.MOD_ID, "en_us");
+        super(output, Ageratum.MOD_ID, AgeratumConstants.I18n.DEFAULT_LANGUAGE_CODE);
     }
 
     @Override

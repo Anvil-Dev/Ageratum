@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum;
 
+import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -90,7 +91,7 @@ public class Ageratum {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         ItemStack stack = event.getItemStack();
         if (!stack.is(Ageratum.DEFAULT_GUIDE_ITEM.get())) return;
-        Ageratum.openGuide(player, Ageratum.location("index"));
+        Ageratum.openGuide(player, Ageratum.location(AgeratumConstants.Guide.INDEX_FILE));
         event.getLevel().playSound(null, player, SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);
         event.setCancellationResult(InteractionResult.SUCCESS);
     }

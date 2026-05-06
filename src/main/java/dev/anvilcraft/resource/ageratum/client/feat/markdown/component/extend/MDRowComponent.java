@@ -71,7 +71,10 @@ public class MDRowComponent extends MDComponent {
         // - halign 用于：水平排列时整体在 maxX 内的对齐；垂直排列时子组件在 maxX 内的对齐。
         // - valign 用于：水平排列时子组件在该行高度内的对齐（上/中/下）。
         HorizontalAlign horizontalAlign = parseHorizontalAlign(
-            params.getOrDefault("halign", params.getOrDefault("alignX", params.getOrDefault("xAlign", params.getOrDefault("align", "left"))))
+            params.getOrDefault(
+                "halign",
+                params.getOrDefault("alignX", params.getOrDefault("xAlign", params.getOrDefault("align", "left")))
+            )
         );
         VerticalAlign verticalAlign = parseVerticalAlign(
             params.getOrDefault("valign", params.getOrDefault("alignY", params.getOrDefault("yAlign", "top")))
@@ -258,7 +261,7 @@ public class MDRowComponent extends MDComponent {
 
             if (preferredWidth > 0) {
                 int remaining = availableWidth - usedWidth;
-                widths[i] = Math.max(1, Math.min(preferredWidth, remaining));
+                widths[i] = Math.clamp(remaining, 1, preferredWidth);
                 usedWidth += widths[i];
             } else {
                 widths[i] = -1;
