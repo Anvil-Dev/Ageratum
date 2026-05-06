@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.structure;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
@@ -39,22 +40,6 @@ import java.util.Set;
 public final class StructureProjectionManager {
     private static final float PROJECTION_ALPHA = 0.45f;
     private static final ReferenceHolder<Set<Item>> DEFAULT_SCROLL_ITEMS = ReferenceHolder.create(() -> Set.of(Ageratum.DEFAULT_GUIDE_ITEM.get()));
-
-    public static final KeyMapping LAYER_UP_KEY = new KeyMapping(
-        "key.ageratum.structure_projection.layer_up",
-        GLFW.GLFW_KEY_PAGE_UP,
-        "key.categories.ageratum"
-    );
-    public static final KeyMapping LAYER_DOWN_KEY = new KeyMapping(
-        "key.ageratum.structure_projection.layer_down",
-        GLFW.GLFW_KEY_PAGE_DOWN,
-        "key.categories.ageratum"
-    );
-    public static final KeyMapping REMOVE_KEY = new KeyMapping(
-        "key.ageratum.structure_projection.remove",
-        GLFW.GLFW_KEY_END,
-        "key.categories.ageratum"
-    );
 
     private static @Nullable ActiveProjection activeProjection;
 
@@ -118,13 +103,6 @@ public final class StructureProjectionManager {
     }
 
     @SubscribeEvent
-    public static void onKeyMappingsRegister(RegisterKeyMappingsEvent event) {
-        event.register(LAYER_UP_KEY);
-        event.register(LAYER_DOWN_KEY);
-        event.register(REMOVE_KEY);
-    }
-
-    @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) {
@@ -144,14 +122,14 @@ public final class StructureProjectionManager {
             return;
         }
 
-        if (REMOVE_KEY.consumeClick()) {
+        if (AgeratumKeyMappings.REMOVE_KEY.consumeClick()) {
             activeProjection = null;
             return;
         }
-        while (LAYER_UP_KEY.consumeClick()) {
+        while (AgeratumKeyMappings.LAYER_UP_KEY.consumeClick()) {
             projection.expandVisibleLayers();
         }
-        while (LAYER_DOWN_KEY.consumeClick()) {
+        while (AgeratumKeyMappings.LAYER_DOWN_KEY.consumeClick()) {
             projection.shrinkVisibleLayers();
         }
     }

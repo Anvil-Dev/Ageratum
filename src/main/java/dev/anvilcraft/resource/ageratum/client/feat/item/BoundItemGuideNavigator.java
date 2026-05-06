@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Either;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
@@ -130,16 +131,9 @@ public final class BoundItemGuideNavigator {
         return Math.min(100L, (double) elapsed / HOLD_DURATION_MS);
     }
 
-    public static final KeyMapping W_KEY_MAPPING = new KeyMapping("key.ageratum.more_info", GLFW.GLFW_KEY_W, "key.categories.ageratum");
-
     private static boolean isWDown(Minecraft minecraft) {
         long window = minecraft.getWindow().getWindow();
-        return InputConstants.isKeyDown(window, W_KEY_MAPPING.getKey().getValue());
-    }
-
-    @SubscribeEvent
-    public static void onKetReg(RegisterKeyMappingsEvent event) {
-        event.register(W_KEY_MAPPING);
+        return InputConstants.isKeyDown(window, AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue());
     }
 
     private static void resetHoldState() {
