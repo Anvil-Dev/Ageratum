@@ -1,6 +1,6 @@
 # Structure Preview Rendering
 
-This document explains how `MDNBTStructureComponent` renders `.nbt` structures inside the guide UI, including the core pipeline and class responsibilities.
+This document explains how `MDNBTStructureComponent` renders `.nbt` / `.snbt` (SNBT) structures inside the guide UI, including the core pipeline and class responsibilities.
 
 ---
 
@@ -9,7 +9,7 @@ This document explains how `MDNBTStructureComponent` renders `.nbt` structures i
 The structure preview pipeline is:
 
 1. Resolve the structure target path (including relative paths)
-2. Open NBT data from resource packs or preview files
+2. Open NBT/SNBT data from resource packs or preview files
 3. Place the template into `SandboxRenderLevel`
 4. Render it through `StructurePreviewRenderer` into the markdown UI
 

@@ -226,6 +226,8 @@ _ 被转义
 
 <structure id="./test.nbt"/>
 
+<structure id="./test.snbt"/>
+
 ---
 
 ## 已实现：图片（独占一行，namespace:path）

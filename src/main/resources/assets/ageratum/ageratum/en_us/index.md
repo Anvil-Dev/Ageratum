@@ -241,6 +241,8 @@ Tilde fenced code block is now supported.
 
 <structure id="./test.nbt"/>
 
+<structure id="./test.snbt"/>
+
 ---
 
 ## Implemented: Image (line-only, namespace:path)
