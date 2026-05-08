@@ -37,7 +37,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import com.mojang.brigadier.StringReader;
 import org.lwjgl.glfw.GLFW;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -57,6 +58,7 @@ import javax.annotation.Nullable;
  */
 @Slf4j
 public final class MDNBTStructureComponent extends MDComponent {
+    private static final int MAX_SNBT_BYTES = 8 * 1024 * 1024;
     private static final float MIN_ZOOM = AgeratumConstants.Structure.Camera.MIN_ZOOM;
     private static final float MAX_ZOOM = AgeratumConstants.Structure.Camera.MAX_ZOOM;
     private static final float ROTATE_YAW_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_YAW;
@@ -337,32 +339,12 @@ public final class MDNBTStructureComponent extends MDComponent {
      */
     private @Nullable SandboxRenderLevel prepare(@Nullable Level clientLevel, StructureTarget target) {
         if (clientLevel == null) return null;
-        try (InputStream inputStream = MDNBTStructureComponent.openStructureStream(target)) {
-            if (inputStream == null) {
-                return null;
-            }
-
+        try {
             StructureTemplate template = new StructureTemplate();
             HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
-            byte[] bytes = inputStream.readAllBytes();
-            CompoundTag root;
-            try {
-                root = NbtIo.readCompressed(new ByteArrayInputStream(bytes), NbtAccounter.unlimitedHeap());
-            } catch (Exception compressedException) {
-                try {
-                    String snbt = new String(bytes, StandardCharsets.UTF_8);
-                    if (!snbt.isEmpty() && snbt.charAt(0) == '\ufeff') {
-                        snbt = snbt.substring(1);
-                    }
-                    root = new TagParser(new StringReader(snbt)).readStruct();
-                } catch (Exception snbtException) {
-                    log.warn(
-                        "Failed to parse structure file '{}' as compressed NBT or SNBT",
-                        target.displayPath(),
-                        snbtException
-                    );
-                    return null;
-                }
+            CompoundTag root = readStructureRoot(target);
+            if (root == null) {
+                return null;
             }
             root = normalizeStructureRoot(root);
             template.load(blocks, root);
@@ -373,7 +355,104 @@ public final class MDNBTStructureComponent extends MDComponent {
             this.structureTemplateCache = template;
             return StructureSandboxFactory.create(clientLevel, template, pos);
         } catch (Exception exception) {
+            log.warn("Failed to load structure preview from '{}'", target.displayPath(), exception);
             return null;
+        }
+    }
+
+    private static @Nullable CompoundTag readStructureRoot(StructureTarget target) {
+        ParseMode preferredMode;
+        try (InputStream stream = MDNBTStructureComponent.openStructureStream(target)) {
+            if (stream == null) {
+                return null;
+            }
+            preferredMode = detectParseMode(stream);
+        } catch (IOException exception) {
+            log.warn("Failed to open structure file '{}'", target.displayPath(), exception);
+            return null;
+        }
+
+        CompoundTag parsed = parseStructureRoot(target, preferredMode);
+        if (parsed != null) {
+            return parsed;
+        }
+
+        ParseMode fallbackMode = preferredMode == ParseMode.COMPRESSED_NBT ? ParseMode.SNBT : ParseMode.COMPRESSED_NBT;
+        parsed = parseStructureRoot(target, fallbackMode);
+        if (parsed != null) {
+            log.warn(
+                "Structure file '{}' failed {} parsing and was loaded as {}",
+                target.displayPath(),
+                preferredMode.description,
+                fallbackMode.description
+            );
+            return parsed;
+        }
+
+        log.warn(
+            "Failed to parse structure file '{}' as {} or {}",
+            target.displayPath(),
+            preferredMode.description,
+            fallbackMode.description
+        );
+        return null;
+    }
+
+    private static @Nullable CompoundTag parseStructureRoot(StructureTarget target, ParseMode mode) {
+        try (InputStream stream = MDNBTStructureComponent.openStructureStream(target)) {
+            if (stream == null) {
+                return null;
+            }
+            return switch (mode) {
+                case COMPRESSED_NBT -> NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
+                case SNBT -> readSnbtRoot(stream);
+            };
+        } catch (Exception exception) {
+            log.debug("Failed to parse structure '{}' as {}", target.displayPath(), mode.description, exception);
+            return null;
+        }
+    }
+
+    private static CompoundTag readSnbtRoot(InputStream stream) throws Exception {
+        String snbt = readUtf8WithLimit(stream, MAX_SNBT_BYTES);
+        if (!snbt.isEmpty() && snbt.charAt(0) == '\ufeff') {
+            snbt = snbt.substring(1);
+        }
+        return new TagParser(new StringReader(snbt)).readStruct();
+    }
+
+    private static ParseMode detectParseMode(InputStream stream) throws IOException {
+        BufferedInputStream buffered = stream instanceof BufferedInputStream b ? b : new BufferedInputStream(stream);
+        buffered.mark(2);
+        int first = buffered.read();
+        int second = buffered.read();
+        buffered.reset();
+        return first == 0x1f && second == 0x8b ? ParseMode.COMPRESSED_NBT : ParseMode.SNBT;
+    }
+
+    private static String readUtf8WithLimit(InputStream stream, int maxBytes) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(maxBytes, 8192));
+        byte[] buffer = new byte[8192];
+        int total = 0;
+        int read;
+        while ((read = stream.read(buffer)) != -1) {
+            total += read;
+            if (total > maxBytes) {
+                throw new IOException("SNBT payload exceeds " + maxBytes + " bytes limit");
+            }
+            output.write(buffer, 0, read);
+        }
+        return output.toString(StandardCharsets.UTF_8);
+    }
+
+    private enum ParseMode {
+        COMPRESSED_NBT("compressed NBT"),
+        SNBT("SNBT");
+
+        private final String description;
+
+        ParseMode(String description) {
+            this.description = description;
         }
     }
 
