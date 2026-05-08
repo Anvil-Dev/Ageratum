@@ -194,19 +194,21 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 
 ### Structure NBT Component (`<structure/>`)
 
-Use the structure extension to render a summary, top-down block preview, and bounded NBT tree for `.nbt` structure files directly inside
+Use the structure extension to render a summary, top-down block preview, and bounded NBT tree for `.nbt` / `.snbt` structure files directly inside
 documents:
 
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
 
 <structure id="./test.nbt"/>
+
+<structure id="./test.snbt"/>
 ```
 
 - `id` / `path`: required, target structure file `ResourceLocation`
 - `maxDepth`: optional, maximum expansion depth, default `2`
 - `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
-- Relative paths are supported and resolved against the current document directory, including `.nbt` files placed next to the Markdown
+- Relative paths are supported and resolved against the current document directory, including `.nbt` / `.snbt` files placed next to the Markdown
   document inside the resource pack; in preview mode the matching file is loaded from `run/ageratum_review/`
 - The component first shows structure metadata such as size, palette, block count, and entity count, then renders a top-down block preview
   followed by a depth-limited NBT tree

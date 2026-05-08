@@ -283,21 +283,23 @@ Block content here — supports Markdown syntax.
 ### Structure NBT Component
 
 Use the `structure` extension to render a summary, top-down block preview, and bounded NBT tree view for
-structure files stored under `data/<namespace>/structure/*.nbt`:
+structure files (`.nbt` / `.snbt`):
 
 ```markdown
 <structure id="minecraft:village/plains/houses/plains_small_house_1"/>
 
 <structure id="./test.nbt"/>
 
+<structure id="./test.snbt"/>
+
 ```
 
 - `id` / `path`: required, target structure file `ResourceLocation`
 - `maxDepth`: optional, maximum expansion depth, default `2`
 - `maxEntries`: optional, maximum number of keys/list entries shown per level, default `12`
-- Relative paths are supported, for example `./test.nbt` or `../shared/demo.nbt`, resolved against the current document directory and able
-  to point to `.nbt` files placed next to the Markdown document inside the resource pack
-- In preview mode, relative paths are loaded from the matching location under `run/ageratum_review/`
+- Relative paths are supported, for example `./test.nbt`, `./test.snbt` or `../shared/demo.nbt`, resolved against the current document directory and able
+  to point to `.nbt` / `.snbt` files placed next to the Markdown document inside the resource pack
+- In preview mode, relative paths are loaded from the matching location under `run/ageratum_review/` (both `.nbt` and `.snbt`)
 - Rendered content: structure size, palette/block/entity counts, a top-down block preview, and a depth-limited NBT tree
 - Hovering a block in the preview shows its block ID, structure coordinates, palette index, and whether it carries block-entity NBT
 - Fallback behavior: if the structure file is missing or cannot be read, the component shows an inline error message

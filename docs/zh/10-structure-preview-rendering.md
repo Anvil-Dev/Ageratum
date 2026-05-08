@@ -1,6 +1,6 @@
 # 结构预览渲染说明
 
-本文档说明 `MDNBTStructureComponent` 在 GUI 中渲染 `.nbt` 结构时的主要流程与关键类职责，帮助后续维护与扩展。
+本文档说明 `MDNBTStructureComponent` 在 GUI 中渲染 `.nbt` / `.snbt` 结构时的主要流程与关键类职责，帮助后续维护与扩展。
 
 ---
 
@@ -9,7 +9,7 @@
 结构预览是一条“资源解析 -> 沙盒世界装配 -> 渲染输出”的链路：
 
 1. 组件解析目标结构路径（支持相对路径）
-2. 从资源包或 preview 目录读取 NBT
+2. 从资源包或 preview 目录读取 NBT / SNBT
 3. 将结构放置到 `SandboxRenderLevel`
 4. 使用 `StructurePreviewRenderer` 在文档 UI 内绘制
 

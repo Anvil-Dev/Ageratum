@@ -21,8 +21,12 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
@@ -30,13 +34,19 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.BlockHitResult;
+import com.mojang.brigadier.StringReader;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
@@ -334,7 +344,27 @@ public final class MDNBTStructureComponent extends MDComponent {
 
             StructureTemplate template = new StructureTemplate();
             HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
-            CompoundTag root = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
+            byte[] bytes = inputStream.readAllBytes();
+            CompoundTag root;
+            try {
+                root = NbtIo.readCompressed(new ByteArrayInputStream(bytes), NbtAccounter.unlimitedHeap());
+            } catch (Exception compressedException) {
+                try {
+                    String snbt = new String(bytes, StandardCharsets.UTF_8);
+                    if (!snbt.isEmpty() && snbt.charAt(0) == '\ufeff') {
+                        snbt = snbt.substring(1);
+                    }
+                    root = new TagParser(new StringReader(snbt)).readStruct();
+                } catch (Exception snbtException) {
+                    log.warn(
+                        "Failed to parse structure file '{}' as compressed NBT or SNBT",
+                        target.displayPath(),
+                        snbtException
+                    );
+                    return null;
+                }
+            }
+            root = normalizeStructureRoot(root);
             template.load(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
@@ -345,6 +375,131 @@ public final class MDNBTStructureComponent extends MDComponent {
         } catch (Exception exception) {
             return null;
         }
+    }
+
+    /**
+     * Normalize SNBT variants into the vanilla StructureTemplate NBT format.
+     *
+     * <p>In addition to vanilla structure NBT (compressed or SNBT), we also support a simplified SNBT format:
+     * <pre>
+     * {
+     *   size: [x, y, z],
+     *   palette: ["minecraft:stone", "minecraft:barrier{waterlogged:false}"],
+     *   data: [{pos:[0,0,0], state:"minecraft:stone"}, ...]
+     * }
+     * </pre>
+     * This method converts it to {@code palette: [{Name:"...", Properties:{...}}, ...]} and
+     * {@code blocks: [{pos:[...], state:<index>}, ...]}.
+     */
+    private static CompoundTag normalizeStructureRoot(CompoundTag root) {
+        Tag paletteTag = root.get("palette");
+        boolean paletteIsStringList = paletteTag instanceof ListTag list && list.getElementType() == Tag.TAG_STRING;
+        Tag dataTag = root.get("data");
+        boolean hasSimplifiedData = dataTag instanceof ListTag list && list.getElementType() == Tag.TAG_COMPOUND;
+
+        if (!paletteIsStringList && !hasSimplifiedData) {
+            return root;
+        }
+
+        CompoundTag converted = root.copy();
+
+        // Build palette entries in a deterministic order.
+        List<String> paletteStates = new ArrayList<>();
+        if (paletteIsStringList) {
+            ListTag paletteStrings = (ListTag) converted.get("palette");
+            for (int i = 0; i < paletteStrings.size(); i++) {
+                String state = paletteStrings.getString(i);
+                if (!state.isBlank()) {
+                    paletteStates.add(state);
+                }
+            }
+        }
+
+        ListTag dataList = hasSimplifiedData ? (ListTag) converted.get("data") : null;
+        if (paletteStates.isEmpty() && dataList != null) {
+            for (int i = 0; i < dataList.size(); i++) {
+                CompoundTag entry = dataList.getCompound(i);
+                String state = entry.getString("state");
+                if (!state.isBlank() && !paletteStates.contains(state)) {
+                    paletteStates.add(state);
+                }
+            }
+        }
+
+        ListTag palette = new ListTag();
+        Map<String, Integer> paletteIndex = new LinkedHashMap<>();
+        for (String state : paletteStates) {
+            paletteIndex.put(state, palette.size());
+            palette.add(toStructurePaletteEntry(state));
+        }
+        converted.put("palette", palette);
+
+        if (dataList != null && !converted.contains("blocks")) {
+            ListTag blocks = new ListTag();
+            for (int i = 0; i < dataList.size(); i++) {
+                CompoundTag entry = dataList.getCompound(i);
+                String state = entry.getString("state");
+
+                Integer index = paletteIndex.get(state);
+                if (index == null) {
+                    index = palette.size();
+                    paletteIndex.put(state, index);
+                    palette.add(toStructurePaletteEntry(state));
+                }
+
+                CompoundTag block = new CompoundTag();
+                Tag pos = entry.get("pos");
+                if (pos != null) {
+                    block.put("pos", pos.copy());
+                }
+                block.putInt("state", index);
+
+                Tag nbt = entry.get("nbt");
+                if (nbt != null) {
+                    block.put("nbt", nbt.copy());
+                }
+                blocks.add(block);
+            }
+            converted.remove("data");
+            converted.put("blocks", blocks);
+        }
+
+        return converted;
+    }
+
+    private static CompoundTag toStructurePaletteEntry(String stateString) {
+        String raw = stateString.trim();
+        String name = raw;
+        String props = "";
+
+        int braceIndex = raw.indexOf('{');
+        if (braceIndex >= 0 && raw.endsWith("}")) {
+            name = raw.substring(0, braceIndex).trim();
+            props = raw.substring(braceIndex + 1, raw.length() - 1).trim();
+        }
+
+        CompoundTag entry = new CompoundTag();
+        entry.putString("Name", name);
+
+        if (!props.isEmpty()) {
+            CompoundTag properties = new CompoundTag();
+            String[] pairs = props.split(",");
+            for (String pair : pairs) {
+                int colon = pair.indexOf(':');
+                if (colon < 0) {
+                    continue;
+                }
+                String key = pair.substring(0, colon).trim();
+                String value = pair.substring(colon + 1).trim();
+                if (!key.isEmpty() && !value.isEmpty()) {
+                    properties.put(key, StringTag.valueOf(value));
+                }
+            }
+            if (!properties.isEmpty()) {
+                entry.put("Properties", properties);
+            }
+        }
+        return entry;
     }
 
     /**
@@ -361,9 +516,11 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
         }
 
-        Resource directResource = Minecraft.getInstance().getResourceManager().getResource(target.location()).orElse(null);
-        if (directResource != null) {
-            return directResource.open();
+        for (ResourceLocation candidate : candidateResourceLocations(target.location())) {
+            Resource directResource = Minecraft.getInstance().getResourceManager().getResource(candidate).orElse(null);
+            if (directResource != null) {
+                return directResource.open();
+            }
         }
 
         for (String candidate : candidateResourcePaths(target.location())) {
@@ -375,6 +532,18 @@ public final class MDNBTStructureComponent extends MDComponent {
         return null;
     }
 
+    private static List<ResourceLocation> candidateResourceLocations(ResourceLocation location) {
+        String path = location.getPath();
+        if (endsWithStructureExtension(path)) {
+            return List.of(location);
+        }
+        return List.of(
+            location,
+            ResourceLocation.fromNamespaceAndPath(location.getNamespace(), path + ".nbt"),
+            ResourceLocation.fromNamespaceAndPath(location.getNamespace(), path + ".snbt")
+        );
+    }
+
     /**
      * 生成结构文件在 classpath 中的回退搜索路径。
      */
@@ -382,7 +551,9 @@ public final class MDNBTStructureComponent extends MDComponent {
         String normalizedPath = normalizeStructurePath(location.getPath());
         return List.of(
             "data/" + location.getNamespace() + "/structure/" + normalizedPath + ".nbt",
-            "data/" + location.getNamespace() + "/structures/" + normalizedPath + ".nbt"
+            "data/" + location.getNamespace() + "/structures/" + normalizedPath + ".nbt",
+            "data/" + location.getNamespace() + "/structure/" + normalizedPath + ".snbt",
+            "data/" + location.getNamespace() + "/structures/" + normalizedPath + ".snbt"
         );
     }
 
@@ -391,14 +562,22 @@ public final class MDNBTStructureComponent extends MDComponent {
         while (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
         }
-        if (normalized.endsWith(".nbt")) {
-            normalized = normalized.substring(0, normalized.length() - 4);
+        if (endsWithStructureExtension(normalized)) {
+            int dotIndex = normalized.lastIndexOf('.');
+            normalized = dotIndex >= 0 ? normalized.substring(0, dotIndex) : normalized;
         }
         return normalized;
     }
 
-    private static String ensureNbtExtension(String path) {
-        return path.endsWith(".nbt") ? path : path + ".nbt";
+    private static boolean endsWithStructureExtension(String path) {
+        return path.endsWith(".nbt") || path.endsWith(".snbt");
+    }
+
+    private static List<String> expandStructureExtensions(String path) {
+        String normalized = path.replace('\\', '/');
+        return endsWithStructureExtension(normalized)
+               ? List.of(normalized)
+               : List.of(normalized + ".nbt", normalized + ".snbt");
     }
 
     private static String getCurrentDirectoryPath(ResourceLocation location) {
@@ -419,7 +598,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             if (trimmed.contains(":")) {
                 ResourceLocation location = ResourceLocation.parse(trimmed);
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
-                                            ? List.of(ensureNbtExtension(RelativePathResolver.resolveWithinBase("", location.getPath())))
+                                            ? expandStructureExtensions(RelativePathResolver.resolveWithinBase("", location.getPath()))
                                             : List.of();
                 return new StructureTarget(location, trimmed, previewPaths);
             }
@@ -427,7 +606,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             String resolvedPath = RelativePathResolver.resolveWithinBase(getCurrentDirectoryPath(sourceLocation), trimmed);
             ResourceLocation location = ResourceLocation.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
             List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
-                                        ? List.of(ensureNbtExtension(resolvedPath))
+                                        ? expandStructureExtensions(resolvedPath)
                                         : List.of();
             return new StructureTarget(location, trimmed, previewPaths);
         }
