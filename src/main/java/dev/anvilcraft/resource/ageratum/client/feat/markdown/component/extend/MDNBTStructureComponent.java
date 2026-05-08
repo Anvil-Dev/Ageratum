@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
@@ -34,7 +35,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.BlockHitResult;
-import com.mojang.brigadier.StringReader;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.BufferedInputStream;
@@ -45,9 +45,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -126,13 +128,14 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.cameraRig.setZoom(2.0f);
         this.cameraRig.setOffsetX(this.panOffsetX);
         this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
-        StructurePreviewRenderer.getInstance().render(
-            this.previewLevel,
-            this.cameraRig,
-            graphics.bufferSource(),
-            this.visibleMinY,
-            this.visibleMinY + this.visibleLayerCount
-        );
+        StructurePreviewRenderer.getInstance()
+            .render(
+                this.previewLevel,
+                this.cameraRig,
+                graphics.bufferSource(),
+                this.visibleMinY,
+                this.visibleMinY + this.visibleLayerCount
+            );
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
@@ -160,15 +163,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     @Override
-    public boolean keyPressed(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int keyCode,
-        int scanCode,
-        int modifiers,
-        int maxX
-    ) {
+    public boolean keyPressed(Minecraft minecraft, double mouseX, double mouseY, int keyCode, int scanCode, int modifiers, int maxX) {
         if (this.previewLevel == null) {
             return false;
         }
@@ -234,15 +229,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     @Override
-    public boolean mouseDragged(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int button,
-        double dragX,
-        double dragY,
-        int maxX
-    ) {
+    public boolean mouseDragged(Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX) {
         if (button != this.dragButton) {
             return false;
         }
@@ -446,8 +433,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private enum ParseMode {
-        COMPRESSED_NBT("compressed NBT"),
-        SNBT("SNBT");
+        COMPRESSED_NBT("compressed NBT"), SNBT("SNBT");
 
         private final String description;
 
@@ -484,11 +470,12 @@ public final class MDNBTStructureComponent extends MDComponent {
 
         // Build palette entries in a deterministic order.
         List<String> paletteStates = new ArrayList<>();
+        Set<String> seenPaletteStates = new HashSet<>();
         if (paletteIsStringList) {
             ListTag paletteStrings = (ListTag) converted.get("palette");
             for (int i = 0; i < paletteStrings.size(); i++) {
                 String state = paletteStrings.getString(i);
-                if (!state.isBlank()) {
+                if (!state.isBlank() && seenPaletteStates.add(state)) {
                     paletteStates.add(state);
                 }
             }
@@ -499,7 +486,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             for (int i = 0; i < dataList.size(); i++) {
                 CompoundTag entry = dataList.getCompound(i);
                 String state = entry.getString("state");
-                if (!state.isBlank() && !paletteStates.contains(state)) {
+                if (!state.isBlank() && seenPaletteStates.add(state)) {
                     paletteStates.add(state);
                 }
             }
@@ -654,9 +641,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     private static List<String> expandStructureExtensions(String path) {
         String normalized = path.replace('\\', '/');
-        return endsWithStructureExtension(normalized)
-               ? List.of(normalized)
-               : List.of(normalized + ".nbt", normalized + ".snbt");
+        return endsWithStructureExtension(normalized) ? List.of(normalized) : List.of(normalized + ".nbt", normalized + ".snbt");
     }
 
     private static String getCurrentDirectoryPath(ResourceLocation location) {
