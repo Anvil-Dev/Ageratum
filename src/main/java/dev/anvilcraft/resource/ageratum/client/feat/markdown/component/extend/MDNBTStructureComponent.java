@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
@@ -20,8 +21,12 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
@@ -30,11 +35,19 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -45,6 +58,7 @@ import javax.annotation.Nullable;
  */
 @Slf4j
 public final class MDNBTStructureComponent extends MDComponent {
+    private static final int MAX_SNBT_BYTES = 8 * 1024 * 1024;
     private static final float MIN_ZOOM = AgeratumConstants.Structure.Camera.MIN_ZOOM;
     private static final float MAX_ZOOM = AgeratumConstants.Structure.Camera.MAX_ZOOM;
     private static final float ROTATE_YAW_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_YAW;
@@ -112,14 +126,16 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.cameraRig.setZoom(2.0f);
         this.cameraRig.setOffsetX(this.panOffsetX);
         this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
-        // TODO
-//        StructurePreviewRenderer.getInstance().render(
-//            this.previewLevel,
-//            this.cameraRig,
-//            graphics.bufferSource(),
-//            this.visibleMinY,
-//            this.visibleMinY + this.visibleLayerCount
-//        );
+        /* TODO
+        StructurePreviewRenderer.getInstance()
+            .render(
+                this.previewLevel,
+                this.cameraRig,
+                graphics.bufferSource(),
+                this.visibleMinY,
+                this.visibleMinY + this.visibleLayerCount
+            );
+         */
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
@@ -138,8 +154,9 @@ public final class MDNBTStructureComponent extends MDComponent {
             context.maxX() - AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_RIGHT_MARGIN,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_TOP_MARGIN,
             0,
-            0,
             isHover ? AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT : 0,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
@@ -313,14 +330,14 @@ public final class MDNBTStructureComponent extends MDComponent {
      */
     private @Nullable SandboxRenderLevel prepare(@Nullable Level clientLevel, StructureTarget target) {
         if (clientLevel == null) return null;
-        try (InputStream inputStream = MDNBTStructureComponent.openStructureStream(target)) {
-            if (inputStream == null) {
-                return null;
-            }
-
+        try {
             StructureTemplate template = new StructureTemplate();
             HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
-            CompoundTag root = NbtIo.readCompressed(inputStream, NbtAccounter.unlimitedHeap());
+            CompoundTag root = readStructureRoot(target);
+            if (root == null) {
+                return null;
+            }
+            root = normalizeStructureRoot(root);
             template.load(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
@@ -329,8 +346,233 @@ public final class MDNBTStructureComponent extends MDComponent {
             this.structureTemplateCache = template;
             return StructureSandboxFactory.create(clientLevel, template, pos);
         } catch (Exception exception) {
+            log.warn("Failed to load structure preview from '{}'", target.displayPath(), exception);
             return null;
         }
+    }
+
+    private static @Nullable CompoundTag readStructureRoot(StructureTarget target) {
+        ParseMode preferredMode;
+        try (InputStream stream = MDNBTStructureComponent.openStructureStream(target)) {
+            if (stream == null) {
+                return null;
+            }
+            preferredMode = detectParseMode(stream);
+        } catch (IOException exception) {
+            log.warn("Failed to open structure file '{}'", target.displayPath(), exception);
+            return null;
+        }
+
+        CompoundTag parsed = parseStructureRoot(target, preferredMode);
+        if (parsed != null) {
+            return parsed;
+        }
+
+        ParseMode fallbackMode = preferredMode == ParseMode.COMPRESSED_NBT ? ParseMode.SNBT : ParseMode.COMPRESSED_NBT;
+        parsed = parseStructureRoot(target, fallbackMode);
+        if (parsed != null) {
+            log.warn(
+                "Structure file '{}' failed {} parsing and was loaded as {}",
+                target.displayPath(),
+                preferredMode.description,
+                fallbackMode.description
+            );
+            return parsed;
+        }
+
+        log.warn(
+            "Failed to parse structure file '{}' as {} or {}",
+            target.displayPath(),
+            preferredMode.description,
+            fallbackMode.description
+        );
+        return null;
+    }
+
+    private static @Nullable CompoundTag parseStructureRoot(StructureTarget target, ParseMode mode) {
+        try (InputStream stream = MDNBTStructureComponent.openStructureStream(target)) {
+            if (stream == null) {
+                return null;
+            }
+            return switch (mode) {
+                case COMPRESSED_NBT -> NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
+                case SNBT -> readSnbtRoot(stream);
+            };
+        } catch (Exception exception) {
+            log.debug("Failed to parse structure '{}' as {}", target.displayPath(), mode.description, exception);
+            return null;
+        }
+    }
+
+    private static CompoundTag readSnbtRoot(InputStream stream) throws Exception {
+        String snbt = readUtf8WithLimit(stream, MAX_SNBT_BYTES);
+        if (!snbt.isEmpty() && snbt.charAt(0) == '\ufeff') {
+            snbt = snbt.substring(1);
+        }
+        return TagParser.parseCompoundAsArgument(new StringReader(snbt));
+    }
+
+    private static ParseMode detectParseMode(InputStream stream) throws IOException {
+        BufferedInputStream buffered = stream instanceof BufferedInputStream b ? b : new BufferedInputStream(stream);
+        buffered.mark(2);
+        int first = buffered.read();
+        int second = buffered.read();
+        buffered.reset();
+        return first == 0x1f && second == 0x8b ? ParseMode.COMPRESSED_NBT : ParseMode.SNBT;
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static String readUtf8WithLimit(InputStream stream, int maxBytes) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(maxBytes, 8192));
+        byte[] buffer = new byte[8192];
+        int total = 0;
+        int read;
+        while ((read = stream.read(buffer)) != -1) {
+            total += read;
+            if (total > maxBytes) {
+                throw new IOException("SNBT payload exceeds " + maxBytes + " bytes limit");
+            }
+            output.write(buffer, 0, read);
+        }
+        return output.toString(StandardCharsets.UTF_8);
+    }
+
+    private enum ParseMode {
+        COMPRESSED_NBT("compressed NBT"), SNBT("SNBT");
+
+        private final String description;
+
+        ParseMode(String description) {
+            this.description = description;
+        }
+    }
+
+    /**
+     * Normalize SNBT variants into the vanilla StructureTemplate NBT format.
+     *
+     * <p>In addition to vanilla structure NBT (compressed or SNBT), we also support a simplified SNBT format:
+     * <pre>
+     * {
+     *   size: [x, y, z],
+     *   palette: ["minecraft:stone", "minecraft:barrier{waterlogged:false}"],
+     *   data: [{pos:[0,0,0], state:"minecraft:stone"}, ...]
+     * }
+     * </pre>
+     * This method converts it to {@code palette: [{Name:"...", Properties:{...}}, ...]} and
+     * {@code blocks: [{pos:[...], state:<index>}, ...]}.
+     */
+    private static CompoundTag normalizeStructureRoot(CompoundTag root) {
+        Tag paletteTag = root.get("palette");
+        boolean paletteIsStringList = paletteTag instanceof ListTag list && (list.isEmpty() || list.getFirst().getId() == Tag.TAG_STRING);
+        Tag dataTag = root.get("data");
+        boolean hasSimplifiedData = dataTag instanceof ListTag list && (list.isEmpty() || list.getFirst().getId() == Tag.TAG_COMPOUND);
+
+        if (!paletteIsStringList && !hasSimplifiedData) {
+            return root;
+        }
+
+        CompoundTag converted = root.copy();
+
+        // Build palette entries in a deterministic order.
+        List<String> paletteStates = new ArrayList<>();
+        Set<String> seenPaletteStates = new HashSet<>();
+        if (paletteIsStringList) {
+            ListTag paletteStrings = (ListTag) converted.get("palette");
+            if(paletteStrings!=null) {
+                for (int i = 0; i < paletteStrings.size(); i++) {
+                    String state = paletteStrings.getStringOr(i, "minecraft:air");
+                    if (!state.isBlank() && seenPaletteStates.add(state)) {
+                        paletteStates.add(state);
+                    }
+                }
+            }
+        }
+
+        ListTag dataList = hasSimplifiedData ? (ListTag) converted.get("data") : null;
+        if (paletteStates.isEmpty() && dataList != null) {
+            for (int i = 0; i < dataList.size(); i++) {
+                CompoundTag entry = dataList.getCompoundOrEmpty(i);
+                String state = entry.getStringOr("state", "minecraft:air");
+                if (!state.isBlank() && seenPaletteStates.add(state)) {
+                    paletteStates.add(state);
+                }
+            }
+        }
+
+        ListTag palette = new ListTag();
+        Map<String, Integer> paletteIndex = new LinkedHashMap<>();
+        for (String state : paletteStates) {
+            paletteIndex.put(state, palette.size());
+            palette.add(toStructurePaletteEntry(state));
+        }
+        converted.put("palette", palette);
+
+        if (dataList != null && !converted.contains("blocks")) {
+            ListTag blocks = new ListTag();
+            for (int i = 0; i < dataList.size(); i++) {
+                CompoundTag entry = dataList.getCompoundOrEmpty(i);
+                String state = entry.getStringOr("state", "minecraft:air");
+
+                Integer index = paletteIndex.get(state);
+                if (index == null) {
+                    index = palette.size();
+                    paletteIndex.put(state, index);
+                    palette.add(toStructurePaletteEntry(state));
+                }
+
+                CompoundTag block = new CompoundTag();
+                Tag pos = entry.get("pos");
+                if (pos != null) {
+                    block.put("pos", pos.copy());
+                }
+                block.putInt("state", index);
+
+                Tag nbt = entry.get("nbt");
+                if (nbt != null) {
+                    block.put("nbt", nbt.copy());
+                }
+                blocks.add(block);
+            }
+            converted.remove("data");
+            converted.put("blocks", blocks);
+        }
+
+        return converted;
+    }
+
+    private static CompoundTag toStructurePaletteEntry(String stateString) {
+        String raw = stateString.trim();
+        String name = raw;
+        String props = "";
+
+        int braceIndex = raw.indexOf('{');
+        if (braceIndex >= 0 && raw.endsWith("}")) {
+            name = raw.substring(0, braceIndex).trim();
+            props = raw.substring(braceIndex + 1, raw.length() - 1).trim();
+        }
+
+        CompoundTag entry = new CompoundTag();
+        entry.putString("Name", name);
+
+        if (!props.isEmpty()) {
+            CompoundTag properties = new CompoundTag();
+            String[] pairs = props.split(",");
+            for (String pair : pairs) {
+                int colon = pair.indexOf(':');
+                if (colon < 0) {
+                    continue;
+                }
+                String key = pair.substring(0, colon).trim();
+                String value = pair.substring(colon + 1).trim();
+                if (!key.isEmpty() && !value.isEmpty()) {
+                    properties.put(key, StringTag.valueOf(value));
+                }
+            }
+            if (!properties.isEmpty()) {
+                entry.put("Properties", properties);
+            }
+        }
+        return entry;
     }
 
     /**
@@ -347,9 +589,11 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
         }
 
-        Resource directResource = Minecraft.getInstance().getResourceManager().getResource(target.location()).orElse(null);
-        if (directResource != null) {
-            return directResource.open();
+        for (Identifier candidate : candidateIdentifiers(target.location())) {
+            Resource directResource = Minecraft.getInstance().getResourceManager().getResource(candidate).orElse(null);
+            if (directResource != null) {
+                return directResource.open();
+            }
         }
 
         for (String candidate : candidateResourcePaths(target.location())) {
@@ -361,6 +605,18 @@ public final class MDNBTStructureComponent extends MDComponent {
         return null;
     }
 
+    private static List<Identifier> candidateIdentifiers(Identifier location) {
+        String path = location.getPath();
+        if (endsWithStructureExtension(path)) {
+            return List.of(location);
+        }
+        return List.of(
+            location,
+            Identifier.fromNamespaceAndPath(location.getNamespace(), path + ".nbt"),
+            Identifier.fromNamespaceAndPath(location.getNamespace(), path + ".snbt")
+        );
+    }
+
     /**
      * 生成结构文件在 classpath 中的回退搜索路径。
      */
@@ -368,7 +624,9 @@ public final class MDNBTStructureComponent extends MDComponent {
         String normalizedPath = normalizeStructurePath(location.getPath());
         return List.of(
             "data/" + location.getNamespace() + "/structure/" + normalizedPath + ".nbt",
-            "data/" + location.getNamespace() + "/structures/" + normalizedPath + ".nbt"
+            "data/" + location.getNamespace() + "/structures/" + normalizedPath + ".nbt",
+            "data/" + location.getNamespace() + "/structure/" + normalizedPath + ".snbt",
+            "data/" + location.getNamespace() + "/structures/" + normalizedPath + ".snbt"
         );
     }
 
@@ -377,14 +635,20 @@ public final class MDNBTStructureComponent extends MDComponent {
         while (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
         }
-        if (normalized.endsWith(".nbt")) {
-            normalized = normalized.substring(0, normalized.length() - 4);
+        if (endsWithStructureExtension(normalized)) {
+            int dotIndex = normalized.lastIndexOf('.');
+            normalized = dotIndex >= 0 ? normalized.substring(0, dotIndex) : normalized;
         }
         return normalized;
     }
 
-    private static String ensureNbtExtension(String path) {
-        return path.endsWith(".nbt") ? path : path + ".nbt";
+    private static boolean endsWithStructureExtension(String path) {
+        return path.endsWith(".nbt") || path.endsWith(".snbt");
+    }
+
+    private static List<String> expandStructureExtensions(String path) {
+        String normalized = path.replace('\\', '/');
+        return endsWithStructureExtension(normalized) ? List.of(normalized) : List.of(normalized + ".nbt", normalized + ".snbt");
     }
 
     private static String getCurrentDirectoryPath(Identifier location) {
@@ -405,7 +669,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             if (trimmed.contains(":")) {
                 Identifier location = Identifier.parse(trimmed);
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
-                                            ? List.of(ensureNbtExtension(RelativePathResolver.resolveWithinBase("", location.getPath())))
+                                            ? expandStructureExtensions(RelativePathResolver.resolveWithinBase("", location.getPath()))
                                             : List.of();
                 return new StructureTarget(location, trimmed, previewPaths);
             }
@@ -413,7 +677,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             String resolvedPath = RelativePathResolver.resolveWithinBase(getCurrentDirectoryPath(sourceLocation), trimmed);
             Identifier location = Identifier.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
             List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
-                                        ? List.of(ensureNbtExtension(resolvedPath))
+                                        ? expandStructureExtensions(resolvedPath)
                                         : List.of();
             return new StructureTarget(location, trimmed, previewPaths);
         }
