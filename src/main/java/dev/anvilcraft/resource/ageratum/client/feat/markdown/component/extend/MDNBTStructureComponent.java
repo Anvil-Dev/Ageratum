@@ -126,7 +126,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         context.enableScissor(1, 1, maxX - 1, height - 1);
         this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
         this.cameraRig.setZoom(2.0f);
-        this.cameraRig.setOffsetX(this.panOffsetX);
+        // 将结构投影居中到组件分配区域的中心（考虑 offsetX + maxX 与屏幕中心的偏移）
+        this.cameraRig.setOffsetX(context.offsetX() + maxX / 2.0f - context.screenWidth() / 2.0f + this.panOffsetX);
         this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
         StructurePreviewRenderer.getInstance()
             .render(
