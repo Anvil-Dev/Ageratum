@@ -27,6 +27,20 @@ public interface StructureProjectionApi {
     }
 
     /**
+     * 显示浮动投影：跟随玩家视线移动，右键固定。
+     */
+    static boolean showFloating(StructureTemplate template, BlockPos origin) {
+        return StructureProjectionApi.showFloating(template, origin, List.of());
+    }
+
+    /**
+     * 显示浮动投影，指定允许 Ctrl+滚轮移动时手持的物品集合。
+     */
+    static boolean showFloating(StructureTemplate template, BlockPos origin, Collection<Item> moveControlItems) {
+        return StructureProjectionManager.showFloatingProjection(template, origin, moveControlItems);
+    }
+
+    /**
      * 移除当前投影。
      */
     static void clear() {

@@ -28,6 +28,7 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
@@ -146,6 +147,22 @@ public final class MDNBTStructureComponent extends MDComponent {
         return isHover(maxX - 21, 5, 16, 16, mouseX, mouseY);
     }
 
+    /**
+     * 计算层数指示器区域中 [+] 按钮的 X 坐标。
+     */
+    private int getLayerUpButtonX(MDRenderContext context) {
+        int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
+        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
+        int labelWidth = context.minecraft().font.width(layerLabel);
+        int btnSize = context.minecraft().font.lineHeight + padding;
+        int btnGap = 2;
+        return 4 + padding + labelWidth + padding + btnGap;
+    }
+
+    private int getLayerButtonSize(MDRenderContext context) {
+        return context.minecraft().font.lineHeight + AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
+    }
+
     private void renderButton(MDRenderContext context) {
         GuiGraphics graphics = context.graphics();
         boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
@@ -212,6 +229,26 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != 0 && button != 1) {
             return false;
         }
+        // 层数调节按钮
+        if (button == 0 && this.previewLevel != null) {
+            int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
+            String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
+            int labelWidth = minecraft.font.width(layerLabel);
+            int btnSize = minecraft.font.lineHeight + padding;
+            int btnGap = 2;
+            int btnUpX = 4 + padding + labelWidth + padding + btnGap;
+            int btnDownX = btnUpX + btnSize + btnGap;
+            if (isHover(btnUpX, 4, btnSize, btnSize, (float) mouseX, (float) mouseY)) {
+                this.ensureLayerPreviewInitialized();
+                this.visibleLayerCount = Math.min(this.totalLayerCount, this.visibleLayerCount + 1);
+                return true;
+            }
+            if (isHover(btnDownX, 4, btnSize, btnSize, (float) mouseX, (float) mouseY)) {
+                this.ensureLayerPreviewInitialized();
+                this.visibleLayerCount = Math.max(1, this.visibleLayerCount - 1);
+                return true;
+            }
+        }
         if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
             if (this.structureTemplateCache != null && minecraft.cameraEntity != null) {
                 BlockPos blockPos;
@@ -220,7 +257,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                 } else {
                     blockPos = minecraft.cameraEntity.getOnPos().above();
                 }
-                StructureProjectionApi.show(this.structureTemplateCache, blockPos);
+                StructureProjectionApi.showFloating(this.structureTemplateCache, blockPos);
                 minecraft.setScreen(null);
             }
             return true;
@@ -290,22 +327,48 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void renderLayerIndicator(MDRenderContext context, GuiGraphics graphics) {
-        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
         int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
-        int x = 4;
-        int y = 4;
-        int width = context.minecraft().font.width(layerLabel) + padding * 2;
-        int height = context.minecraft().font.lineHeight + padding * 2;
+        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
+        int fontHeight = context.minecraft().font.lineHeight;
+        int labelWidth = context.minecraft().font.width(layerLabel);
+        int btnSize = fontHeight + padding;
+        int btnGap = 2;
+        int totalWidth = padding + labelWidth + padding + btnGap + btnSize + btnGap + btnSize + padding;
+        int totalHeight = fontHeight + padding * 2;
+        int startX = 4;
+        int startY = 4;
 
-        graphics.fill(x, y, x + width, y + height, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
+        // 背景
+        graphics.fill(startX, startY, startX + totalWidth, startY + totalHeight, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
+        // 层数文本
         graphics.drawString(
             context.minecraft().font,
             layerLabel,
-            x + padding,
-            y + padding,
+            startX + padding,
+            startY + padding,
             AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_TEXT,
             false
         );
+
+        // [+] 按钮
+        int btnUpX = startX + padding + labelWidth + padding + btnGap;
+        int btnDownX = btnUpX + btnSize + btnGap;
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
+        boolean hoverUp = isHover(btnUpX, startY, btnSize, btnSize, mouseX, mouseY);
+        boolean hoverDown = isHover(btnDownX, startY, btnSize, btnSize, mouseX, mouseY);
+
+        int btnBgUp = hoverUp ? 0x88AAAAAA : 0x88444444;
+        int btnBgDown = hoverDown ? 0x88AAAAAA : 0x88444444;
+        graphics.fill(btnUpX, startY, btnUpX + btnSize, startY + btnSize, btnBgUp);
+        graphics.fill(btnDownX, startY, btnDownX + btnSize, startY + btnSize, btnBgDown);
+        graphics.drawString(context.minecraft().font, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
+        graphics.drawString(context.minecraft().font, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
+
+        // tooltip
+        if (hoverUp || hoverDown) {
+            context.addTooltip(Component.literal("快捷键: PageUp/PageDown"));
+        }
     }
 
     private static float clamp(float value, float min, float max) {
