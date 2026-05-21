@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.gui;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
@@ -843,8 +844,8 @@ public class GuideScreen extends Screen {
                                 ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE
                                 : AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED
                             );
-            guiGraphics.text(
-                this.font,
+            guiGraphics.anvillib$text(
+                AnvilLibFont.getSelectFont(),
                 this.fitLabelTitle(entry.title),
                 originX + (
                     entry.level == 1
@@ -1201,8 +1202,8 @@ public class GuideScreen extends Screen {
             pose.popMatrix();
             int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
             int width = this.font.width(this.fitLabelTitle(entry.title()));
-            guiGraphics.text(
-                this.font,
+            guiGraphics.anvillib$text(
+                AnvilLibFont.getSelectFont(),
                 this.fitLabelTitle(entry.title()),
                 markX + AgeratumConstants.GuideScreenUI.Positions.BOOKMARK_TEXT_BASE_X - width,
                 originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,

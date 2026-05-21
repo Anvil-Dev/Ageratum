@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -166,7 +167,7 @@ public class MDTableComponent extends MDComponent {
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
                         default -> 0;
                     };
-                    guiGraphics.text(minecraft.font, seq, drawX, 0, 0xFF000000, false);
+                    guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), seq, drawX, 0, 0xFF000000, false);
                     pose.translate(0, minecraft.font.lineHeight);
                 }
                 pose.popMatrix();

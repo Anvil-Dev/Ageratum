@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;
@@ -270,7 +271,7 @@ public class MDCodeBlockComponent extends MDComponent {
                 String lineStr = String.valueOf(lineNumber);
                 int lineNumX = PADDING + gutterWidth - minecraft.font.width(lineStr) - 1;
                 int lineNumY = PADDING + y;
-                guiGraphics.text(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
+                guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
             }
 
             if (split.isEmpty()) {
@@ -281,8 +282,8 @@ public class MDCodeBlockComponent extends MDComponent {
                     strX = PADDING + offsetX;
                 }
                 for (FormattedCharSequence sequence : split) {
-                    guiGraphics.text(
-                        minecraft.font,
+                    guiGraphics.anvillib$text(
+                        AnvilLibFont.getSelectFont(),
                         sequence,
                         strX,
                         PADDING + y,

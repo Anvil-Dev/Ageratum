@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -68,7 +69,7 @@ public class MDItemComponent extends MDImageComponent {
         if (this.showText) {
             Component hoverName = itemStack.getHoverName();
             int width = font.width(hoverName);
-            graphics.text(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
 

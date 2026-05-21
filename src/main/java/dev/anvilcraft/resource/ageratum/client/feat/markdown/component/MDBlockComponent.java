@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -137,7 +138,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         pose.pushMatrix();
         pose.translate(textX, y);
         for (FormattedCharSequence sequence : split) {
-            guiGraphics.text(minecraft.font, sequence, 0, 0, 0xFF000000, false);
+            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
             pose.translate(0, minecraft.font.lineHeight);
         }
         pose.popMatrix();

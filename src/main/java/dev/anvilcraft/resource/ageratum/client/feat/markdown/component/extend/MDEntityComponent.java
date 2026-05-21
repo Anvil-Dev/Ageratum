@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.brigadier.StringReader;
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -79,7 +80,7 @@ public final class MDEntityComponent extends MDComponent {
         if (this.showText) {
             Component hoverName = entity.getType().getDescription();
             int nameWidth = minecraft.font.width(hoverName);
-            graphics.text(minecraft.font, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
+            graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
         }
 
 //        context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);

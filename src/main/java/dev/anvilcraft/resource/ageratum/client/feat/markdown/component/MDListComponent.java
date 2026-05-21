@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
@@ -90,8 +91,8 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         }
 
         ListItem item = cachedItem.item();
-        guiGraphics.text(
-            minecraft.font,
+        guiGraphics.anvillib$text(
+            AnvilLibFont.getSelectFont(),
             marker(item),
             cachedItem.level() * INDENT_WIDTH,
             y,

@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
@@ -103,7 +104,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static void extractPlaceholderRenderState(GuiGraphicsExtractor graphics, String text, int color) {
-        graphics.text(Minecraft.getInstance().font, text, 0, 0, color, false);
+        graphics.anvillib$text(AnvilLibFont.getSelectFont(), text, 0, 0, color, false);
     }
 
     private LatexTextureState ensureTextureState(Minecraft minecraft) {

@@ -1,5 +1,6 @@
 dependencies {
     implementation libs.bundles.anvillib
+    interfaceInjectionData libs.anvillib.font
     jarJar libs.bundles.anvillib
     implementation(libs.jhighlight) { transitive = false }
     jarJar libs.jhighlight

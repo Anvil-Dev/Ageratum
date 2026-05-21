@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
@@ -92,7 +93,7 @@ public abstract class MDComponent {
         Matrix3x2fStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.text(minecraft.font, sequence, 0, 0, 0xFF000000, false);
+            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
             maxY -= minecraft.font.lineHeight;
         }
     }

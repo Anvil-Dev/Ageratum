@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -88,7 +89,7 @@ public class MDBlockComponent extends MDImageComponent {
         if (this.showText) {
             Component hoverName = state.getBlock().getName();
             int width = font.width(hoverName);
-            graphics.text(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
 

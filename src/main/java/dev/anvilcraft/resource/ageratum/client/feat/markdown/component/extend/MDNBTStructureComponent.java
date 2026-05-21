@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.brigadier.StringReader;
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
@@ -301,8 +302,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         int height = context.minecraft().font.lineHeight + padding * 2;
 
         graphics.fill(x, y, x + width, y + height, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
-        graphics.text(
-            context.minecraft().font,
+        graphics.anvillib$text(
+            AnvilLibFont.getSelectFont(),
             layerLabel,
             x + padding,
             y + padding,
