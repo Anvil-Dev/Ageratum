@@ -63,6 +63,60 @@ public record MDDocument(@Nullable ResourceLocation sourceLocation, Map<String, 
     }
 
     /**
+     * 从 Front Matter 中读取文档权重，用于导航排序。
+     *
+     * <p>支持 {@code weight}、{@code navigation.weight} 字段，
+     * 值越小排序越靠前，默认值为 0。</p>
+     */
+    public int getWeight() {
+        Object navigation = this.frontMatter.get("navigation");
+        if (navigation instanceof Map<?, ?> navigationMap) {
+            Integer navWeight = intValue(navigationMap.get("weight"));
+            if (navWeight != null) {
+                return navWeight;
+            }
+        }
+        Integer weight = intValue(this.frontMatter.get("weight"));
+        return weight == null ? 0 : weight;
+    }
+
+    /**
+     * 从 Front Matter 中读取标题颜色。
+     *
+     * <p>支持 {@code color}、{@code navigation.color} 字段，
+     * 值为 {@code #RRGGBB} 格式的十六进制颜色。</p>
+     *
+     * @return 颜色字符串，未设置时返回 {@code null}
+     */
+    @Nullable
+    public String getNavigationColor() {
+        Object navigation = this.frontMatter.get("navigation");
+        if (navigation instanceof Map<?, ?> navigationMap) {
+            String navColor = stringValue(navigationMap.get("color"));
+            if (navColor != null) {
+                return navColor;
+            }
+        }
+        return stringValue(this.frontMatter.get("color"));
+    }
+
+    @Nullable
+    private static Integer intValue(@Nullable Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        String str = stringValue(value);
+        if (str == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(str);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    /**
      * 获取文档标题；无文件名上下文时，最后回退为 "Untitled"。
      */
     public String getTitle() {

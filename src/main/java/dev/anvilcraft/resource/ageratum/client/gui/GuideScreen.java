@@ -39,11 +39,13 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -163,6 +165,14 @@ public class GuideScreen extends Screen {
      */
     @Getter
     protected double labelScrollRemainder;
+    /**
+     * 已折叠的父标签组索引（对应 labelEntries 中 level==1 条目的索引）。
+     */
+    protected final Set<Integer> collapsedLabelGroups = new HashSet<>();
+    /**
+     * 当前可见标签在 labelEntries 中的索引列表（受折叠状态影响）。
+     */
+    protected List<Integer> visibleLabelIndices = List.of();
     /**
      * 当前标签列表（仅显示到二级）。
      */
@@ -424,6 +434,9 @@ public class GuideScreen extends Screen {
         if (this.mouseInContentRange(mouseX, mouseY)) {
             this.renderHoverTooltip(guiGraphics, mouseX, mouseY);
         }
+
+        // 渲染侧边标签 tooltip
+        this.renderLabelTooltips(guiGraphics, mouseX - i, mouseY - j);
         pose.popPose();
     }
 
@@ -456,7 +469,12 @@ public class GuideScreen extends Screen {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
         if (this.mouseInLabelRange(mouseX, mouseY)) {
-            int rowDelta = this.consumeLabelScrollRows(scrollY);
+            // Ctrl/Alt/Shift 加速标签栏翻滚（3倍速度）
+            double acceleratedScrollY = scrollY;
+            if (Screen.hasControlDown() || Screen.hasAltDown() || Screen.hasShiftDown()) {
+                acceleratedScrollY *= 3.0;
+            }
+            int rowDelta = this.consumeLabelScrollRows(acceleratedScrollY);
             if (rowDelta != 0) {
                 this.scrollLabelsBy(rowDelta);
             }
@@ -781,61 +799,40 @@ public class GuideScreen extends Screen {
      * @param mouseY      相对鼠标 Y
      */
     private void renderLabel(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        // ── 检查是否需要固定父标签 ──
+        int pinnedParentIndex = this.findPinnedParentIndex();
+        int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
         int start = this.labelScrollRows;
-        int end = Math.min(this.labelEntries.size(), start + this.getLabelVisibleRows());
+        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows() - pinnedRowCount);
         String currentFile = this.getCurrentFileArgument();
         PoseStack pose = guiGraphics.pose();
         float labelImageScale = this.getLabelImageScale();
-        for (int index = start; index < end; index++) {
-            int row = index - start;
-            LabelEntry entry = this.labelEntries.get(index);
-            int originX = this.getLabelBaseX() + (entry.level == 1 ? 0 : LABEL_LEVEL2_INDENT);
-            int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
-            boolean isHover = this.mouseInRange(
-                originX,
-                originY,
-                this.labelWidth,
-                this.labelHeight,
-                mouseX,
-                mouseY
-            ) && mouseX < this.getContentStartX();
-            boolean isActive = entry.fileArgument != null && entry.fileArgument.equals(currentFile);
-            if (entry.clickable && (isHover || isActive)) {
-                originX -= LABEL_HOVER_SHIFT;
-            }
-            pose.pushPose();
-            pose.scale(labelImageScale, labelImageScale, labelImageScale);
-            guiGraphics.blit(
-                entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
-                originX * this.getLabelScaleCountDown(),
-                originY * this.getLabelScaleCountDown(),
-                0,
-                0,
-                0,
-                LABEL_IMAGE_WIDTH,
-                LABEL_IMAGE_HEIGHT,
-                LABEL_IMAGE_SIZE,
-                LABEL_IMAGE_SIZE
+
+        // 渲染固定的父标签
+        if (pinnedParentIndex >= 0) {
+            LabelEntry pinnedEntry = this.labelEntries.get(pinnedParentIndex);
+            int originX = this.getLabelBaseX();
+            int originY = this.getLabelStartY();
+            this.renderSingleLabel(
+                guiGraphics, pose, labelImageScale,
+                pinnedEntry, pinnedParentIndex, originX, originY,
+                0, currentFile, mouseX, mouseY
             );
-            pose.popPose();
-            int textColor = isActive
-                            ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE
-                            : (
-                                entry.clickable
-                                ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE
-                                : AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED
-                            );
-            guiGraphics.drawString(
-                this.font,
-                this.fitLabelTitle(entry.title),
-                originX + (
-                    entry.level == 1
-                    ? AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT
-                    : AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2
-                ),
-                originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
-                textColor,
-                false
+        }
+
+        for (int index = start; index < end; index++) {
+            int row = (index - start) + pinnedRowCount;
+            int entryIndexInFull = this.visibleLabelIndices.get(index);
+            // 跳过已作为固定标签渲染的条目
+            if (entryIndexInFull == pinnedParentIndex) {
+                continue;
+            }
+            this.renderSingleLabel(
+                guiGraphics, pose, labelImageScale,
+                this.labelEntries.get(entryIndexInFull), entryIndexInFull,
+                this.getLabelBaseX() + (this.labelEntries.get(entryIndexInFull).level == 1 ? 0 : LABEL_LEVEL2_INDENT),
+                this.getLabelStartY() + row * this.getLabelRowOffset(),
+                row, currentFile, mouseX, mouseY
             );
         }
         // 关闭按钮
@@ -1235,6 +1232,42 @@ public class GuideScreen extends Screen {
     }
 
     /**
+     * 渲染收藏标签的 tooltip。
+     *
+     * <p>对悬停的收藏标签显示完整标题和 Ctrl+右键 移除收藏提示。</p>
+     */
+    private void renderBookmarkTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (!this.isBookmarkEnabled()) {
+            return;
+        }
+        List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
+        if (bookmarks.isEmpty()) {
+            return;
+        }
+        int start = this.bookmarkScrollRows;
+        int end = Math.min(bookmarks.size(), start + this.getBookmarkVisibleRows());
+        for (int index = start; index < end; index++) {
+            int row = index - start;
+            int originX = this.getBookmarkBaseX();
+            int originY = this.getBookmarkStartY() + row * this.getLabelRowOffset();
+            if (this.mouseInRange(originX, originY, this.labelWidth + BOOKMARK_HOVER_SHIFT, this.labelHeight, mouseX, mouseY)) {
+                GuideBookmarkStore.BookmarkEntry entry = bookmarks.get(index);
+                List<Component> lines = new ArrayList<>();
+                lines.add(Component.literal(entry.title().getString()));
+                lines.add(Component.literal("Ctrl+右键 移除收藏"));
+                guiGraphics.renderTooltip(
+                    this.font,
+                    lines,
+                    Optional.empty(),
+                    this.leftPos + mouseX,
+                    this.topPos + mouseY
+                );
+                return;
+            }
+        }
+    }
+
+    /**
      * 判断鼠标是否位于书签列表可交互区域。
      */
     private boolean mouseInBookmarkRange(double mouseX, double mouseY) {
@@ -1373,7 +1406,8 @@ public class GuideScreen extends Screen {
                 rootDocument.location(),
                 1,
                 Component.literal(rootDocument.title()),
-                true
+                true,
+                parseHexColor(rootDocument.color())
             ));
         }
 
@@ -1382,8 +1416,11 @@ public class GuideScreen extends Screen {
         }
 
         this.labelEntries = List.copyOf(finalEntries);
-        this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - this.getLabelVisibleRows());
+        // 默认折叠所有父标签组
+        this.collapseAllLabelGroups();
+        this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.scrollLabelToCurrentDocument();
     }
 
     private void rebuildPreviewLabelEntries() {
@@ -1422,8 +1459,11 @@ public class GuideScreen extends Screen {
         }
 
         this.labelEntries = List.copyOf(finalEntries);
-        this.maxLabelScrollRows = Math.max(0, this.labelEntries.size() - this.getLabelVisibleRows());
+        // 默认折叠所有父标签组
+        this.collapseAllLabelGroups();
+        this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.scrollLabelToCurrentDocument();
     }
 
     private void insertPreviewDocument(PreviewDirectoryNode root, Path previewRoot, Path absolutePath) {
@@ -1532,7 +1572,8 @@ public class GuideScreen extends Screen {
                 indexDocument.location(),
                 1,
                 Component.literal(indexDocument.title()),
-                true
+                true,
+                parseHexColor(indexDocument.color())
             ));
         } else {
             String name = directory.name();
@@ -1544,7 +1585,14 @@ public class GuideScreen extends Screen {
         }
 
         for (GuideDocumentCache.NavigationDocument document : directory.documents()) {
-            target.add(new LabelEntry(document.fileArgument(), document.location(), 2, Component.literal(document.title()), true));
+            target.add(new LabelEntry(
+                document.fileArgument(),
+                document.location(),
+                2,
+                Component.literal(document.title()),
+                true,
+                parseHexColor(document.color())
+            ));
         }
 
         // 仅展开到二级：子目录只在其含 index.md 时显示为二级可点击项。
@@ -1556,7 +1604,8 @@ public class GuideScreen extends Screen {
                     childIndex.location(),
                     2,
                     Component.literal(childIndex.title()),
-                    true
+                    true,
+                    parseHexColor(childIndex.color())
                 ));
             }
         }
@@ -1570,16 +1619,23 @@ public class GuideScreen extends Screen {
         if (relMouseX >= this.getContentStartX()) return false;
         int relMouseY = (int) Math.floor(mouseY - this.topPos);
         int start = this.labelScrollRows;
-        int end = Math.min(this.labelEntries.size(), start + this.getLabelVisibleRows());
+        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows());
         for (int index = start; index < end; index++) {
             int row = index - start;
-            LabelEntry entry = this.labelEntries.get(index);
-            if (!entry.clickable || entry.location == null) {
-                continue;
-            }
+            int entryIndexInFull = this.visibleLabelIndices.get(index);
+            LabelEntry entry = this.labelEntries.get(entryIndexInFull);
             int originX = this.getLabelBaseX() + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
             int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
+                // Shift+左键 → 切换父标签折叠状态
+                if (Screen.hasShiftDown() && entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
+                    this.toggleLabelGroup(entryIndexInFull);
+                    return true;
+                }
+                // 普通左键 → 跳转页面
+                if (!entry.clickable || entry.location == null) {
+                    return false;
+                }
                 List<ResourceLocation> breadCrumbs = this.breadCrumbs;
                 if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
                     breadCrumbs = new ArrayList<>(this.breadCrumbs);
@@ -1590,6 +1646,64 @@ public class GuideScreen extends Screen {
             }
         }
         return false;
+    }
+
+    /**
+     * 将侧边标签栏滚动到当前文档对应的标签位置。
+     *
+     * <p>如果当前文档所属的父标签组处于折叠状态，会自动展开该组。</p>
+     */
+    private void scrollLabelToCurrentDocument() {
+        int fullIndex = this.findCurrentDocumentLabelIndex();
+        if (fullIndex < 0) {
+            return;
+        }
+        // 如果父组被折叠，先展开
+        int parentIndex = this.findParentGroupIndex(fullIndex);
+        if (parentIndex >= 0 && this.collapsedLabelGroups.contains(parentIndex)) {
+            this.collapsedLabelGroups.remove(parentIndex);
+            this.rebuildVisibleLabelIndices();
+            this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
+        }
+        // 找到当前文档在可见列表中的位置
+        int visibleIndex = this.visibleLabelIndices.indexOf(fullIndex);
+        if (visibleIndex < 0) {
+            return;
+        }
+        // 滚动使当前标签可见（尽量放在可视区域中间偏上位置）
+        int visibleRows = this.getLabelVisibleRows();
+        int targetScroll = Math.max(0, visibleIndex - visibleRows / 3);
+        this.labelScrollRows = Mth.clamp(targetScroll, 0, this.maxLabelScrollRows);
+    }
+
+    /**
+     * 在 labelEntries 中查找当前文档对应的标签索引。
+     */
+    private int findCurrentDocumentLabelIndex() {
+        String currentFile = this.getCurrentFileArgument();
+        for (int i = 0; i < this.labelEntries.size(); i++) {
+            LabelEntry entry = this.labelEntries.get(i);
+            if (entry.fileArgument != null && entry.fileArgument.equals(currentFile)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 查找给定标签索引所属的父标签组（level==1）索引。
+     */
+    private int findParentGroupIndex(int childIndex) {
+        // 如果 childIndex 本身是 level==1，则无父组
+        if (this.labelEntries.get(childIndex).level == 1) {
+            return -1;
+        }
+        for (int i = childIndex - 1; i >= 0; i--) {
+            if (this.labelEntries.get(i).level == 1) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private String getCurrentFileArgument() {
@@ -2084,6 +2198,188 @@ public class GuideScreen extends Screen {
     }
 
     /**
+     * 渲染单个标签条目。
+     */
+    private void renderSingleLabel(
+        GuiGraphics guiGraphics,
+        PoseStack pose,
+        float labelImageScale,
+        LabelEntry entry,
+        int entryIndexInFull,
+        int originX,
+        int originY,
+        int row,
+        String currentFile,
+        int mouseX,
+        int mouseY
+    ) {
+        boolean isHover = this.mouseInRange(
+            originX,
+            originY,
+            this.labelWidth,
+            this.labelHeight,
+            mouseX,
+            mouseY
+        ) && mouseX < this.getContentStartX();
+        boolean isActive = entry.fileArgument != null && entry.fileArgument.equals(currentFile);
+        if (entry.clickable && (isHover || isActive)) {
+            originX -= LABEL_HOVER_SHIFT;
+        }
+        pose.pushPose();
+        pose.scale(labelImageScale, labelImageScale, labelImageScale);
+        guiGraphics.blit(
+            entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
+            originX * this.getLabelScaleCountDown(),
+            originY * this.getLabelScaleCountDown(),
+            0,
+            0,
+            0,
+            LABEL_IMAGE_WIDTH,
+            LABEL_IMAGE_HEIGHT,
+            LABEL_IMAGE_SIZE,
+            LABEL_IMAGE_SIZE
+        );
+        pose.popPose();
+        int textColor = isActive
+                        ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE
+                        : (
+                            entry.clickable
+                            ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE
+                            : AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED
+                        );
+        int resolvedColor = (entry.color != null && !isActive) ? entry.color : textColor;
+        String displayTitle = this.fitLabelTitle(entry.title);
+        guiGraphics.drawString(
+            this.font,
+            displayTitle,
+            originX + (
+                entry.level == 1
+                ? AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT
+                : AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2
+            ),
+            originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
+            resolvedColor,
+            false
+        );
+    }
+
+    /**
+     * 渲染侧边标签的 tooltip。
+     *
+     * <p>对父标签显示完整名称和 Shift+左键 折叠/展开提示。</p>
+     */
+    private void renderLabelTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int start = this.labelScrollRows;
+        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows());
+        int pinnedParentIndex = this.findPinnedParentIndex();
+        int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
+        String currentFile = this.getCurrentFileArgument();
+
+        // 先检查固定父标签
+        if (pinnedParentIndex >= 0) {
+            int originX = this.getLabelBaseX();
+            int originY = this.getLabelStartY();
+            if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY)
+                && mouseX < this.getContentStartX()) {
+                LabelEntry entry = this.labelEntries.get(pinnedParentIndex);
+                this.drawLabelTooltip(guiGraphics, entry, pinnedParentIndex, originX, originY, mouseX, mouseY);
+                return;
+            }
+        }
+
+        for (int index = start; index < end; index++) {
+            int row = (index - start) + pinnedRowCount;
+            int entryIndexInFull = this.visibleLabelIndices.get(index);
+            if (entryIndexInFull == pinnedParentIndex) {
+                continue;
+            }
+            LabelEntry entry = this.labelEntries.get(entryIndexInFull);
+            int originX = this.getLabelBaseX() + (entry.level == 1 ? 0 : LABEL_LEVEL2_INDENT);
+            int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
+            if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY)
+                && mouseX < this.getContentStartX()) {
+                this.drawLabelTooltip(guiGraphics, entry, entryIndexInFull, originX, originY, mouseX, mouseY);
+                return;
+            }
+        }
+
+        // 渲染收藏标签 tooltip
+        this.renderBookmarkTooltips(guiGraphics, mouseX, mouseY);
+    }
+
+    /**
+     * 绘制单个标签的 tooltip。
+     */
+    private void drawLabelTooltip(
+        GuiGraphics guiGraphics,
+        LabelEntry entry,
+        int entryIndexInFull,
+        int originX,
+        int originY,
+        int mouseX,
+        int mouseY
+    ) {
+        List<Component> lines = new ArrayList<>();
+        // 第一行：完整名称
+        lines.add(Component.literal(entry.title.getString()));
+        // 父标签且拥有子标签时，显示折叠提示
+        if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
+            boolean collapsed = this.collapsedLabelGroups.contains(entryIndexInFull);
+            lines.add(Component.literal(collapsed ? "Shift+左键 展开" : "Shift+左键 收起"));
+        }
+        guiGraphics.renderTooltip(
+            this.font,
+            lines,
+            Optional.empty(),
+            this.leftPos + mouseX,
+            this.topPos + mouseY
+        );
+    }
+
+    /**
+     * 查找需要固定在顶部的父标签索引。
+     *
+     * <p>当当前页面是 level==2 的子标签，且其父标签已滚出可视范围时，
+     * 返回父标签在 labelEntries 中的索引；否则返回 -1。</p>
+     */
+    private int findPinnedParentIndex() {
+        String currentFile = this.getCurrentFileArgument();
+        int activeIndex = -1;
+        for (int i = 0; i < this.labelEntries.size(); i++) {
+            LabelEntry entry = this.labelEntries.get(i);
+            if (entry.fileArgument != null && entry.fileArgument.equals(currentFile)) {
+                activeIndex = i;
+                break;
+            }
+        }
+        if (activeIndex < 0) {
+            return -1;
+        }
+        LabelEntry activeEntry = this.labelEntries.get(activeIndex);
+        if (activeEntry.level != 2) {
+            return -1;
+        }
+        int parentIndex = -1;
+        for (int i = activeIndex - 1; i >= 0; i--) {
+            if (this.labelEntries.get(i).level == 1) {
+                parentIndex = i;
+                break;
+            }
+        }
+        if (parentIndex < 0) {
+            return -1;
+        }
+        if (this.visibleLabelIndices.contains(parentIndex)) {
+            int visiblePos = this.visibleLabelIndices.indexOf(parentIndex);
+            if (visiblePos >= this.labelScrollRows
+                && visiblePos < this.labelScrollRows + this.getLabelVisibleRows()) {
+                return -1;
+            }
+        }
+        return parentIndex;
+    }
+
+    /**
      * 获取指定组件中某个 Markdown 坐标对应的文本样式。
      *
      * @param component Markdown 组件
@@ -2098,8 +2394,22 @@ public class GuideScreen extends Screen {
     }
 
     protected record LabelEntry(
-        @Nullable String fileArgument, @Nullable ResourceLocation location, int level, Component title, boolean clickable
+        @Nullable String fileArgument,
+        @Nullable ResourceLocation location,
+        int level,
+        Component title,
+        boolean clickable,
+        @Nullable Integer color
     ) {
+        public LabelEntry(
+            @Nullable String fileArgument,
+            @Nullable ResourceLocation location,
+            int level,
+            Component title,
+            boolean clickable
+        ) {
+            this(fileArgument, location, level, title, clickable, null);
+        }
     }
 
     private record ComponentMouseHit(MDComponent component, double mouseX, double mouseY) {
@@ -2117,6 +2427,104 @@ public class GuideScreen extends Screen {
     }
 
     private record PreviewDocument(String fileArgument, String title, ResourceLocation location) {
+    }
+
+    /**
+     * 将 {@code #RRGGBB} 格式的颜色字符串解析为整数颜色值。
+     *
+     * @return 颜色值，无效输入时返回 {@code null}
+     */
+    @Nullable
+    private static Integer parseHexColor(@Nullable String color) {
+        if (color == null || color.isBlank()) {
+            return null;
+        }
+        String hex = color.trim();
+        if (hex.startsWith("#")) {
+            hex = hex.substring(1);
+        }
+        if (hex.length() != 6) {
+            return null;
+        }
+        try {
+            return 0xFF000000 | Integer.parseInt(hex, 16);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * 折叠所有父标签组（level==1 的标签）。
+     */
+    private void collapseAllLabelGroups() {
+        this.collapsedLabelGroups.clear();
+        for (int i = 0; i < this.labelEntries.size(); i++) {
+            if (this.labelEntries.get(i).level == 1) {
+                this.collapsedLabelGroups.add(i);
+            }
+        }
+        this.rebuildVisibleLabelIndices();
+    }
+
+    /**
+     * 切换指定父标签组的折叠状态。
+     */
+    private void toggleLabelGroup(int groupIndex) {
+        if (this.collapsedLabelGroups.remove(groupIndex)) {
+            // 已折叠 → 展开
+        } else {
+            this.collapsedLabelGroups.add(groupIndex);
+        }
+        this.rebuildVisibleLabelIndices();
+        // 折叠/展开后重新约束滚动范围
+        int visibleRows = this.getLabelVisibleRows();
+        this.maxLabelScrollRows = Math.max(0, this.visibleLabelIndices.size() - visibleRows);
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+    }
+
+    /**
+     * 根据折叠状态重建可见标签索引列表。
+     *
+     * <p>规则：level==1 始终可见；level==2 条目仅在其所属父组
+     * （前一个最近的 level==1 条目）未被折叠时可见。</p>
+     */
+    private void rebuildVisibleLabelIndices() {
+        List<Integer> indices = new ArrayList<>();
+        boolean currentGroupCollapsed = false;
+        for (int i = 0; i < this.labelEntries.size(); i++) {
+            LabelEntry entry = this.labelEntries.get(i);
+            if (entry.level == 1) {
+                currentGroupCollapsed = this.collapsedLabelGroups.contains(i);
+                indices.add(i); // level==1 始终可见
+            } else if (!currentGroupCollapsed) {
+                indices.add(i);
+            }
+        }
+        this.visibleLabelIndices = List.copyOf(indices);
+    }
+
+    /**
+     * 获取可见标签数量。
+     */
+    private int getVisibleLabelCount() {
+        return this.visibleLabelIndices.size();
+    }
+
+    /**
+     * 判断 labelEntries 中位于 groupIndex 的 level==1 标签是否拥有子标签。
+     */
+    private boolean labelGroupHasChildren(int groupIndex) {
+        if (this.labelEntries.get(groupIndex).level != 1) {
+            return false;
+        }
+        for (int i = groupIndex + 1; i < this.labelEntries.size(); i++) {
+            LabelEntry entry = this.labelEntries.get(i);
+            if (entry.level == 1) {
+                return false; // 遇到下一个 level==1，说明没有子标签
+            }
+            return true; // 找到 level==2
+        }
+        return false;
     }
 
     /**

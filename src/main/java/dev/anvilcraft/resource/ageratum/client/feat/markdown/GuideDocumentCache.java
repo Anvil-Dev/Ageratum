@@ -131,7 +131,7 @@ public final class GuideDocumentCache {
 
         NavigationTreeKey key = new NavigationTreeKey(location.getNamespace(), normalizeLanguageCode(languageCode));
         MutableDirectoryNode root = treeRoots.computeIfAbsent(key, ignored -> new MutableDirectoryNode(location.getNamespace(), ""));
-        root.insert(fileArgument, location, document.getTitle(fileArgument));
+        root.insert(fileArgument, location, document.getTitle(fileArgument), document.getWeight(), document.getNavigationColor());
     }
 
     private static Map<NavigationTreeKey, NavigationTree> freezeNavigationTrees(
@@ -276,7 +276,16 @@ public final class GuideDocumentCache {
     ) {
     }
 
-    public record NavigationDocument(String fileArgument, String title, ResourceLocation location) {
+    public record NavigationDocument(
+        String fileArgument,
+        String title,
+        ResourceLocation location,
+        int weight,
+        @Nullable String color
+    ) {
+        public NavigationDocument(String fileArgument, String title, ResourceLocation location) {
+            this(fileArgument, title, location, 0, null);
+        }
     }
 
     private static final class MutableDirectoryNode {
@@ -291,8 +300,7 @@ public final class GuideDocumentCache {
             this.namespace = namespace;
             this.name = name;
         }
-
-        private void insert(String fileArgument, ResourceLocation location, String title) {
+        private void insert(String fileArgument, ResourceLocation location, String title, int weight, @Nullable String color) {
             String[] segments = fileArgument.split("/");
             MutableDirectoryNode current = this;
             for (int i = 0; i < segments.length - 1; i++) {
@@ -300,7 +308,7 @@ public final class GuideDocumentCache {
                 current = current.children.computeIfAbsent(segment, name -> new MutableDirectoryNode(this.namespace, name));
             }
             String fileName = segments[segments.length - 1];
-            NavigationDocument document = new NavigationDocument(fileArgument, title, location);
+            NavigationDocument document = new NavigationDocument(fileArgument, title, location, weight, color);
             if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(fileName)) {
                 current.indexDocument = document;
             } else {
@@ -316,7 +324,10 @@ public final class GuideDocumentCache {
         private NavigationDirectory freezeAsDirectory(int level) {
             List<NavigationDocument> directoryDocuments = new ArrayList<>(this.documents);
 
-            directoryDocuments.sort(Comparator.comparing(NavigationDocument::fileArgument));
+            directoryDocuments.sort(
+                Comparator.comparingInt(NavigationDocument::weight)
+                    .thenComparing(NavigationDocument::fileArgument)
+            );
 
             if (level <= 1 && this.indexDocument != null) {
                 directoryDocuments.addFirst(this.indexDocument);
