@@ -272,6 +272,23 @@ public class MDRowComponent extends MDComponent {
         }
         return maxX;
     }
+    @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        if (this.contentComponents.isEmpty()) {
+            return 0;
+        }
+        if (this.direction == Direction.VERTICAL) {
+            int maxWidth = 0;
+            for (MDComponent child : this.contentComponents) {
+                int w = child.getPreferredWidth(minecraft, maxX, maxY);
+                if (w > 0) maxWidth = Math.max(maxWidth, w);
+            }
+            return maxWidth > 0 ? maxWidth : -1;
+        }
+        int[] preferredWidths = this.calculateUnconstrainedWidths(minecraft);
+        return sum(preferredWidths) + SPACING * (this.contentComponents.size() - 1);
+    }
+
     /**
      * 以无约束宽度计算各组件完整的 preferredWidth。
      */

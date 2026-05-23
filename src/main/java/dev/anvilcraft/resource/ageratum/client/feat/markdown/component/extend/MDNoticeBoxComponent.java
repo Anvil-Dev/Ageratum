@@ -54,6 +54,19 @@ public class MDNoticeBoxComponent extends MDComponent {
     }
 
     @Override
+    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
+        int maxChildWidth = 0;
+        for (MDComponent child : this.contentComponents) {
+            int w = child.getPreferredWidth(minecraft, maxX, maxY);
+            if (w > 0) maxChildWidth = Math.max(maxChildWidth, w);
+        }
+        if (maxChildWidth > 0) {
+            return maxChildWidth + PADDING * 2 + BORDER_WIDTH;
+        }
+        return -1;
+    }
+
+    @Override
     public void render(
         MDRenderContext context
     ) {
