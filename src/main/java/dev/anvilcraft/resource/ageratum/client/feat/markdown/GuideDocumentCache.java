@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import com.mojang.logging.LogUtils;
+import dev.anvilcraft.resource.ageratum.client.command.AgeratumCommand;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -91,6 +92,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                 PARSED_DOCUMENT_CACHE = Map.copyOf(prepared.documents());
                 NAVIGATION_TREE_CACHE = Map.copyOf(prepared.navigationTrees());
                 ITEM_DOCUMENT_CACHE = Map.copyOf(prepared.itemDocuments());
+                AgeratumCommand.warmSuggestionCache(PARSED_DOCUMENT_CACHE);
                 LOGGER.info("Preloaded {} guide markdown files", PARSED_DOCUMENT_CACHE.size());
             }
         };

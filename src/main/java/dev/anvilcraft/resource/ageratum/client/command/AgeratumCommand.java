@@ -10,6 +10,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
@@ -29,9 +30,12 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import javax.annotation.Nullable;
 
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public class AgeratumCommand {
@@ -42,6 +46,14 @@ public class AgeratumCommand {
         (context, builder) -> SharedSuggestionProvider.suggestResource(
             AgeratumStructureTemplateManager.listAll(), builder
         );
+
+    @Nullable
+    private static List<String> cachedNamespaces;
+    @Nullable
+    private static String cachedNamespacesLanguage;
+    private static final Map<String, List<String>> cachedFiles = new HashMap<>();
+    @Nullable
+    private static String cachedFilesLanguage;
 
     private static final DynamicCommandExceptionType ERROR_TEMPLATE_INVALID = new DynamicCommandExceptionType(
         template -> Component.translatableEscape("commands.place.template.invalid", template)
@@ -130,13 +142,23 @@ public class AgeratumCommand {
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         String namespace = StringArgumentType.getString(context, "namespace");
-        List<String> files = new ArrayList<>();
-        for (String file : GuideDocumentLoader.listFiles(
-            minecraft.getResourceManager(),
-            namespace,
-            AgeratumClient.getClientLanguageCode(minecraft)
-        )) {
-            files.add("\"%s\"".formatted(file));
+        String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
+        String cacheKey = namespace + "/" + languageCode;
+        List<String> files = cachedFiles.get(cacheKey);
+        if (files == null) {
+            files = new ArrayList<>();
+            for (String file : GuideDocumentLoader.listFiles(
+                minecraft.getResourceManager(),
+                namespace,
+                languageCode
+            )) {
+                files.add("\"%s\"".formatted(file));
+            }
+            if (!languageCode.equals(cachedFilesLanguage)) {
+                cachedFiles.clear();
+                cachedFilesLanguage = languageCode;
+            }
+            cachedFiles.put(cacheKey, files);
         }
         return SharedSuggestionProvider.suggest(files, builder);
     }
@@ -146,14 +168,19 @@ public class AgeratumCommand {
         SuggestionsBuilder builder
     ) {
         Minecraft minecraft = Minecraft.getInstance();
-        List<String> namespaces = new ArrayList<>();
-        for (String namespace : GuideDocumentLoader.listNamespaces(
-            minecraft.getResourceManager(),
-            AgeratumClient.getClientLanguageCode(minecraft)
-        )) {
-            namespaces.add("\"%s\"".formatted(namespace));
+        String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
+        if (cachedNamespaces == null || !languageCode.equals(cachedNamespacesLanguage)) {
+            List<String> namespaces = new ArrayList<>();
+            for (String namespace : GuideDocumentLoader.listNamespaces(
+                minecraft.getResourceManager(),
+                languageCode
+            )) {
+                namespaces.add("\"%s\"".formatted(namespace));
+            }
+            cachedNamespaces = namespaces;
+            cachedNamespacesLanguage = languageCode;
         }
-        return SharedSuggestionProvider.suggest(namespaces, builder);
+        return SharedSuggestionProvider.suggest(cachedNamespaces, builder);
     }
 
     private static int openGuide(CommandContext<CommandSourceStack> context) {
@@ -173,5 +200,53 @@ public class AgeratumCommand {
         } catch (Exception ignore) {
         }
         return AgeratumClient.openGuide(context, namespace, file, anchor);
+    }
+
+    /**
+     * 从已解析的文档数据预热命令建议缓存。
+     * 在 {@link GuideDocumentCache} 重载完成后调用。
+     */
+    public static void warmSuggestionCache(Map<ResourceLocation, ?> documents) {
+        cachedFiles.clear();
+        Map<String, Map<String, List<String>>> grouped = new HashMap<>();
+        for (ResourceLocation location : documents.keySet()) {
+            String path = location.getPath();
+            // path: ageratum/<languageCode>/<file>.md
+            int prefixEnd = path.indexOf('/', AgeratumConstants.Guide.ROOT_FOLDER.length() + 1);
+            if (prefixEnd < 0) continue;
+            String languageCode = path.substring(AgeratumConstants.Guide.ROOT_FOLDER.length() + 1, prefixEnd);
+            String fileWithExt = path.substring(prefixEnd + 1);
+            if (!fileWithExt.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) continue;
+            String file = fileWithExt.substring(0, fileWithExt.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
+
+            Map<String, List<String>> langMap = grouped.computeIfAbsent(languageCode, k -> new HashMap<>());
+            langMap.computeIfAbsent(location.getNamespace(), k -> new ArrayList<>()).add("\"" + file + "\"");
+        }
+
+        // Build namespace list for default language first, then aggregate all
+        String defaultLang = AgeratumConstants.I18n.DEFAULT_LANGUAGE_CODE;
+        Map<String, List<String>> defaultLangMap = grouped.getOrDefault(defaultLang, Map.of());
+        List<String> nsList = new ArrayList<>(defaultLangMap.keySet());
+        for (String lang : grouped.keySet()) {
+            if (lang.equals(defaultLang)) continue;
+            for (String ns : grouped.get(lang).keySet()) {
+                if (!nsList.contains(ns)) nsList.add(ns);
+            }
+        }
+        nsList.sort(String::compareTo);
+        cachedNamespaces = nsList.stream().map(ns -> "\"" + ns + "\"").toList();
+        cachedNamespacesLanguage = defaultLang;
+
+        // Populate file caches per namespace+language
+        for (Map.Entry<String, Map<String, List<String>>> langEntry : grouped.entrySet()) {
+            String lang = langEntry.getKey();
+            for (Map.Entry<String, List<String>> nsEntry : langEntry.getValue().entrySet()) {
+                String ns = nsEntry.getKey();
+                List<String> files = nsEntry.getValue();
+                files.sort(String::compareTo);
+                cachedFiles.put(ns + "/" + lang, files);
+            }
+        }
+        cachedFilesLanguage = defaultLang;
     }
 }
