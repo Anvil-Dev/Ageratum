@@ -13,22 +13,20 @@ import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -101,24 +99,18 @@ public record GuideItemBinding(ResourceLocation itemId, @Nullable String rawComp
      * <p>会尽量复用绑定里声明的数据组件；若组件无法解析，则返回空。</p>
      */
     public Optional<ItemStack> createItemStack() {
+        Item item = BuiltInRegistries.ITEM.get(this.itemId);
+        if (item == Items.AIR) {
+            return Optional.empty();
+        }
+        ItemStack stack = item.getDefaultInstance();
+        if (this.rawComponents == null) {
+            return Optional.of(stack);
+        }
+
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             return Optional.empty();
-        }
-
-        Optional<HolderLookup.RegistryLookup<Item>> lookup = level.registryAccess().lookup(Registries.ITEM);
-        if (lookup.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Optional<Holder.Reference<Item>> itemReference = lookup.get().get(ResourceKey.create(Registries.ITEM, this.itemId));
-        if (itemReference.isEmpty()) {
-            return Optional.empty();
-        }
-
-        ItemStack stack = itemReference.get().value().getDefaultInstance();
-        if (this.rawComponents == null) {
-            return Optional.of(stack);
         }
 
         JsonObject componentObject = this.parseRequiredComponentsAsJsonObject();
