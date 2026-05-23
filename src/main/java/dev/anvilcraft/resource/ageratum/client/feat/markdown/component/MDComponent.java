@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -52,6 +53,10 @@ public abstract class MDComponent {
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
     /**
+     * 断链颜色（红色），用于标记指向不存在文档的超链接。
+     */
+    private static final int BROKEN_LINK_COLOR = 0xFFFF5555;
+    /**
      * -- GETTER --
      * 获取组件的 FormattedText。
      *
@@ -60,7 +65,13 @@ public abstract class MDComponent {
     @SuppressWarnings("JavadocDeclaration")
     protected final FormattedText text;
 
+    
     /**
+     * 渲染时实际使用的文本，若不为 null 则覆盖 {@link #text}。
+     * 用于 post-process 后的文本替换（如断链红色标记）。
+     */
+    private @Nullable FormattedText effectiveText;
+/**
      * 使用原始文本创建组件，文本会按默认规则进行 Markdown 内联解析。
      */
     public MDComponent(String text) {
@@ -75,6 +86,20 @@ public abstract class MDComponent {
     }
 
     /**
+     * 设置渲染时覆盖文本（null 表示使用原始 text）。
+     */
+    public void setEffectiveText(@Nullable FormattedText effectiveText) {
+        this.effectiveText = effectiveText;
+    }
+
+    /**
+     * 获取渲染时实际使用的 FormattingText。
+     */
+    protected FormattedText getEffectiveText() {
+        return this.effectiveText != null ? this.effectiveText : this.text;
+    }
+
+    /**
      * 在给定区域内渲染组件内容。
      */
     public void render(MDRenderContext context) {
@@ -82,7 +107,8 @@ public abstract class MDComponent {
         int maxX = context.maxX();
         int maxY = context.maxY();
         GuiGraphics guiGraphics = context.graphics();
-        List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
+        FormattedText textToRender = this.getEffectiveText();
+        List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
             guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
@@ -112,7 +138,8 @@ public abstract class MDComponent {
      * 计算组件在指定宽度下的渲染高度。
      */
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        return minecraft.font.split(this.text, maxX).size() * minecraft.font.lineHeight;
+        FormattedText textToRender = this.getEffectiveText();
+        return minecraft.font.split(textToRender, maxX).size() * minecraft.font.lineHeight;
     }
 
     /**
@@ -122,7 +149,8 @@ public abstract class MDComponent {
      */
     @Nullable
     public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
-        return this.getStyleAtFormattedTextPosition(minecraft, this.text, mouseX, mouseY, maxX);
+        FormattedText textToRender = this.getEffectiveText();
+        return this.getStyleAtFormattedTextPosition(minecraft, textToRender, mouseX, mouseY, maxX);
     }
 
     /**
@@ -393,11 +421,29 @@ public abstract class MDComponent {
      * 为链接文本构造带点击事件的样式。
      */
     private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
-        Style style = parentStyle.withUnderlined(true).withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR);
+        int color = resolveLinkColor(target);
+        Style style = parentStyle.withUnderlined(true).withColor(color);
         if (target == null || target.isBlank()) {
             return style;
         }
         return style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, target));
+    }
+
+    /**
+     * 解析链接颜色：若为内部文档链接且目标不存在，返回断链红色。
+     */
+    private static int resolveLinkColor(@Nullable String target) {
+        if (target == null || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:")) {
+            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
+        }
+        ResourceLocation docLocation = ResourceLocation.tryParse(target);
+        if (docLocation == null || !GuideDocumentCache.isCacheLoaded()) {
+            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
+        }
+        if (GuideDocumentCache.getParsedDocument(docLocation).isEmpty()) {
+            return BROKEN_LINK_COLOR;
+        }
+        return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
     }
 
     /**

@@ -19,6 +19,7 @@ public class AgeratumLanguageProvider extends LanguageProvider {
         this.add("system.ageratum.share.tip", "Player %s has shared a guide with you:");
         this.add("system.ageratum.share.button", "[CLICK TO OPEN]");
         this.add("tooltip.ageratum.bind_item_hold", "Hold %s to get more info");
+        this.add("tooltip.ageratum.press_to_open", "Press %s to open documentation");
         this.add("key.ageratum.more_info", "Get More Info");
         this.add("key.ageratum.structure_projection.layer_up", "Increase Projection Layers");
         this.add("key.ageratum.structure_projection.layer_down", "Decrease Projection Layers");

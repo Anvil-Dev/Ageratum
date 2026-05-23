@@ -68,11 +68,11 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
             if (displaying.isEmpty()) break RENDER_INGREDIENT;
             guiGraphics.renderItem(displaying, 0, 0);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
-            this.renderTooltip(context, displaying, 0, 0, mouseX, mouseY);
+            this.renderRecipeItem(context, displaying, 0, 0, mouseX, mouseY);
         }
         guiGraphics.renderItem(this.resultItem, 54, 0);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
-        this.renderTooltip(context, this.resultItem, 54, 0, mouseX, mouseY);
+        this.renderRecipeItem(context, this.resultItem, 54, 0, mouseX, mouseY);
         pose.popPose();
     }
 }

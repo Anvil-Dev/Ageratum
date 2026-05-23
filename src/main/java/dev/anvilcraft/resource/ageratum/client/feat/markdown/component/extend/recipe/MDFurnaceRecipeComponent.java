@@ -75,15 +75,15 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
             if (displaying.isEmpty()) break RENDER_INGREDIENT;
             guiGraphics.renderItem(displaying, 0, 0);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
-            this.renderTooltip(context, displaying, 0, 0, mouseX, mouseY);
+            this.renderRecipeItem(context, displaying, 0, 0, mouseX, mouseY);
         }
         guiGraphics.renderItem(this.resultItem, 54, 10);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 10);
-        this.renderTooltip(context, this.resultItem, 54, 10, mouseX, mouseY);
+        this.renderRecipeItem(context, this.resultItem, 54, 10, mouseX, mouseY);
         if (this.toastSymbol != null) {
             guiGraphics.renderItem(this.toastSymbol, -28, 12);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.toastSymbol, -28, 12);
-            this.renderTooltip(context, this.toastSymbol, -28, 12, mouseX, mouseY);
+            this.renderRecipeItem(context, this.toastSymbol, -28, 12, mouseX, mouseY);
         }
         pose.popPose();
     }

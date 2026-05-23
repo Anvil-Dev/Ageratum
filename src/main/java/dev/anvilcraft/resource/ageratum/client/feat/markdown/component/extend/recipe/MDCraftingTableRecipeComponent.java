@@ -72,11 +72,11 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             int y = (i / 3) * 19;
             guiGraphics.renderItem(displaying, x, y);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
-            this.renderTooltip(context, displaying, x, y, mouseX, mouseY);
+            this.renderRecipeItem(context, displaying, x, y, mouseX, mouseY);
         }
         guiGraphics.renderItem(this.resultItem, 93, 19);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
-        this.renderTooltip(context, this.resultItem, 93, 19, mouseX, mouseY);
+        this.renderRecipeItem(context, this.resultItem, 93, 19, mouseX, mouseY);
         pose.popPose();
     }
 

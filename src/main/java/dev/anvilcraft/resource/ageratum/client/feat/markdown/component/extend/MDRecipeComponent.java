@@ -1,6 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -11,6 +13,8 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -43,20 +47,27 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      */
     private final int height;
 
-    /**
+        /**
+     * 当前鼠标悬停的配方物品绑定的文档位置，用于配方内 W 键跳转。
+     */
+    protected @javax.annotation.Nullable ResourceLocation hoveredDocLink;
+
+/**
      * 创建配方组件。
      */
     public MDRecipeComponent(ResourceLocation imageLocation, int width, int height, boolean enableAlignCenter) {
         super(imageLocation, false, enableAlignCenter);
         this.width = width;
         this.height = height;
-    }
+            this.hoveredDocLink = null;
+}
 
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphics guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
+        this.hoveredDocLink = null;  // 每帧重置
         this.renderRecipe(context, mouseX, mouseY);
     }
 
@@ -65,6 +76,47 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      */
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
     }
+
+    /**
+     * 渲染配方物品并检查文档绑定，若存在则记录到 {@link #hoveredDocLink}
+     * 并在 tooltip 中显示 W 键跳转提示。
+     */
+    protected void renderRecipeItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+            Minecraft minecraft = context.minecraft();
+            String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
+            GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode).ifPresentOrElse(
+                doc -> {
+                    this.hoveredDocLink = doc;
+                    context.addTooltip(Component.translatable(
+                        "tooltip.ageratum.press_to_open",
+                        Component.keybind("key.ageratum.more_info")
+                    ));
+                },
+                () -> this.hoveredDocLink = null
+            );
+        }
+    }
+
+    @Override
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        if (this.hoveredDocLink != null
+            && keyCode == dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue()) {
+            AgeratumClient.openGuideOnClient(this.hoveredDocLink, java.util.List.of());
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * 解析 {@code recipe} 扩展标签。

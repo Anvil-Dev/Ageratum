@@ -26,8 +26,7 @@ import javax.annotation.Nullable;
 
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public final class BoundItemGuideNavigator {
-    private static final long HOLD_DURATION_MS = AgeratumConstants.ItemBinding.HOLD_DURATION_MS;
-    private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_STALE_MS;
+private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_STALE_MS;
 
     @Nullable
     private static ResourceLocation hoveredDocumentLocation;
@@ -112,7 +111,7 @@ public final class BoundItemGuideNavigator {
             return;
         }
 
-        if (openedDuringCurrentHold || holdStartAtMs < 0L || now - holdStartAtMs < HOLD_DURATION_MS) {
+        if (openedDuringCurrentHold || holdStartAtMs < 0L || now - holdStartAtMs < AgeratumClient.CONFIG.itemBindingHoldDurationMs) {
             return;
         }
 
@@ -126,7 +125,7 @@ public final class BoundItemGuideNavigator {
             return 0;
         }
         long elapsed = Math.max(0L, now - holdStartAtMs);
-        return Math.min(100L, (double) elapsed / HOLD_DURATION_MS);
+        return Math.min(100L, (double) elapsed / AgeratumClient.CONFIG.itemBindingHoldDurationMs);
     }
 
     private static boolean isWDown(Minecraft minecraft) {

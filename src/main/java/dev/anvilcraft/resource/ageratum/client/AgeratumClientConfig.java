@@ -28,9 +28,13 @@ public class AgeratumClientConfig {
     public String previewPath = "ageratum_preview";
 
     @Comment("Share your guide only with player from the same team")
-    public boolean shareGuideOnlyInTeam = false;
+   public boolean shareGuideOnlyInTeam = false;
 
-    @Comment("The scaling ratio of the interface")
+    @Comment("Hold duration (milliseconds) for W-key item binding navigation, default 750ms")
+    @BoundedDiscrete(min = 100, max = 5000)
+    public int itemBindingHoldDurationMs = 750;
+
+   @Comment("The scaling ratio of the interface")
     @BoundedDiscrete(min = 1, max = 4)
     public int scale = 1;
 }

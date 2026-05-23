@@ -84,12 +84,12 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
             int x = (i % 3) * 19;
             guiGraphics.renderItem(displaying, x, 0);
             guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, 0);
-            this.renderTooltip(context, displaying, x, 0, mouseX, mouseY);
+            this.renderRecipeItem(context, displaying, x, 0, mouseX, mouseY);
         }
         ItemStack resultItem = this.resultSupplier.get();
         guiGraphics.renderItem(resultItem, 92, 0);
         guiGraphics.renderItemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
-        this.renderTooltip(context, resultItem, 92, 0, mouseX, mouseY);
+        this.renderRecipeItem(context, resultItem, 92, 0, mouseX, mouseY);
         pose.popPose();
     }
 

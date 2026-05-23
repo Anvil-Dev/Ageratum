@@ -40,7 +40,15 @@ public final class GuideDocumentCache {
     private static volatile Map<NavigationTreeKey, NavigationTree> NAVIGATION_TREE_CACHE = Map.of();
     private static volatile Map<ResourceLocation, List<ItemDocumentBinding>> ITEM_DOCUMENT_CACHE = Map.of();
 
-    private static final PreparableReloadListener RELOAD_LISTENER =
+    
+
+    /**
+     * 检查文档缓存是否已完成首次加载。
+     */
+    public static boolean isCacheLoaded() {
+        return !PARSED_DOCUMENT_CACHE.isEmpty();
+    }
+private static final PreparableReloadListener RELOAD_LISTENER =
         new SimplePreparableReloadListener<PreparedGuideData>() {
             @Override
             protected PreparedGuideData prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
