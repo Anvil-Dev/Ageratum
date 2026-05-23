@@ -44,6 +44,8 @@ public class MDRowComponent extends MDComponent {
     private final Direction direction;
     private final HorizontalAlign horizontalAlign;
     private final VerticalAlign verticalAlign;
+    /** 水平布局时的统一缩放比（0 表示无需缩放）。 */
+    private float uniformScale;
 
     public MDRowComponent(
         List<MDComponent> contentComponents,
@@ -56,6 +58,7 @@ public class MDRowComponent extends MDComponent {
         this.direction = direction;
         this.horizontalAlign = horizontalAlign;
         this.verticalAlign = verticalAlign;
+        this.uniformScale = 0f;
     }
 
     public static MDComponent parse(MDExtensionContext context) {
@@ -103,15 +106,26 @@ public class MDRowComponent extends MDComponent {
         float mouseY = context.mouseY();
         GuiGraphics guiGraphics = context.graphics();
 
-        int[] widths = this.calculateComponentWidths(minecraft, maxX, Integer.MAX_VALUE);
+        // 先以无约束宽度计算各组件完整 preferredWidth
+        int[] preferredWidths = this.calculateUnconstrainedWidths(minecraft);
         int[] heights = new int[this.contentComponents.size()];
         int rowHeight = 0;
         for (int i = 0; i < this.contentComponents.size(); i++) {
-            int h = this.contentComponents.get(i).getHeight(minecraft, widths[i], Integer.MAX_VALUE);
+            int h = this.contentComponents.get(i).getHeight(minecraft, preferredWidths[i], Integer.MAX_VALUE);
             heights[i] = h;
             rowHeight = Math.max(rowHeight, h);
         }
 
+        int totalPreferred = sum(preferredWidths) + SPACING * (this.contentComponents.size() - 1);
+        // 计算统一缩放比：超出可用宽度时等比缩小
+        float scale = totalPreferred > maxX ? (float) maxX / totalPreferred : 1.0f;
+        this.uniformScale = scale;
+
+        // 缩放后的真实宽度
+        int[] widths = new int[this.contentComponents.size()];
+        for (int i = 0; i < this.contentComponents.size(); i++) {
+            widths[i] = Math.max(1, Math.round(preferredWidths[i] * scale));
+        }
         int totalWidth = sum(widths) + SPACING * (this.contentComponents.size() - 1);
         int baseX = alignOffset(maxX, totalWidth, this.horizontalAlign);
 
@@ -122,34 +136,51 @@ public class MDRowComponent extends MDComponent {
         int currentX = 0;
         for (int i = 0; i < this.contentComponents.size(); i++) {
             MDComponent component = this.contentComponents.get(i);
-            int componentWidth = widths[i];
+            int preferredW = preferredWidths[i];
             int componentHeight = heights[i];
             int yOffset = alignOffset(rowHeight, componentHeight, this.verticalAlign);
+            int scaledYOffset = scale < 1.0f ? Math.round(yOffset * scale) : yOffset;
 
-            // 子组件渲染时，需要同步：
-            // - PoseStack 的 translate
-            // - child context 的 offsetX/offsetY（用于 scissor / tooltip / 等）
-            // - mouseX/mouseY（用于命中测试）
             pose.pushPose();
-            pose.translate(0, yOffset, 0);
-            int childMaxY = maxY <= 0 ? maxY : Math.max(0, maxY - yOffset);
-            int childX = baseX + currentX;
-            component.render(
-                context.child(
-                    componentWidth,
-                    childMaxY,
-                    mouseX - childX,
-                    mouseY - yOffset,
-                    context.offsetX() + childX,
-                    context.offsetY() + yOffset,
-                    context.scale()
-                )
-            );
+            if (scale < 1.0f) {
+                pose.translate(0, scaledYOffset, 0);
+                pose.scale(scale, scale, 1.0f);
+                int childMaxY = maxY <= 0 ? maxY : (int) Math.max(1, (maxY - scaledYOffset) / scale);
+                int childX = baseX + currentX;
+                float childMouseX = (mouseX - childX) / scale;
+                float childMouseY = (mouseY - scaledYOffset) / scale;
+                component.render(
+                    context.child(
+                        preferredW,
+                        childMaxY,
+                        childMouseX,
+                        childMouseY,
+                        Math.round(context.offsetX() + childX / scale),
+                        Math.round(context.offsetY() + scaledYOffset / scale),
+                        context.scale() * scale
+                    )
+                );
+            } else {
+                pose.translate(0, yOffset, 0);
+                int childMaxY = maxY <= 0 ? maxY : Math.max(0, maxY - yOffset);
+                int childX = baseX + currentX;
+                component.render(
+                    context.child(
+                        preferredW,
+                        childMaxY,
+                        mouseX - childX,
+                        mouseY - yOffset,
+                        context.offsetX() + childX,
+                        context.offsetY() + yOffset,
+                        context.scale()
+                    )
+                );
+            }
             pose.popPose();
 
             if (i < this.contentComponents.size() - 1) {
-                currentX += componentWidth + SPACING;
-                pose.translate(componentWidth + SPACING, 0, 0);
+                currentX += widths[i] + SPACING;
+                pose.translate(widths[i] + SPACING, 0, 0);
             }
         }
 
@@ -218,14 +249,17 @@ public class MDRowComponent extends MDComponent {
             return height;
         }
 
-        int[] widths = this.calculateComponentWidths(minecraft, maxX, maxY);
+        int[] preferredWidths = this.calculateUnconstrainedWidths(minecraft);
+        int totalPreferred = sum(preferredWidths) + SPACING * (this.contentComponents.size() - 1);
+        float scale = totalPreferred > maxX ? (float) maxX / totalPreferred : 1.0f;
+
         int maxHeight = 0;
         for (int i = 0; i < this.contentComponents.size(); i++) {
             MDComponent component = this.contentComponents.get(i);
-            int height = component.getHeight(minecraft, widths[i], maxY);
+            int height = component.getHeight(minecraft, preferredWidths[i], maxY);
             maxHeight = Math.max(maxHeight, height);
         }
-        return maxHeight;
+        return scale < 1.0f ? Math.max(1, Math.round(maxHeight * scale)) : maxHeight;
     }
 
     private static int resolveVerticalChildWidth(MDComponent component, Minecraft minecraft, int maxX) {
@@ -238,46 +272,17 @@ public class MDRowComponent extends MDComponent {
         }
         return maxX;
     }
-
     /**
-     * 计算水平排列时每个子组件应分配的宽度。
-     *
-     * <p>优先使用子组件声明的期望宽度（通过 {@link MDComponent#getPreferredWidth}），
-     * 剩余空间由没有期望宽度的组件平均分配。</p>
+     * 以无约束宽度计算各组件完整的 preferredWidth。
      */
-    private int[] calculateComponentWidths(Minecraft minecraft, int maxX, int maxY) {
-        int componentCount = this.contentComponents.size();
-        int[] widths = new int[componentCount];
-
-        int totalSpacing = SPACING * (componentCount - 1);
-        int availableWidth = Math.max(1, maxX - totalSpacing);
-
-        int usedWidth = 0;
-        int flexibleCount = 0;
-
-        for (int i = 0; i < componentCount; i++) {
+    private int[] calculateUnconstrainedWidths(Minecraft minecraft) {
+        int count = this.contentComponents.size();
+        int[] widths = new int[count];
+        for (int i = 0; i < count; i++) {
             MDComponent component = this.contentComponents.get(i);
-            int preferredWidth = component.getPreferredWidth(minecraft, availableWidth, maxY);
-
-            if (preferredWidth > 0) {
-                int remaining = availableWidth - usedWidth;
-                widths[i] = Math.clamp(remaining, 1, preferredWidth);
-                usedWidth += widths[i];
-            } else {
-                widths[i] = -1;
-                flexibleCount++;
-            }
+            int preferred = component.getPreferredWidth(minecraft, Integer.MAX_VALUE, Integer.MAX_VALUE);
+            widths[i] = preferred > 0 ? preferred : 1;
         }
-
-        int remainingWidth = Math.max(0, availableWidth - usedWidth);
-        int flexibleWidth = flexibleCount > 0 ? remainingWidth / flexibleCount : 0;
-
-        for (int i = 0; i < componentCount; i++) {
-            if (widths[i] == -1) {
-                widths[i] = Math.max(1, flexibleWidth);
-            }
-        }
-
         return widths;
     }
 
@@ -430,14 +435,22 @@ public class MDRowComponent extends MDComponent {
     }
 
     private @Nullable ChildHit hitTestHorizontal(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
-        int[] widths = this.calculateComponentWidths(minecraft, maxX, Integer.MAX_VALUE);
+        int[] preferredWidths = this.calculateUnconstrainedWidths(minecraft);
 
         int[] heights = new int[this.contentComponents.size()];
         int rowHeight = 0;
         for (int i = 0; i < this.contentComponents.size(); i++) {
-            int h = this.contentComponents.get(i).getHeight(minecraft, widths[i], Integer.MAX_VALUE);
+            int h = this.contentComponents.get(i).getHeight(minecraft, preferredWidths[i], Integer.MAX_VALUE);
             heights[i] = h;
             rowHeight = Math.max(rowHeight, h);
+        }
+
+        int totalPreferred = sum(preferredWidths) + SPACING * (this.contentComponents.size() - 1);
+        float scale = totalPreferred > maxX ? (float) maxX / totalPreferred : 1.0f;
+
+        int[] widths = new int[this.contentComponents.size()];
+        for (int i = 0; i < this.contentComponents.size(); i++) {
+            widths[i] = Math.max(1, Math.round(preferredWidths[i] * scale));
         }
 
         int totalWidth = sum(widths) + SPACING * (this.contentComponents.size() - 1);
@@ -448,14 +461,16 @@ public class MDRowComponent extends MDComponent {
             MDComponent component = this.contentComponents.get(i);
             int width = widths[i];
             int height = heights[i];
+            int yOffset = alignOffset(rowHeight, height, this.verticalAlign);
+            int scaledHeight = scale < 1.0f ? Math.max(1, Math.round(height * scale)) : height;
+            int scaledYOffset = scale < 1.0f ? Math.round(yOffset * scale) : yOffset;
             int x = baseX + currentX;
 
             if (mouseX >= x && mouseX < x + width) {
-                int y = alignOffset(rowHeight, height, this.verticalAlign);
-                if (mouseY < y || mouseY >= y + height) {
+                if (mouseY < scaledYOffset || mouseY >= scaledYOffset + scaledHeight) {
                     return null;
                 }
-                return new ChildHit(component, x, y, width, height);
+                return new ChildHit(component, x, scaledYOffset, width, scaledHeight);
             }
 
             currentX += width + SPACING;
