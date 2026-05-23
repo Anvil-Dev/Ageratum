@@ -59,23 +59,39 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                     location -> location.getPath().startsWith(GUIDE_ROOT + "/")
                                 && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
-                Map<ResourceLocation, MDDocument> prepared = new HashMap<>();
-                Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
+                // 第一趟：读取文件、提取 front matter、建立物品绑定缓存
+                Map<ResourceLocation, String> rawMarkdowns = new LinkedHashMap<>();
                 Map<ResourceLocation, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
                 for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
                     ResourceLocation location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        MDDocument document = parser.parseDocument(location, markdown);
-                        prepared.put(location, document);
-                        registerNavigationNode(treeRoots, location, document);
-                        for (GuideItemBinding binding : document.getGuideItemBindings()) {
+                        rawMarkdowns.put(location, markdown);
+                        Map<String, Object> frontMatter = MarkdownParser.extractFrontMatter(markdown).frontMatter();
+                        MDDocument tempDoc = new MDDocument(location, frontMatter, List.of());
+                        for (GuideItemBinding binding : tempDoc.getGuideItemBindings()) {
                             itemDocuments
                                 .computeIfAbsent(binding.itemId(), ignored -> new ArrayList<>())
                                 .add(new ItemDocumentBinding(location, binding));
                         }
                     } catch (IOException exception) {
                         throw new UncheckedIOException("Failed to preload guide: " + location, exception);
+                    } catch (RuntimeException exception) {
+                        LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
+                    }
+                }
+                // 提前应用物品绑定缓存，使第二趟 <ref> 解析时可用
+                ITEM_DOCUMENT_CACHE = Map.copyOf(freezeItemDocuments(itemDocuments));
+
+                // 第二趟：完整解析文档，<ref> 可查新的物品绑定缓存
+                Map<ResourceLocation, MDDocument> prepared = new HashMap<>();
+                Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
+                for (Map.Entry<ResourceLocation, String> entry : rawMarkdowns.entrySet()) {
+                    ResourceLocation location = entry.getKey();
+                    try {
+                        MDDocument document = parser.parseDocument(location, entry.getValue());
+                        prepared.put(location, document);
+                        registerNavigationNode(treeRoots, location, document);
                     } catch (RuntimeException exception) {
                         LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
                     }
