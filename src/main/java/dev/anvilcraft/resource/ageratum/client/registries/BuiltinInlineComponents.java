@@ -71,7 +71,7 @@ public final class BuiltinInlineComponents {
                 Item item = BuiltInRegistries.ITEM.get(itemId);
                 if (item == Items.AIR) {
                     return Component.translatable("item." + itemId.getNamespace() + "." + itemId.getPath())
-                        .withStyle(context.baseStyle());
+                        .withStyle(context.baseStyle().withColor(AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR));
                 }
                 String componentStr = context.params().get("component");
                 String itemSpec = itemIdStr.trim();
@@ -84,7 +84,7 @@ public final class BuiltinInlineComponents {
                 AtomicReference<MutableComponent> displayText = new AtomicReference<>(Component.translatable(item.getDescriptionId()));
                 AtomicReference<Style> linkStyle = new AtomicReference<>(
                     context.baseStyle()
-                        .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
+                        .withColor(AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR)
                         .withUnderlined(true)
                         .withItalic(true)
                 );
@@ -97,9 +97,11 @@ public final class BuiltinInlineComponents {
                             ));
                         });
                     binding.resolveFirstDocument(languageCode)
-                        .ifPresent(targetDocument -> linkStyle.set(linkStyle.get().withClickEvent(
-                            new ClickEvent(ClickEvent.Action.OPEN_URL, targetDocument.toString())
-                        )));
+                        .ifPresent(targetDocument -> linkStyle.set(linkStyle.get()
+                            .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
+                            .withClickEvent(
+                                new ClickEvent(ClickEvent.Action.OPEN_URL, targetDocument.toString())
+                            )));
                 }
 
                 return displayText.get().withStyle(linkStyle.get());

@@ -52,10 +52,7 @@ public abstract class MDComponent {
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
-    /**
-     * 断链颜色（红色），用于标记指向不存在文档的超链接。
-     */
-    private static final int BROKEN_LINK_COLOR = 0xFFFF5555;
+    private static final int BROKEN_LINK_COLOR = AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
