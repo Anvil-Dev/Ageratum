@@ -53,10 +53,10 @@ public class AgeratumCommand {
     /**
      * 在客户端资源包中已知的结构模板列表（由 {@link AgeratumStructureTemplateManager} 扫描）。
      */
-    private static final SuggestionProvider<CommandSourceStack> SUGGEST_TEMPLATES =
-        (context, builder) -> SharedSuggestionProvider.suggestResource(
-            AgeratumStructureTemplateManager.listAll(), builder
-        );
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_TEMPLATES = (context, builder) -> SharedSuggestionProvider.suggestResource(
+        AgeratumStructureTemplateManager.listAll(),
+        builder
+    );
 
     @Nullable
     private static List<String> cachedNamespaces;
@@ -66,9 +66,10 @@ public class AgeratumCommand {
     @Nullable
     private static String cachedFilesLanguage;
 
-    private static final DynamicCommandExceptionType ERROR_TEMPLATE_INVALID = new DynamicCommandExceptionType(
-        template -> Component.translatableEscape("commands.place.template.invalid", template)
-    );
+    private static final DynamicCommandExceptionType ERROR_TEMPLATE_INVALID = new DynamicCommandExceptionType(template -> Component.translatableEscape(
+        "commands.place.template.invalid",
+        template
+    ));
 
     /**
      * 注册客户端命令 {@code /ageratum}。
@@ -84,39 +85,21 @@ public class AgeratumCommand {
      */
     @SubscribeEvent
     public static void onCommandRegister(RegisterClientCommandsEvent event) {
-        event.getDispatcher().register(
-            Commands.literal("ageratum")
-                .then(
-                    Commands.literal("item").executes(AgeratumCommand::itemCommand)
-                )
-                .then(
-                    Commands.literal("preview").executes(AgeratumCommand::preview)
-                )
-                .then(
-                    Commands.literal("structure")
-                        .then(
-                            Commands.argument("template", ResourceLocationArgument.id())
-                                .suggests(SUGGEST_TEMPLATES)
-                                .then(
-                                    Commands.argument("pos", BlockPosArgument.blockPos())
-                                        .executes(AgeratumCommand::structure)
-                                )
-                        )
-                )
-                .then(
-                    Commands.argument("namespace", StringArgumentType.string())
-                        .suggests(AgeratumCommand::getNamespaceSuggestions)
+        event.getDispatcher()
+            .register(Commands.literal("ageratum")
+                .then(Commands.literal("item").executes(AgeratumCommand::itemCommand))
+                .then(Commands.literal("preview").executes(AgeratumCommand::preview))
+                .then(Commands.literal("structure")
+                    .then(Commands.argument("template", ResourceLocationArgument.id())
+                        .suggests(SUGGEST_TEMPLATES)
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(AgeratumCommand::structure))))
+                .then(Commands.argument("namespace", StringArgumentType.string())
+                    .suggests(AgeratumCommand::getNamespaceSuggestions)
+                    .executes(AgeratumCommand::openGuide)
+                    .then(Commands.argument("file", StringArgumentType.string())
+                        .suggests(AgeratumCommand::getFileSuggestions)
                         .executes(AgeratumCommand::openGuide)
-                        .then(
-                            Commands.argument("file", StringArgumentType.string())
-                                .suggests(AgeratumCommand::getFileSuggestions)
-                                .executes(AgeratumCommand::openGuide)
-                                .then(
-                                    Commands.argument("anchor", StringArgumentType.string())
-                                        .executes(AgeratumCommand::openGuide)
-                                )
-                        )
-                ));
+                        .then(Commands.argument("anchor", StringArgumentType.string()).executes(AgeratumCommand::openGuide)))));
     }
 
     /**
@@ -151,15 +134,25 @@ public class AgeratumCommand {
         refText.append("/>");
         String refString = refText.toString();
 
-        Component message = Component.literal(refString)
-            .withStyle(style -> style
-                .withColor(0xFF66CCFF)
+        Component message = Component.literal(itemId.toString())
+            .withStyle(style -> style.withColor(0xFF66CCFF)
                 .withUnderlined(true)
                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, refString))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    Component.translatable("commands.ageratum.item.copy_hint"))));
+                .withHoverEvent(new HoverEvent(
+                    HoverEvent.Action.SHOW_TEXT,
+                    Component.translatable("commands.ageratum.item.id_copy_hint")
+                )));
+        Component message1 = Component.literal(refString)
+            .withStyle(style -> style.withColor(0xFF66CCFF)
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, refString))
+                .withHoverEvent(new HoverEvent(
+                    HoverEvent.Action.SHOW_TEXT,
+                    Component.translatable("commands.ageratum.item.ref_copy_hint")
+                )));
 
         source.sendSuccess(() -> message, false);
+        source.sendSuccess(() -> message1, false);
         return 1;
     }
 
@@ -198,8 +191,7 @@ public class AgeratumCommand {
         }
         ResourceLocation previewLocation = AgeratumClient.toPreviewLocation(AgeratumConstants.Guide.INDEX_FILE);
         if (!AgeratumClient.openGuideOnClient(previewLocation, List.of())) {
-            source.sendFailure(Component.literal("Preview index.md not found: " + AgeratumClient.resolvePreviewDocumentPath(
-                previewLocation)));
+            source.sendFailure(Component.literal("Preview index.md not found: " + AgeratumClient.resolvePreviewDocumentPath(previewLocation)));
             return 0;
         }
         return 1;
@@ -232,11 +224,7 @@ public class AgeratumCommand {
         List<String> files = cachedFiles.get(cacheKey);
         if (files == null) {
             files = new ArrayList<>();
-            for (String file : GuideDocumentLoader.listFiles(
-                minecraft.getResourceManager(),
-                namespace,
-                languageCode
-            )) {
+            for (String file : GuideDocumentLoader.listFiles(minecraft.getResourceManager(), namespace, languageCode)) {
                 files.add("\"%s\"".formatted(file));
             }
             if (!languageCode.equals(cachedFilesLanguage)) {
@@ -256,10 +244,7 @@ public class AgeratumCommand {
         String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
         if (cachedNamespaces == null || !languageCode.equals(cachedNamespacesLanguage)) {
             List<String> namespaces = new ArrayList<>();
-            for (String namespace : GuideDocumentLoader.listNamespaces(
-                minecraft.getResourceManager(),
-                languageCode
-            )) {
+            for (String namespace : GuideDocumentLoader.listNamespaces(minecraft.getResourceManager(), languageCode)) {
                 namespaces.add("\"%s\"".formatted(namespace));
             }
             cachedNamespaces = namespaces;

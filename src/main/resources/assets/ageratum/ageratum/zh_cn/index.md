@@ -1,5 +1,6 @@
 ---
-item_id: "ageratum:guidebook"
+items: 
+    - "ageratum:guidebook"
 ---
 
 # Ageratum 文档系统
