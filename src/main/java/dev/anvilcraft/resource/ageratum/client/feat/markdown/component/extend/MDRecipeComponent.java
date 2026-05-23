@@ -90,7 +90,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
                 doc -> {
                     this.hoveredDocLink = doc;
                     context.addTooltip(Component.translatable(
-                        "tooltip.ageratum.press_to_open",
+                        "tooltip.ageratum.bind_item_hold",
                         Component.keybind("key.ageratum.more_info")
                     ));
                 },

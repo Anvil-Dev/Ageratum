@@ -5,6 +5,8 @@
   "ageratum.configuration.bread_crumbs_has_label.tooltip": "面包屑是否记录从侧边栏标签的跳转",
   "ageratum.configuration.enable_preview": "启用预览模式",
   "ageratum.configuration.enable_preview.tooltip": "是否启用预览模式（启用该模式后，可以实时查看指定路径下文档的更改情况）",
+  "ageratum.configuration.item_binding_hold_duration_ms": "物品绑定长按时长（毫秒）",
+  "ageratum.configuration.item_binding_hold_duration_ms.tooltip": "W键物品绑定的保持时间（毫秒），默认值为750毫秒。",
   "ageratum.configuration.preview_path": "预览路径",
   "ageratum.configuration.preview_path.tooltip": "用于设置预览模式的路径",
   "ageratum.configuration.scale": "缩放",
@@ -16,6 +18,8 @@
   "ageratum.configuration.show_code_block_line_numbers": "显示代码块的行号",
   "ageratum.configuration.show_code_block_line_numbers.tooltip": "在代码块中显示行号",
   "ageratum.configuration.title": "藿香 配置",
+  "commands.ageratum.item.copy_hint": "点击复制 ref 标签",
+  "commands.ageratum.item.empty_hand": "主手上没有物品",
   "commands.ageratum.preview.disable": "预览功能未启用",
   "item.ageratum.guidebook": "藿香 指南书",
   "itemGroup.ageratum.default": "藿香",
@@ -27,5 +31,4 @@
   "system.ageratum.share.button": "[点击打开]",
   "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南：",
   "tooltip.ageratum.bind_item_hold": "按住 %s 寻思"
-  "tooltip.ageratum.press_to_open": "按 %s 打开文档"
 }

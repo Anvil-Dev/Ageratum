@@ -16,10 +16,11 @@ public class AgeratumLanguageProvider extends LanguageProvider {
     protected void addTranslations() {
         ConfigData.readConfigClass(this, AgeratumClientConfig.class);
         this.add("commands.ageratum.preview.disable", "Preview is not enabled");
+        this.add("commands.ageratum.item.empty_hand", "No item in main hand");
+        this.add("commands.ageratum.item.copy_hint", "Click to copy ref tag");
         this.add("system.ageratum.share.tip", "Player %s has shared a guide with you:");
         this.add("system.ageratum.share.button", "[CLICK TO OPEN]");
         this.add("tooltip.ageratum.bind_item_hold", "Hold %s to get more info");
-        this.add("tooltip.ageratum.press_to_open", "Press %s to open documentation");
         this.add("key.ageratum.more_info", "Get More Info");
         this.add("key.ageratum.structure_projection.layer_up", "Increase Projection Layers");
         this.add("key.ageratum.structure_projection.layer_down", "Decrease Projection Layers");
