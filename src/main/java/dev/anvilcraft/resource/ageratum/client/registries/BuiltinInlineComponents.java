@@ -86,64 +86,6 @@ public final class BuiltinInlineComponents {
                     context.baseStyle()
                         .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
                         .withUnderlined(true)
-                );
-                if (binding != null) {
-                    binding.createItemStack()
-                        .ifPresent(stack -> {
-                            displayText.set(stack.getDisplayName().copy());
-                            linkStyle.set(linkStyle.get().withHoverEvent(
-                                new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackInfo(stack))
-                            ));
-                        });
-                    binding.resolveFirstDocument(languageCode)
-                        .ifPresent(targetDocument -> linkStyle.set(linkStyle.get().withClickEvent(
-                            new ClickEvent(ClickEvent.Action.OPEN_URL, targetDocument.toString())
-                        )));
-                }
-
-                return displayText.get().withStyle(linkStyle.get());
-            }
-        );
-
-    /**
-     * 物品链接行内组件：{@code <itemlink item="<item id>" component="<item component>"/>}。
-     *
-     * <p>与 {@code <ref>} 功能一致，但默认以斜体显示物品的本地化名称；
-     * 若该物品有绑定的文档页面，点击即可跳转。</p>
-     *
-     * <p>示例：{@code <itemlink item="minecraft:diamond"/>}</p>
-     */
-    public static final DeferredHolder<MDInlineComponentFactory, MDInlineComponentFactory> ITEMLINK =
-        AgeratumRegistries.INLINE_COMPONENT_FACTORIES.register(
-            "itemlink",
-            () -> context -> {
-                String itemIdStr = context.params().get("item");
-                if (itemIdStr == null || itemIdStr.isBlank()) {
-                    return Component.empty().withStyle(context.baseStyle());
-                }
-                ResourceLocation itemId = ResourceLocation.tryParse(itemIdStr.trim());
-                if (itemId == null) {
-                    return Component.empty().withStyle(context.baseStyle());
-                }
-                Item item = BuiltInRegistries.ITEM.get(itemId);
-                if (item == Items.AIR) {
-                    return Component.translatable("item." + itemId.getNamespace() + "." + itemId.getPath())
-                        .withStyle(context.baseStyle());
-                }
-                String componentStr = context.params().get("component");
-                String itemSpec = itemIdStr.trim();
-                if (componentStr != null && !componentStr.isBlank()) {
-                    itemSpec += componentStr.trim();
-                }
-                Minecraft minecraft = Minecraft.getInstance();
-                String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-                GuideItemBinding binding = GuideItemBinding.parse(itemSpec).orElse(null);
-                AtomicReference<MutableComponent> displayText = new AtomicReference<>(Component.translatable(item.getDescriptionId()));
-                // itemlink 默认斜体
-                AtomicReference<Style> linkStyle = new AtomicReference<>(
-                    context.baseStyle()
-                        .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
-                        .withUnderlined(true)
                         .withItalic(true)
                 );
                 if (binding != null) {
