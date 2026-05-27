@@ -78,12 +78,18 @@ public class MDBlockComponent extends MDImageComponent {
         if (level != null) {
             this.cameraRig.setZoom(1.5f);
             int blockHeight = this.getHeight(context.minecraft(), context.maxX(), context.maxY());
-            StructurePreviewRenderer.getInstance().render(
-                level, this.cameraRig, graphics,
-                context.maxX(), Math.max(1, blockHeight),
-                Integer.MIN_VALUE, Integer.MAX_VALUE,
-                0, 0
-            );
+            StructurePreviewRenderer.getInstance()
+                .render(
+                    level,
+                    this.cameraRig,
+                    graphics,
+                    context.maxX(),
+                    Math.max(1, blockHeight),
+                    Integer.MIN_VALUE,
+                    Integer.MAX_VALUE,
+                    0,
+                    0
+                );
         }
 
         ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();
@@ -127,12 +133,8 @@ public class MDBlockComponent extends MDImageComponent {
         return state;
     }
 
-    private static <T extends Comparable<T>> BlockState applyProperty(
-        BlockState state, Property<T> property, String rawValue
-    ) {
-        return property.getValue(rawValue)
-            .map(v -> state.setValue(property, v))
-            .orElse(state);
+    private static <T extends Comparable<T>> BlockState applyProperty(BlockState state, Property<T> property, String rawValue) {
+        return property.getValue(rawValue).map(v -> state.setValue(property, v)).orElse(state);
     }
 
     @Override

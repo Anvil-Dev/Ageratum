@@ -19,7 +19,9 @@ import org.joml.Matrix4f;
  * 结构/方块预览渲染器。
  */
 public final class StructurePreviewRenderer {
-    /** 匹配旧渲染管线 0.625*16 的缩放系数 */
+    /**
+     * 匹配旧渲染管线 0.625*16 的缩放系数
+     */
     private static final float BASE_SCALE = 8.0f;
 
     private static StructurePreviewRenderer instance;
@@ -30,17 +32,20 @@ public final class StructurePreviewRenderer {
     }
 
     /**
-     * @param graphics  当前绘制上下文
-     * @param maxX      组件渲染宽度
-     * @param height    组件渲染高度
+     * @param graphics 当前绘制上下文
+     * @param maxX     组件渲染宽度
+     * @param height   组件渲染高度
      */
     public void render(
         SandboxRenderLevel level,
         ViewportCameraRig cameraRig,
         GuiGraphicsExtractor graphics,
-        int maxX, int height,
-        int visibleMinY, int visibleMaxYExclusive,
-        float panOffsetX, float panOffsetY
+        int maxX,
+        int height,
+        int visibleMinY,
+        int visibleMaxYExclusive,
+        float panOffsetX,
+        float panOffsetY
     ) {
         var bounds = level.getBounds();
         int minY = Math.max(bounds.min().getY(), visibleMinY);
@@ -56,8 +61,7 @@ public final class StructurePreviewRenderer {
         float worldPanX = panOffsetX / (guiScale * pipScale);
         float worldPanY = panOffsetY / (guiScale * pipScale);
 
-        var transform = new Matrix4f()
-            .translate(worldPanX, worldPanY, 0)
+        var transform = new Matrix4f().translate(worldPanX, worldPanY, 0)
             .rotateZ(Mth.DEG_TO_RAD * cameraRig.getRotationZ())
             .rotateX(Mth.DEG_TO_RAD * cameraRig.getRotationX())
             .rotateY(Mth.DEG_TO_RAD * cameraRig.getRotationY());
@@ -88,11 +92,18 @@ public final class StructurePreviewRenderer {
         if (bx1 <= bx0 || by1 <= by0) return;
 
         var state = new StructurePipRenderingState(
-            level, startPos, endPos,
-            x0, y0, x0 + pipW, y0 + pipH,
+            level,
+            startPos,
+            endPos,
+            x0,
+            y0,
+            x0 + pipW,
+            y0 + pipH,
             pipScale,
             Minecraft.getInstance().options.ambientOcclusion().get(),
-            pose3D, new Matrix3x2f(), scissor
+            pose3D,
+            new Matrix3x2f(),
+            scissor
         );
 
         graphics.submitPictureInPictureRenderState(state);
@@ -104,7 +115,8 @@ public final class StructurePreviewRenderer {
         MultiBufferSource.BufferSource buffers,
         Vec3 cameraPos,
         BlockPos origin,
-        int visibleMinY, int visibleMaxYExclusive,
+        int visibleMinY,
+        int visibleMaxYExclusive,
         float alpha
     ) {
         var minecraft = Minecraft.getInstance();
@@ -112,9 +124,7 @@ public final class StructurePreviewRenderer {
         float oy = (float) (origin.getY() - cameraPos.y());
         float oz = (float) (origin.getZ() - cameraPos.z());
 
-        var blockRenderer = new ModelBlockRenderer(
-            minecraft.options.ambientOcclusion().get(), false, minecraft.getBlockColors()
-        );
+        var blockRenderer = new ModelBlockRenderer(minecraft.options.ambientOcclusion().get(), false, minecraft.getBlockColors());
         var modelManager = minecraft.getModelManager();
 
         level.getFilledBlocks().forEach(pos -> {
@@ -129,7 +139,14 @@ public final class StructurePreviewRenderer {
             poseStack.translate(ox + pos.getX(), oy + pos.getY(), oz + pos.getZ());
             blockRenderer.tesselateBlock(
                 (x, y, z, quad, instance) -> consumer.putBakedQuad(poseStack.last(), quad, instance),
-                0, 0, 0, level, pos, blockState, model, blockState.getSeed(pos)
+                0,
+                0,
+                0,
+                level,
+                pos,
+                blockState,
+                model,
+                blockState.getSeed(pos)
             );
             poseStack.popPose();
         });
