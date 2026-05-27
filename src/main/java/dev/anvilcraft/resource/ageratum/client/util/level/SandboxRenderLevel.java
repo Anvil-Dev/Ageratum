@@ -11,6 +11,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientRecipeContainer;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -21,6 +22,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.Difficulty;
@@ -37,7 +39,10 @@ import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.alchemy.PotionBrewing;
 import net.minecraft.world.item.crafting.RecipeAccess;
 import net.minecraft.world.item.crafting.SelectableRecipe;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -78,7 +83,7 @@ import java.util.stream.Stream;
  *
  * <p>只实现渲染与结构放置所需能力，其他与玩法相关系统均采用桩实现。</p>
  */
-public class SandboxRenderLevel extends Level {
+public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     private static final ResourceKey<Level> LEVEL_ID = ResourceKey.create(
         Registries.DIMENSION,
         Ageratum.location("structure")
@@ -250,6 +255,21 @@ public class SandboxRenderLevel extends Level {
         return this.worldBorder;
     }
 
+    // BlockAndTintGetter 实现
+    @Override
+    public CardinalLighting cardinalLighting() {
+        return CardinalLighting.DEFAULT;
+    }
+
+    @Override
+    public int getBlockTint(BlockPos pos, ColorResolver color) {
+        return -1;
+    }
+
+    public float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return state.getShadeBrightness(level, pos);
+    }
+
     public record Bounds(BlockPos min, BlockPos max) {
     }
 
@@ -280,6 +300,13 @@ public class SandboxRenderLevel extends Level {
                 mutablePos.set(pos);
                 return mutablePos;
             });
+    }
+
+    /**
+     * 供渲染器使用的随机源。
+     */
+    public RandomSource getRandom() {
+        return this.random;
     }
 
     /**

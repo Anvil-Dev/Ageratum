@@ -280,7 +280,7 @@ public class AgeratumClient {
 
     public static Identifier toPreviewLocation(@Nullable String fileArgument) {
         String normalized = normalizePreviewFileArgument(fileArgument);
-        return Ageratum.location(normalized);
+        return Identifier.fromNamespaceAndPath(AgeratumConstants.Preview.NAMESPACE, normalized);
     }
 
     public static Path getPreviewRootPath() {

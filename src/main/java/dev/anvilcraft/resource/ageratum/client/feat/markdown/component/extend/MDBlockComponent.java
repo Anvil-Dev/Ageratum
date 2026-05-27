@@ -8,6 +8,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -75,10 +76,13 @@ public class MDBlockComponent extends MDImageComponent {
 
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
-            this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
-            this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - context.offsetY() - context.topPos() - 24.25f);
-            this.cameraRig.setOffsetX(-context.screenWidth() / 2.0f + context.leftPos() + context.offsetX() + context.maxX() / 2.0f);
-            // TODO StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
+            this.cameraRig.setZoom(1.5f);
+            StructurePreviewRenderer.getInstance().render(
+                level, this.cameraRig, graphics,
+                context.maxX(), context.maxY(),
+                Integer.MIN_VALUE, Integer.MAX_VALUE,
+                0, 0
+            );
         }
 
         ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();

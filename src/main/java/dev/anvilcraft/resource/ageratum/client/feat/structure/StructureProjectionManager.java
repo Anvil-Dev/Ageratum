@@ -5,6 +5,7 @@ import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
 import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
@@ -132,19 +133,13 @@ public final class StructureProjectionManager {
     }
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent.AfterLevel event) {
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
         if (projection == null || minecraft.level == null || projection.isNotInLevel(minecraft.level)) {
             return;
         }
-        /* TODO
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
-            return;
-        }
-        */
         PoseStack poseStack = event.getPoseStack();
-        /* TODO
         StructurePreviewRenderer.getInstance().renderWorldProjection(
             projection.level,
             poseStack,
@@ -155,7 +150,6 @@ public final class StructureProjectionManager {
             projection.visibleMinY + projection.visibleLayerCount,
             PROJECTION_ALPHA
         );
-        */
     }
 
     private static final class ActiveProjection {

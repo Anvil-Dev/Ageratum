@@ -12,6 +12,7 @@ import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
@@ -123,20 +124,17 @@ public final class MDNBTStructureComponent extends MDComponent {
         graphics.outline(0, 0, maxX, height, 0xAA000000);
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
-        this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
         this.cameraRig.setZoom(2.0f);
-        this.cameraRig.setOffsetX(this.panOffsetX);
-        this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
-        /* TODO
         StructurePreviewRenderer.getInstance()
             .render(
                 this.previewLevel,
                 this.cameraRig,
-                graphics.bufferSource(),
+                graphics,
+                maxX, height,
                 this.visibleMinY,
-                this.visibleMinY + this.visibleLayerCount
+                this.visibleMinY + this.visibleLayerCount,
+                this.panOffsetX, this.panOffsetY
             );
-         */
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
