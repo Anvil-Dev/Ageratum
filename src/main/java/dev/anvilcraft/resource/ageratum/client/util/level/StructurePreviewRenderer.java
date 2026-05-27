@@ -14,6 +14,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3x2f;
 import org.joml.Matrix4f;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 结构/方块预览渲染器。
@@ -22,9 +23,9 @@ public final class StructurePreviewRenderer {
     /**
      * 匹配旧渲染管线 0.625*16 的缩放系数
      */
-    private static final float BASE_SCALE = 8.0f;
+    private static final float BASE_SCALE = 4.0f;
 
-    private static StructurePreviewRenderer instance;
+    private static @Nullable StructurePreviewRenderer instance;
 
     public static StructurePreviewRenderer getInstance() {
         if (instance == null) instance = new StructurePreviewRenderer();
@@ -45,7 +46,8 @@ public final class StructurePreviewRenderer {
         int visibleMinY,
         int visibleMaxYExclusive,
         float panOffsetX,
-        float panOffsetY
+        float panOffsetY,
+        float scale
     ) {
         var bounds = level.getBounds();
         int minY = Math.max(bounds.min().getY(), visibleMinY);
@@ -138,7 +140,7 @@ public final class StructurePreviewRenderer {
             poseStack.pushPose();
             poseStack.translate(ox + pos.getX(), oy + pos.getY(), oz + pos.getZ());
             blockRenderer.tesselateBlock(
-                (x, y, z, quad, instance) -> consumer.putBakedQuad(poseStack.last(), quad, instance),
+                (_, _, _, quad, instance) -> consumer.putBakedQuad(poseStack.last(), quad, instance),
                 0,
                 0,
                 0,

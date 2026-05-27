@@ -125,16 +125,18 @@ public final class MDNBTStructureComponent extends MDComponent {
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
         this.cameraRig.setZoom(2.0f);
-        StructurePreviewRenderer.getInstance()
-            .render(
-                this.previewLevel,
-                this.cameraRig,
-                graphics,
-                maxX, height,
-                this.visibleMinY,
-                this.visibleMinY + this.visibleLayerCount,
-                this.panOffsetX, this.panOffsetY
-            );
+        StructurePreviewRenderer.getInstance().render(
+            this.previewLevel,
+            this.cameraRig,
+            graphics,
+            maxX,
+            height,
+            this.visibleMinY,
+            this.visibleMinY + this.visibleLayerCount,
+            this.panOffsetX,
+            this.panOffsetY,
+            context.scale()
+        );
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
@@ -477,7 +479,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         Set<String> seenPaletteStates = new HashSet<>();
         if (paletteIsStringList) {
             ListTag paletteStrings = (ListTag) converted.get("palette");
-            if(paletteStrings!=null) {
+            if (paletteStrings != null) {
                 for (int i = 0; i < paletteStrings.size(); i++) {
                     String state = paletteStrings.getStringOr(i, "minecraft:air");
                     if (!state.isBlank() && seenPaletteStates.add(state)) {
