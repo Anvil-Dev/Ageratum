@@ -77,9 +77,10 @@ public class MDBlockComponent extends MDImageComponent {
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
             this.cameraRig.setZoom(1.5f);
+            int blockHeight = this.getHeight(context.minecraft(), context.maxX(), context.maxY());
             StructurePreviewRenderer.getInstance().render(
                 level, this.cameraRig, graphics,
-                context.maxX(), context.maxY(),
+                context.maxX(), Math.max(1, blockHeight),
                 Integer.MIN_VALUE, Integer.MAX_VALUE,
                 0, 0
             );

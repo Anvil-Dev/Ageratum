@@ -65,24 +65,34 @@ public final class StructurePreviewRenderer {
         pose3D.pose().set(transform);
         transform.normal(pose3D.normal());
 
-        // 从当前 pose 获取组件屏幕坐标（JOML 列主序：m20=X平移, m21=Y平移）
+        // bounds 用屏幕坐标（和 scissor 同一空间），pose 用单位矩阵避免二次平移
         var pose2D = graphics.pose();
         int x0 = Math.round(pose2D.m20());
         int y0 = Math.round(pose2D.m21());
         float scaleX = Math.abs(pose2D.m00());
         float scaleY = Math.abs(pose2D.m11());
-        int x1 = x0 + Math.round(maxX * scaleX);
-        int y1 = y0 + Math.round(height * scaleY);
+        int safeW = Math.min(maxX, 8192);
+        int safeH = Math.min(height, 8192);
+        int pipW = Math.max(1, Math.round(safeW * scaleX));
+        int pipH = Math.max(1, Math.round(safeH * scaleY));
 
-        // scissor 和 Pip 坐标均为屏幕空间，求交集正确
         var scissor = graphics.peekScissorStack();
+        // 预检交集，防止无效尺寸
+        int bx0 = x0, by0 = y0, bx1 = x0 + pipW, by1 = y0 + pipH;
+        if (scissor != null) {
+            bx0 = Math.max(bx0, scissor.left());
+            by0 = Math.max(by0, scissor.top());
+            bx1 = Math.min(bx1, scissor.right());
+            by1 = Math.min(by1, scissor.bottom());
+        }
+        if (bx1 <= bx0 || by1 <= by0) return;
 
         var state = new StructurePipRenderingState(
             level, startPos, endPos,
-            x0, y0, x1, y1,
+            x0, y0, x0 + pipW, y0 + pipH,
             pipScale,
             Minecraft.getInstance().options.ambientOcclusion().get(),
-            pose3D, pose2D, scissor
+            pose3D, new Matrix3x2f(), scissor
         );
 
         graphics.submitPictureInPictureRenderState(state);
