@@ -159,23 +159,8 @@ public final class MDEntityComponent extends MDComponent {
             translate,
             pose,
             new Quaternionf(),
-            (int) centerX,
-            context.offsetY(),
-            (int) (200 + centerX),
-            200 + context.offsetY()
+            x1, y1, x2, y2
         );
-        /*TODO
-        MDEntityComponent.renderEntity(
-            graphics,
-            centerX,
-            centerY,
-            scale,
-            translate,
-            pose,
-            cameraOrientation,
-            entity
-        );
-        */
         entity.setYRot(yRot);
         entity.setXRot(xRot);
         if (entity instanceof LivingEntity living) {
@@ -184,49 +169,6 @@ public final class MDEntityComponent extends MDComponent {
             living.yHeadRot = yHeadRot;
         }
     }
-
-    /*TODO
-    private static void renderEntity(
-        GuiGraphicsExtractor guiGraphics,
-        float x,
-        float y,
-        float scale,
-        Vector3f translate,
-        Matrix3x2fc pose,
-        @Nullable Quaternionf cameraOrientation,
-        Entity entity
-    ) {
-        Matrix3x2fStack poseStack = guiGraphics.pose();
-        poseStack.pushMatrix();
-        poseStack.translate(x, y);
-        poseStack.scale(scale, scale);
-        poseStack.translate(translate.x, translate.y);
-        poseStack.mul(pose);
-        Lighting.setupForEntityInInventory();
-        EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-        if (cameraOrientation != null) {
-            entityrenderdispatcher.overrideCameraOrientation(cameraOrientation.conjugate(new Quaternionf()).rotateY((float) Math.PI));
-        }
-
-        entityrenderdispatcher.setRenderShadow(false);
-        // noinspection deprecation
-        RenderSystem.runAsFancy(() -> entityrenderdispatcher.render(
-            entity,
-            0.0,
-            0.0,
-            0.0,
-            0.0F,
-            1.0F,
-            poseStack,
-            guiGraphics.bufferSource(),
-            15728880
-        ));
-        guiGraphics.flush();
-        entityrenderdispatcher.setRenderShadow(true);
-        poseStack.popMatrix();
-        Lighting.setupFor3DItems();
-    }
-    */
 
     private @Nullable Entity getEntity() {
         if (this.cachedEntity != null && this.cachedLevel != null) {
