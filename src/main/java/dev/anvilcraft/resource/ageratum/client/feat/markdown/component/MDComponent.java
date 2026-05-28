@@ -62,13 +62,14 @@ public abstract class MDComponent {
     @SuppressWarnings("JavadocDeclaration")
     protected final FormattedText text;
 
-    
+
     /**
      * 渲染时实际使用的文本，若不为 null 则覆盖 {@link #text}。
      * 用于 post-process 后的文本替换（如断链红色标记）。
      */
     private @Nullable FormattedText effectiveText;
-/**
+
+    /**
      * 使用原始文本创建组件，文本会按默认规则进行 Markdown 内联解析。
      */
     public MDComponent(String text) {
@@ -106,9 +107,11 @@ public abstract class MDComponent {
         GuiGraphics guiGraphics = context.graphics();
         FormattedText textToRender = this.getEffectiveText();
         List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
+        int line = 0;
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
+            guiGraphics.drawString(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
+            line++;
             maxY -= minecraft.font.lineHeight;
         }
     }
