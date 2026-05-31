@@ -85,8 +85,9 @@ public final class MDEntityComponent extends MDComponent {
         context.disableScissor();
     }
 
+    @SuppressWarnings("MathClampMigration")
     private int getContentWidth(int maxX) {
-        return Math.clamp(Math.round(this.entityBbSize.x), 64, maxX);
+        return Math.min(Math.max(Math.round(this.entityBbSize.x), 64), maxX);
     }
 
     private int getContentHeight() {
