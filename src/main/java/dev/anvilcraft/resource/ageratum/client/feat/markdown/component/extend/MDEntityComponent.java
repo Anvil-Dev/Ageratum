@@ -139,7 +139,7 @@ public final class MDEntityComponent extends MDComponent {
         pose.mul(new Quaternionf().rotateY((float) Math.PI));
         float yRot = entity.getYRot();
         float xRot = entity.getXRot();
-        entity.setYRot(180.0F + f2 * 40.0F);
+        entity.setYRot(180.0F - f2 * 40.0F);
         entity.setXRot(-f3 * 20.0F);
         float yBodyRot = 0F;
         float yHeadRot = 0F;
@@ -148,12 +148,13 @@ public final class MDEntityComponent extends MDComponent {
             yBodyRot = living.yBodyRot;
             yHeadRot = living.yHeadRot;
             yHeadRotO = living.yHeadRotO;
-            living.yBodyRot = 180.0F + f2 * 20.0F;
+            living.yBodyRot = 180.0F - f2 * 20.0F;
             living.yHeadRot = living.getYRot();
             living.yHeadRotO = living.getYRot();
         }
         Vector3f translate = new Vector3f(0.0F, entity.getBbHeight() / 2.0F, entity.getBbWidth() / -2.0F);
         EntityRenderState entityRenderState = context.minecraft().getEntityRenderDispatcher().extractEntity(entity, 0);
+        int offsetY = context.offsetY();
         graphics.entity(
             entityRenderState,
             scale,
@@ -161,9 +162,9 @@ public final class MDEntityComponent extends MDComponent {
             pose,
             new Quaternionf(),
             (int) centerX,
-            (int) centerY,
+            offsetY + (int) centerY,
             (int) (200 + centerX),
-            (int) (200 + centerY)
+            offsetY + (int) centerY + 200
         );
         /*TODO
         MDEntityComponent.renderEntity(
