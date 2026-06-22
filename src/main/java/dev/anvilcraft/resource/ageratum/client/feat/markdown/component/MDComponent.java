@@ -100,7 +100,7 @@ public abstract class MDComponent {
     /**
      * 在给定区域内渲染组件内容。
      */
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();

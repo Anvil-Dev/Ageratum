@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
@@ -13,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.StonecutterRecipe;
+import org.joml.Matrix3x2fStack;
 
 import javax.annotation.Nullable;
 
@@ -56,8 +56,8 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
         GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.resultItem == null || this.ingredient == null) return;
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         pose.translate(29F, 8F, 0.0F);
         mouseX -= 28;
         mouseY -= 7;
@@ -73,6 +73,6 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
         GuiGraphicsExtractor.renderItem(this.resultItem, 54, 0);
         GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
         this.renderRecipeItem(context, this.resultItem, 54, 0, mouseX, mouseY);
-        pose.popPose();
+        pose.popMatrix();
     }
 }

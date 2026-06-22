@@ -2,7 +2,6 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -19,8 +18,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -50,7 +49,7 @@ public final class MDEntityComponent extends MDComponent {
     }
 
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         GuiGraphicsExtractor graphics = context.graphics();
         Minecraft minecraft = context.minecraft();
 
@@ -79,9 +78,9 @@ public final class MDEntityComponent extends MDComponent {
 
         context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
         PoseStack pose = graphics.pose();
-        pose.pushPose();
+        pose.pushMatrix();
         MDEntityComponent.renderEntity(context, graphics, x1, y1, x2, y2, this.getScale(entity, context.scale()), entity);
-        pose.popPose();
+        pose.popMatrix();
         context.disableScissor();
     }
 
@@ -176,7 +175,7 @@ public final class MDEntityComponent extends MDComponent {
         @Nullable Quaternionf cameraOrientation,
         Entity entity
     ) {
-        GuiGraphicsExtractor.pose().pushPose();
+        GuiGraphicsExtractor.pose().pushMatrix();
         GuiGraphicsExtractor.pose().translate(x, y, 50.0);
         GuiGraphicsExtractor.pose().scale(scale, scale, -scale);
         GuiGraphicsExtractor.pose().translate(translate.x, translate.y, translate.z);
@@ -202,7 +201,7 @@ public final class MDEntityComponent extends MDComponent {
         ));
         GuiGraphicsExtractor.flush();
         entityrenderdispatcher.setRenderShadow(true);
-        GuiGraphicsExtractor.pose().popPose();
+        GuiGraphicsExtractor.pose().popMatrix();
         Lighting.setupFor3DItems();
     }
 

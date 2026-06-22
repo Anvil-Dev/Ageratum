@@ -20,7 +20,7 @@ public class MDHorizontalRuleComponent extends MDComponent {
      * 在当前行中间绘制一条水平线。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();

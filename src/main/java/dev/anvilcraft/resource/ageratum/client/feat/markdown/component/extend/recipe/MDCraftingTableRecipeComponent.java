@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
@@ -15,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.ShapedRecipe;
+import org.joml.Matrix3x2fStack;
 
 import javax.annotation.Nullable;
 
@@ -58,8 +58,8 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
         GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.resultItem == null || this.ingredients == null) return;
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         pose.translate(9F, 9F, 0.0F);
         mouseX -= 9;
         mouseY -= 9;
@@ -77,7 +77,7 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
         GuiGraphicsExtractor.renderItem(this.resultItem, 93, 19);
         GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
         this.renderRecipeItem(context, this.resultItem, 93, 19, mouseX, mouseY);
-        pose.popPose();
+        pose.popMatrix();
     }
 
     private static NonNullList<Ingredient> getIngredients(CraftingRecipe recipe) {

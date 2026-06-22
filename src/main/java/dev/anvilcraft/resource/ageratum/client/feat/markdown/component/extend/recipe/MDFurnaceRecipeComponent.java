@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
@@ -13,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.joml.Matrix3x2fStack;
 
 import javax.annotation.Nullable;
 
@@ -63,8 +63,8 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
         GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.resultItem == null || this.ingredient == null) return;
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         pose.translate(38F, 9F, 0.0F);
         mouseX -= 38;
         mouseY -= 9;
@@ -85,6 +85,6 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
             GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.toastSymbol, -28, 12);
             this.renderRecipeItem(context, this.toastSymbol, -28, 12, mouseX, mouseY);
         }
-        pose.popPose();
+        pose.popMatrix();
     }
 }

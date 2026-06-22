@@ -5,7 +5,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
@@ -20,6 +19,7 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
+import org.joml.Matrix3x2fStack;
 import org.joml.Matrix4f;
 
 import java.io.IOException;
@@ -133,7 +133,7 @@ public class MDImageComponent extends MDComponent {
      * 按缩放后的尺寸渲染图片。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -147,8 +147,8 @@ public class MDImageComponent extends MDComponent {
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {
             return;
         }
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         if (this.enableAlignCenter) {
             float translateX = (maxX - renderSize.width()) / 2.0f;
             pose.translate(translateX, 0, 0);
@@ -156,7 +156,7 @@ public class MDImageComponent extends MDComponent {
         }
         pose.scale(renderSize.scale(), renderSize.scale(), renderSize.scale());
         this.renderContent(context, size, mouseX / renderSize.scale(), mouseY / renderSize.scale());
-        pose.popPose();
+        pose.popMatrix();
     }
 
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {

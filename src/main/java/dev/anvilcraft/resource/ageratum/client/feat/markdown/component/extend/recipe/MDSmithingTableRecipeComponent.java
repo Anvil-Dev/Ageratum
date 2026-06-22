@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
@@ -27,6 +26,7 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SmithingTransformRecipe;
 import net.minecraft.world.item.crafting.SmithingTrimRecipe;
+import org.joml.Matrix3x2fStack;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -71,8 +71,8 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
     @Override
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
         GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         pose.translate(8F, 8F, 0.0F);
         mouseX -= 8;
         mouseY -= 8;
@@ -90,7 +90,7 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
         GuiGraphicsExtractor.renderItem(resultItem, 92, 0);
         GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
         this.renderRecipeItem(context, resultItem, 92, 0, mouseX, mouseY);
-        pose.popPose();
+        pose.popMatrix();
     }
 
     private static Ingredient getRecipeTemplate(SmithingRecipe smithingRecipe) {

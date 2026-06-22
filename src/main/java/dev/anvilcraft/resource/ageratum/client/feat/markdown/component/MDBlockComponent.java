@@ -1,12 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     @Override
-    public final void render(
+    public final void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -133,13 +133,13 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         int textX,
         int y
     ) {
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         pose.translate(textX, y, 0);
         for (FormattedCharSequence sequence : split) {
             GuiGraphicsExtractor.text(minecraft.font, sequence, 0, 0, 0x000000, false);
             pose.translate(0, minecraft.font.lineHeight, 0);
         }
-        pose.popPose();
+        pose.popMatrix();
     }
 }

@@ -1,7 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.gui;
 
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
@@ -29,6 +28,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.net.URLDecoder;
@@ -408,27 +408,27 @@ public class GuideScreen extends Screen {
      * @param partialTick 当前帧的插值因子（0-1）
      */
     @Override
-    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
-        pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1.0f);
+    public void extractRenderState(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose();
+        pose.pushMatrix();
+        pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown);
         mouseX = (int) Math.round(mouseX * this.scale);
         mouseY = (int) Math.round(mouseY * this.scale);
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
 
         // 绘制半透明背景遮罩
-        this.renderTransparentBackground(GuiGraphicsExtractor);
+        this.extractTransparentBackground(GuiGraphicsExtractor);
         int i = this.leftPos;
         int j = this.topPos;
-        pose.pushPose();
+        pose.pushMatrix();
         // 将坐标系移动到界面左上角，方便后续使用相对坐标
-        pose.translate(i, j, 0);
+        pose.translate(i, j);
         this.renderLabel(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
         this.renderBookmarks(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
         this.renderBg(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
         this.renderContent(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
-        pose.popPose();
+        pose.popMatrix();
 
         // 显示悬停提示信息
         if (this.mouseInContentRange(mouseX, mouseY)) {
@@ -437,11 +437,11 @@ public class GuideScreen extends Screen {
 
         // 渲染侧边标签 tooltip
         this.renderLabelTooltips(GuiGraphicsExtractor, mouseX - i, mouseY - j);
-        pose.popPose();
+        pose.popMatrix();
     }
 
     @Override
-    public void renderTransparentBackground(GuiGraphicsExtractor GuiGraphicsExtractor) {
+    public void extractTransparentBackground(GuiGraphicsExtractor GuiGraphicsExtractor) {
         GuiGraphicsExtractor.fillGradient(
             0,
             0,
@@ -450,6 +450,11 @@ public class GuideScreen extends Screen {
             AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_1,
             AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_2
         );
+    }
+
+    @Override
+    protected void extractBlurredBackground(GuiGraphicsExtractor graphics) {
+        super.extractBlurredBackground(graphics);
     }
 
     /**
@@ -774,13 +779,13 @@ public class GuideScreen extends Screen {
      */
     private void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         // 将纹理左上角（UV 0,0）贴到界面左上角
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         float scaleX = (float) this.imageWidth / GUIDE_IMAGE_WIDTH;
         float scaleY = (float) this.imageHeight / GUIDE_IMAGE_HEIGHT;
         pose.scale(this.getBgImageScale(), this.getBgImageScale(), 1.0f);
         GuiGraphicsExtractor.blit(GUIDE_LOCATION, 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
-        pose.popPose();
+        pose.popMatrix();
     }
 
     private int getLabelScaleCountDown() {
@@ -805,7 +810,7 @@ public class GuideScreen extends Screen {
         int start = this.labelScrollRows;
         int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows() - pinnedRowCount);
         String currentFile = this.getCurrentFileArgument();
-        PoseStack pose = GuiGraphicsExtractor.pose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
         float labelImageScale = this.getLabelImageScale();
 
         // 渲染固定的父标签
@@ -839,7 +844,7 @@ public class GuideScreen extends Screen {
         int originX = this.getCloseButtonX();
         int originY = this.getCloseButtonY();
         boolean isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-        pose.pushPose();
+        pose.pushMatrix();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
         GuiGraphicsExtractor.blit(
             BUTTON_CLOSE_LOCATION,
@@ -886,7 +891,7 @@ public class GuideScreen extends Screen {
                 BUTTON_IMAGE_SIZE
             );
         }
-        pose.popPose();
+        pose.popMatrix();
         this.renderLabelScrollHint(GuiGraphicsExtractor);
     }
 
@@ -975,8 +980,8 @@ public class GuideScreen extends Screen {
         int arrowX = this.getLabelBaseX() + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2;
         int arrowUpY = this.getArrowUpY();
         int arrowDownY = this.getArrowDownY();
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         float labelImageScale = this.getLabelImageScale();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
         if (this.labelScrollRows > 0) {
@@ -1014,7 +1019,7 @@ public class GuideScreen extends Screen {
             );
             GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
-        pose.popPose();
+        pose.popMatrix();
     }
 
     private float computeArrowAlpha(int remainingRows) {
@@ -1121,7 +1126,7 @@ public class GuideScreen extends Screen {
         if (!this.isBookmarkEnabled()) {
             return;
         }
-        PoseStack pose = GuiGraphicsExtractor.pose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
         float labelScale = this.getLabelImageScale();
         List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
 
@@ -1129,7 +1134,7 @@ public class GuideScreen extends Screen {
         int addX = this.getAddButtonX();
         int addY = this.getAddButtonY();
         boolean addHover = this.mouseInRange(addX, addY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-        pose.pushPose();
+        pose.pushMatrix();
         pose.scale(labelScale, labelScale, labelScale);
         GuiGraphicsExtractor.blit(
             BUTTON_ADD_LOCATION,
@@ -1143,7 +1148,7 @@ public class GuideScreen extends Screen {
             BUTTON_IMAGE_SIZE,
             BUTTON_IMAGE_SIZE
         );
-        pose.popPose();
+        pose.popMatrix();
 
         // ── 渲染书签列表 ───────────────────────────────────────────────────────
         if (bookmarks.isEmpty()) {
@@ -1158,7 +1163,7 @@ public class GuideScreen extends Screen {
             int originY = this.getBookmarkStartY() + row * this.getLabelRowOffset();
             boolean isHover = this.mouseInRange(originX, originY, this.labelWidth + BOOKMARK_HOVER_SHIFT, this.labelHeight, mouseX, mouseY);
             int renderX = isHover ? originX + BOOKMARK_HOVER_SHIFT : originX;
-            pose.pushPose();
+            pose.pushMatrix();
             pose.scale(labelScale, labelScale, labelScale);
             GuiGraphicsExtractor.blit(
                 LABEL_BOOKMARK_LOCATION,
@@ -1172,7 +1177,7 @@ public class GuideScreen extends Screen {
                 LABEL_IMAGE_SIZE,
                 LABEL_IMAGE_SIZE
             );
-            pose.popPose();
+            pose.popMatrix();
             int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
             int width = this.font.width(this.fitLabelTitle(entry.title()));
             GuiGraphicsExtractor.text(
@@ -1190,7 +1195,7 @@ public class GuideScreen extends Screen {
             int arrowX = this.getAddButtonX();
             int arrowUpY = this.getBookmarkViewportTopY() - (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING);
             int arrowDownY = this.getBookmarkViewportBottomY();
-            pose.pushPose();
+            pose.pushMatrix();
             pose.scale(labelScale, labelScale, labelScale);
             if (this.bookmarkScrollRows > 0) {
                 float alpha = this.computeArrowAlpha(this.bookmarkScrollRows);
@@ -1227,7 +1232,7 @@ public class GuideScreen extends Screen {
                 );
                 GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            pose.popPose();
+            pose.popMatrix();
         }
     }
 
@@ -2019,8 +2024,8 @@ public class GuideScreen extends Screen {
             (int) (scissorX2 / this.scale),
             (int) (scissorY2 / this.scale)
         );
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         // 移至内容区左上角，并向上平移以实现滚动（不再额外缩放）
         pose.translate(this.getContentStartX(), this.getContentStartY() - this.contentScroll, 0);
 
@@ -2055,7 +2060,7 @@ public class GuideScreen extends Screen {
                 nearestAnchorOffsetY = absOffsetY;
                 nearestAnchor = text.getString();
             }
-            pose.pushPose();
+            pose.pushMatrix();
             component.render(rootContext.child(
                 this.getContentWidth() - 2,
                 Integer.MAX_VALUE,
@@ -2065,14 +2070,14 @@ public class GuideScreen extends Screen {
                 Math.round(totalOffsetY - this.contentScroll),
                 (float) this.scale
             ));
-            pose.popPose();
+            pose.popMatrix();
             int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
             pose.translate(0, offsetY, 0);
             totalOffsetY += offsetY;
             translatedMouseY = translatedMouseY - offsetY;
         }
         this.theNearestAnchor = nearestAnchor;
-        pose.popPose();
+        pose.popMatrix();
         GuiGraphicsExtractor.disableScissor();
         rootContext.renderTooltip();
         rootContext.onEnd(this);
@@ -2225,7 +2230,7 @@ public class GuideScreen extends Screen {
         if (entry.clickable && (isHover || isActive)) {
             originX -= LABEL_HOVER_SHIFT;
         }
-        pose.pushPose();
+        pose.pushMatrix();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
         GuiGraphicsExtractor.blit(
             entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
@@ -2239,7 +2244,7 @@ public class GuideScreen extends Screen {
             LABEL_IMAGE_SIZE,
             LABEL_IMAGE_SIZE
         );
-        pose.popPose();
+        pose.popMatrix();
         int textColor = isActive
                         ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE
                         : (

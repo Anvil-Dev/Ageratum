@@ -1,12 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -126,7 +126,7 @@ public class MDTableComponent extends MDComponent {
      * 渲染表格边框、背景与单元格文本。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -157,8 +157,8 @@ public class MDTableComponent extends MDComponent {
                 int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
                 List<FormattedCharSequence> lines = splitCellLines(minecraft, cell, colWidth, isHeader);
 
-                PoseStack pose = GuiGraphicsExtractor.pose();
-                pose.pushPose();
+                Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+                pose.pushMatrix();
                 pose.translate(cellX, y + PADDING_V, 0);
                 for (FormattedCharSequence seq : lines) {
                     int drawX = switch (this.alignments[col]) {
@@ -169,7 +169,7 @@ public class MDTableComponent extends MDComponent {
                     GuiGraphicsExtractor.text(minecraft.font, seq, drawX, 0, 0x000000, false);
                     pose.translate(0, minecraft.font.lineHeight, 0);
                 }
-                pose.popPose();
+                pose.popMatrix();
             }
 
             for (int col = 1; col < this.columnCount; col++) {

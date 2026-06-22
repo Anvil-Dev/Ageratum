@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -9,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +87,7 @@ public class MDRowComponent extends MDComponent {
     }
 
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         if (this.contentComponents.isEmpty()) {
             return;
         }
@@ -129,8 +129,8 @@ public class MDRowComponent extends MDComponent {
         int totalWidth = sum(widths) + SPACING * (this.contentComponents.size() - 1);
         int baseX = alignOffset(maxX, totalWidth, this.horizontalAlign);
 
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         pose.translate(baseX, 0, 0);
 
         int currentX = 0;
@@ -141,7 +141,7 @@ public class MDRowComponent extends MDComponent {
             int yOffset = alignOffset(rowHeight, componentHeight, this.verticalAlign);
             int scaledYOffset = scale < 1.0f ? Math.round(yOffset * scale) : yOffset;
 
-            pose.pushPose();
+            pose.pushMatrix();
             if (scale < 1.0f) {
                 pose.translate(0, scaledYOffset, 0);
                 pose.scale(scale, scale, 1.0f);
@@ -176,7 +176,7 @@ public class MDRowComponent extends MDComponent {
                     )
                 );
             }
-            pose.popPose();
+            pose.popMatrix();
 
             if (i < this.contentComponents.size() - 1) {
                 currentX += widths[i] + SPACING;
@@ -184,7 +184,7 @@ public class MDRowComponent extends MDComponent {
             }
         }
 
-        pose.popPose();
+        pose.popMatrix();
     }
 
     private void renderVertical(MDRenderContext context) {
@@ -195,8 +195,8 @@ public class MDRowComponent extends MDComponent {
         float mouseY = context.mouseY();
         GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
 
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
 
         int currentY = 0;
         for (int i = 0; i < this.contentComponents.size(); i++) {
@@ -205,7 +205,7 @@ public class MDRowComponent extends MDComponent {
             int childHeight = component.getHeight(minecraft, childWidth, Integer.MAX_VALUE);
             int xOffset = alignOffset(maxX, childWidth, this.horizontalAlign);
 
-            pose.pushPose();
+            pose.pushMatrix();
             pose.translate(xOffset, 0, 0);
             int childMaxY = maxY <= 0 ? maxY : Math.max(0, maxY - currentY);
             component.render(
@@ -219,7 +219,7 @@ public class MDRowComponent extends MDComponent {
                     context.scale()
                 )
             );
-            pose.popPose();
+            pose.popMatrix();
 
             if (i < this.contentComponents.size() - 1) {
                 currentY += childHeight + SPACING;
@@ -227,7 +227,7 @@ public class MDRowComponent extends MDComponent {
             }
         }
 
-        pose.popPose();
+        pose.popMatrix();
     }
 
     @Override

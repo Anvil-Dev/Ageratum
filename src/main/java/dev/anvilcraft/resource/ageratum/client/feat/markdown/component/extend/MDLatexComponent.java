@@ -57,7 +57,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         LatexTextureState state = this.ensureTextureState(context.minecraft());
         if (state.status == LatexStatus.READY) {
             super.render(context);

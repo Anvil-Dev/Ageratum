@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +13,7 @@ import net.minecraft.util.FormattedCharSequence;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.codelibs.jhighlight.renderer.Renderer;
 import org.codelibs.jhighlight.renderer.XhtmlRendererFactory;
+import org.joml.Matrix3x2fStack;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -214,7 +214,7 @@ public class MDCodeBlockComponent extends MDComponent {
      * 渲染代码块主体与行号栏。
      */
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
@@ -229,8 +229,8 @@ public class MDCodeBlockComponent extends MDComponent {
             GuiGraphicsExtractor.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), GUTTER_COLOR);
             GuiGraphicsExtractor.vLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), GUTTER_LINE_COLOR);
         }
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         context.enableScissor(1, 1, maxX - 1, blockHeight - 1);
         int y = 0;
         int lineNumber = 1;
@@ -295,7 +295,7 @@ public class MDCodeBlockComponent extends MDComponent {
             lineNumber++;
         }
         context.disableScissor();
-        pose.popPose();
+        pose.popMatrix();
     }
 
     /**

@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
@@ -8,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
+import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +67,7 @@ public class MDNoticeBoxComponent extends MDComponent {
     }
 
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -90,8 +90,8 @@ public class MDNoticeBoxComponent extends MDComponent {
         GuiGraphicsExtractor.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
 
         // 绘制内容
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         int translateX = PADDING + BORDER_WIDTH;
         pose.translate(translateX, PADDING, 0);
 
@@ -101,7 +101,7 @@ public class MDNoticeBoxComponent extends MDComponent {
             pose.translate(0, componentHeight, 0);
         }
 
-        pose.popPose();
+        pose.popMatrix();
     }
 
     @Override

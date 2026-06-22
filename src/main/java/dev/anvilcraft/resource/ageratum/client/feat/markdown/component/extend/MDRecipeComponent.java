@@ -14,8 +14,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -217,7 +217,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         }
 
         @Override
-        public void render(MDRenderContext context) {
+        public void extractRenderState(MDRenderContext context) {
             Minecraft minecraft = context.minecraft();
             if (component != null) {
                 this.component.render(context.child());

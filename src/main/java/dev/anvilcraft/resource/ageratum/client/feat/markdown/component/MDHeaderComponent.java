@@ -1,6 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
@@ -8,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
+import org.joml.Matrix3x2fStack;
 
 import java.util.regex.Matcher;
 import javax.annotation.Nullable;
@@ -77,7 +77,7 @@ public class MDHeaderComponent extends MDComponent {
      * 渲染标题文本；一级标题额外绘制一条分隔线。
      */
     @Override
-    public void render(
+    public void extractRenderState(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
@@ -86,8 +86,8 @@ public class MDHeaderComponent extends MDComponent {
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
         GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
-        PoseStack pose = GuiGraphicsExtractor.pose();
-        pose.pushPose();
+        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        pose.pushMatrix();
         float scale = this.getScale();
         pose.scale(scale, scale, scale);
         super.render(
@@ -105,7 +105,7 @@ public class MDHeaderComponent extends MDComponent {
             int y = minecraft.font.lineHeight / 2;
             GuiGraphicsExtractor.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
         }
-        pose.popPose();
+        pose.popMatrix();
     }
 
     /**

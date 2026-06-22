@@ -106,7 +106,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     @Override
-    public void render(MDRenderContext context) {
+    public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         GuiGraphicsExtractor graphics = context.graphics();
