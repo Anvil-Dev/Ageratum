@@ -1,19 +1,20 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.recipe;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDRecipeComponent;
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.NonNullList;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.joml.Matrix3x2fStack;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 
 import javax.annotation.Nullable;
 
@@ -28,7 +29,7 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
     /**
      * 工作台组件背景纹理。
      */
-    public static final Identifier CRAFTING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/crafting_table.png");
+    public static final ResourceLocation CRAFTING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/crafting_table.png");
     /**
      * 输入材料列表；客户端世界缺失时为 {@code null}。
      */
@@ -50,16 +51,16 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             return;
         }
         this.ingredients = MDCraftingTableRecipeComponent.getIngredients(recipe);
-        this.resultItem = null;//TODO recipe.getResultItem(level.registryAccess());
+        this.resultItem = recipe.getResultItem(level.registryAccess());
     }
 
     @Override
-    protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphicsExtractor guiGraphics = context.graphics();
+    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
+        GuiGraphics guiGraphics = context.graphics();
         if (this.resultItem == null || this.ingredients == null) return;
-        Matrix3x2fStack pose = guiGraphics.pose();
-        pose.pushMatrix();
-        pose.translate(9F, 9F);
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.translate(9F, 9F, 0.0F);
         mouseX -= 9;
         mouseY -= 9;
         for (int i = 0; i < this.ingredients.size(); i++) {
@@ -69,31 +70,30 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             if (displaying.isEmpty()) continue;
             int x = (i % 3) * 19;
             int y = (i / 3) * 19;
-            guiGraphics.item(displaying, x, y);
-            guiGraphics.itemDecorations(Minecraft.getInstance().font, displaying, x, y);
-            this.extractTooltipRenderState(context, displaying, x, y, mouseX, mouseY);
+            guiGraphics.renderItem(displaying, x, y);
+            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
+            this.renderRecipeItem(context, displaying, x, y, mouseX, mouseY);
         }
-        guiGraphics.item(this.resultItem, 93, 19);
-        guiGraphics.itemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
-        this.extractTooltipRenderState(context, this.resultItem, 93, 19, mouseX, mouseY);
-        pose.popMatrix();
+        guiGraphics.renderItem(this.resultItem, 93, 19);
+        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
+        this.renderRecipeItem(context, this.resultItem, 93, 19, mouseX, mouseY);
+        pose.popPose();
     }
 
     private static NonNullList<Ingredient> getIngredients(CraftingRecipe recipe) {
-        // TODO
-//        NonNullList<Ingredient> ingredients = recipe.getIngredients();
-//        if (!(recipe instanceof ShapedRecipe shaped)) return ingredients;
-//
-//        int width = shaped.pattern.width();
-//        int height = shaped.pattern.height();
-//        if (width == 3 && height == 3) return ingredients;
-//
-//        NonNullList<Ingredient> result = NonNullList.withSize(3 * 3, Ingredient.EMPTY);
-//        for (int y = 0; y < height; y++) {
-//            for (int x = 0; x < width; x++) {
-//                result.set(x + y * 3, ingredients.get(x + y * width));
-//            }
-//        }
-        return NonNullList.create();
+        NonNullList<Ingredient> ingredients = recipe.getIngredients();
+        if (!(recipe instanceof ShapedRecipe shaped)) return ingredients;
+
+        int width = shaped.pattern.width();
+        int height = shaped.pattern.height();
+        if (width == 3 && height == 3) return ingredients;
+
+        NonNullList<Ingredient> result = NonNullList.withSize(3 * 3, Ingredient.EMPTY);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                result.set(x + y * 3, ingredients.get(x + y * width));
+            }
+        }
+        return result;
     }
 }

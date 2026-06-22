@@ -1,10 +1,11 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import com.mojang.logging.LogUtils;
+import dev.anvilcraft.resource.ageratum.client.command.AgeratumCommand;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -36,37 +37,61 @@ public final class GuideDocumentCache {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String GUIDE_ROOT = AgeratumConstants.Guide.ROOT_FOLDER;
 
-    private static volatile Map<Identifier, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
+    private static volatile Map<ResourceLocation, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
     private static volatile Map<NavigationTreeKey, NavigationTree> NAVIGATION_TREE_CACHE = Map.of();
-    private static volatile Map<Identifier, List<ItemDocumentBinding>> ITEM_DOCUMENT_CACHE = Map.of();
+    private static volatile Map<ResourceLocation, List<ItemDocumentBinding>> ITEM_DOCUMENT_CACHE = Map.of();
 
-    private static final PreparableReloadListener RELOAD_LISTENER =
+    
+
+    /**
+     * 检查文档缓存是否已完成首次加载。
+     */
+    public static boolean isCacheLoaded() {
+        return !PARSED_DOCUMENT_CACHE.isEmpty();
+    }
+private static final PreparableReloadListener RELOAD_LISTENER =
         new SimplePreparableReloadListener<PreparedGuideData>() {
             @Override
             protected PreparedGuideData prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
                 MarkdownParser parser = new MarkdownParser();
-                Map<Identifier, Resource> resources = resourceManager.listResources(
+                Map<ResourceLocation, Resource> resources = resourceManager.listResources(
                     GUIDE_ROOT,
                     location -> location.getPath().startsWith(GUIDE_ROOT + "/")
                                 && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
-                Map<Identifier, MDDocument> prepared = new HashMap<>();
-                Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
-                Map<Identifier, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
-                for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
-                    Identifier location = entry.getKey();
+                // 第一趟：读取文件、提取 front matter、建立物品绑定缓存
+                Map<ResourceLocation, String> rawMarkdowns = new LinkedHashMap<>();
+                Map<ResourceLocation, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
+                for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
+                    ResourceLocation location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        MDDocument document = parser.parseDocument(location, markdown);
-                        prepared.put(location, document);
-                        registerNavigationNode(treeRoots, location, document);
-                        for (GuideItemBinding binding : document.getGuideItemBindings()) {
+                        rawMarkdowns.put(location, markdown);
+                        Map<String, Object> frontMatter = MarkdownParser.extractFrontMatter(markdown).frontMatter();
+                        MDDocument tempDoc = new MDDocument(location, frontMatter, List.of());
+                        for (GuideItemBinding binding : tempDoc.getGuideItemBindings()) {
                             itemDocuments
                                 .computeIfAbsent(binding.itemId(), ignored -> new ArrayList<>())
                                 .add(new ItemDocumentBinding(location, binding));
                         }
                     } catch (IOException exception) {
                         throw new UncheckedIOException("Failed to preload guide: " + location, exception);
+                    } catch (RuntimeException exception) {
+                        LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
+                    }
+                }
+                // 提前应用物品绑定缓存，使第二趟 <ref> 解析时可用
+                ITEM_DOCUMENT_CACHE = Map.copyOf(freezeItemDocuments(itemDocuments));
+
+                // 第二趟：完整解析文档，<ref> 可查新的物品绑定缓存
+                Map<ResourceLocation, MDDocument> prepared = new HashMap<>();
+                Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
+                for (Map.Entry<ResourceLocation, String> entry : rawMarkdowns.entrySet()) {
+                    ResourceLocation location = entry.getKey();
+                    try {
+                        MDDocument document = parser.parseDocument(location, entry.getValue());
+                        prepared.put(location, document);
+                        registerNavigationNode(treeRoots, location, document);
                     } catch (RuntimeException exception) {
                         LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
                     }
@@ -83,15 +108,16 @@ public final class GuideDocumentCache {
                 PARSED_DOCUMENT_CACHE = Map.copyOf(prepared.documents());
                 NAVIGATION_TREE_CACHE = Map.copyOf(prepared.navigationTrees());
                 ITEM_DOCUMENT_CACHE = Map.copyOf(prepared.itemDocuments());
+                AgeratumCommand.warmSuggestionCache(PARSED_DOCUMENT_CACHE);
                 LOGGER.info("Preloaded {} guide markdown files", PARSED_DOCUMENT_CACHE.size());
             }
         };
 
-    private static Map<Identifier, List<ItemDocumentBinding>> freezeItemDocuments(
-        Map<Identifier, List<ItemDocumentBinding>> source
+    private static Map<ResourceLocation, List<ItemDocumentBinding>> freezeItemDocuments(
+        Map<ResourceLocation, List<ItemDocumentBinding>> source
     ) {
-        Map<Identifier, List<ItemDocumentBinding>> result = new HashMap<>();
-        for (Map.Entry<Identifier, List<ItemDocumentBinding>> entry : source.entrySet()) {
+        Map<ResourceLocation, List<ItemDocumentBinding>> result = new HashMap<>();
+        for (Map.Entry<ResourceLocation, List<ItemDocumentBinding>> entry : source.entrySet()) {
             List<ItemDocumentBinding> sorted = new ArrayList<>(entry.getValue());
             sorted.sort(Comparator
                 .comparing((ItemDocumentBinding binding) -> binding.location().toString())
@@ -103,7 +129,7 @@ public final class GuideDocumentCache {
 
     private static void registerNavigationNode(
         Map<NavigationTreeKey, MutableDirectoryNode> treeRoots,
-        Identifier location,
+        ResourceLocation location,
         MDDocument document
     ) {
         String path = location.getPath();
@@ -131,7 +157,7 @@ public final class GuideDocumentCache {
 
         NavigationTreeKey key = new NavigationTreeKey(location.getNamespace(), normalizeLanguageCode(languageCode));
         MutableDirectoryNode root = treeRoots.computeIfAbsent(key, ignored -> new MutableDirectoryNode(location.getNamespace(), ""));
-        root.insert(fileArgument, location, document.getTitle(fileArgument));
+        root.insert(fileArgument, location, document.getTitle(fileArgument), document.getWeight(), document.getNavigationColor());
     }
 
     private static Map<NavigationTreeKey, NavigationTree> freezeNavigationTrees(
@@ -164,7 +190,7 @@ public final class GuideDocumentCache {
     /**
      * 根据文档资源位置读取预解析文档。
      */
-    public static Optional<MDDocument> getParsedDocument(Identifier location) {
+    public static Optional<MDDocument> getParsedDocument(ResourceLocation location) {
         MDDocument document = PARSED_DOCUMENT_CACHE.get(location);
         return Optional.ofNullable(document);
     }
@@ -180,18 +206,18 @@ public final class GuideDocumentCache {
     /**
      * 根据物品栈返回文档位置（当前语言优先，其次 en_us，最后回退列表中的第一个）。
      */
-    public static Optional<Identifier> getFirstDocumentByItemStack(ItemStack stack, @Nullable String languageCode) {
+    public static Optional<ResourceLocation> getFirstDocumentByItemStack(ItemStack stack, @Nullable String languageCode) {
         if (stack.isEmpty()) {
             return Optional.empty();
         }
 
-        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         List<ItemDocumentBinding> bindings = ITEM_DOCUMENT_CACHE.get(itemId);
         if (bindings == null || bindings.isEmpty()) {
             return Optional.empty();
         }
 
-        List<Identifier> matchedLocations = new ArrayList<>();
+        List<ResourceLocation> matchedLocations = new ArrayList<>();
         for (ItemDocumentBinding binding : bindings) {
             if (!binding.binding().matches(stack) || matchedLocations.contains(binding.location())) {
                 continue;
@@ -206,10 +232,10 @@ public final class GuideDocumentCache {
         return selectPreferredLocation(matchedLocations, languageCode);
     }
 
-    private static Optional<Identifier> selectPreferredLocation(List<Identifier> locations, @Nullable String languageCode) {
+    private static Optional<ResourceLocation> selectPreferredLocation(List<ResourceLocation> locations, @Nullable String languageCode) {
         String preferredLanguage = normalizeLanguageCode(languageCode);
         if (!preferredLanguage.isEmpty()) {
-            for (Identifier location : locations) {
+            for (ResourceLocation location : locations) {
                 if (preferredLanguage.equals(extractLanguageCode(location))) {
                     return Optional.of(location);
                 }
@@ -217,7 +243,7 @@ public final class GuideDocumentCache {
         }
 
         if (!GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(preferredLanguage)) {
-            for (Identifier location : locations) {
+            for (ResourceLocation location : locations) {
                 if (GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(extractLanguageCode(location))) {
                     return Optional.of(location);
                 }
@@ -227,7 +253,7 @@ public final class GuideDocumentCache {
         return Optional.of(locations.getFirst());
     }
 
-    private static String extractLanguageCode(Identifier location) {
+    private static String extractLanguageCode(ResourceLocation location) {
         String path = location.getPath().replace('\\', '/');
         String prefix = GUIDE_ROOT + "/";
         if (!path.startsWith(prefix)) {
@@ -244,18 +270,18 @@ public final class GuideDocumentCache {
     /**
      * 根据文档资源位置读取预解析组件。
      */
-    public static Optional<List<MDComponent>> getParsedComponents(Identifier location) {
+    public static Optional<List<MDComponent>> getParsedComponents(ResourceLocation location) {
         return getParsedDocument(location).map(MDDocument::components).map(ArrayList::new);
     }
 
     private record PreparedGuideData(
-        Map<Identifier, MDDocument> documents,
+        Map<ResourceLocation, MDDocument> documents,
         Map<NavigationTreeKey, NavigationTree> navigationTrees,
-        Map<Identifier, List<ItemDocumentBinding>> itemDocuments
+        Map<ResourceLocation, List<ItemDocumentBinding>> itemDocuments
     ) {
     }
 
-    private record ItemDocumentBinding(Identifier location, GuideItemBinding binding) {
+    private record ItemDocumentBinding(ResourceLocation location, GuideItemBinding binding) {
     }
 
     private record NavigationTreeKey(String namespace, String languageCode) {
@@ -276,7 +302,16 @@ public final class GuideDocumentCache {
     ) {
     }
 
-    public record NavigationDocument(String fileArgument, String title, Identifier location) {
+    public record NavigationDocument(
+        String fileArgument,
+        String title,
+        ResourceLocation location,
+        int weight,
+        @Nullable String color
+    ) {
+        public NavigationDocument(String fileArgument, String title, ResourceLocation location) {
+            this(fileArgument, title, location, 0, null);
+        }
     }
 
     private static final class MutableDirectoryNode {
@@ -291,8 +326,7 @@ public final class GuideDocumentCache {
             this.namespace = namespace;
             this.name = name;
         }
-
-        private void insert(String fileArgument, Identifier location, String title) {
+        private void insert(String fileArgument, ResourceLocation location, String title, int weight, @Nullable String color) {
             String[] segments = fileArgument.split("/");
             MutableDirectoryNode current = this;
             for (int i = 0; i < segments.length - 1; i++) {
@@ -300,7 +334,7 @@ public final class GuideDocumentCache {
                 current = current.children.computeIfAbsent(segment, name -> new MutableDirectoryNode(this.namespace, name));
             }
             String fileName = segments[segments.length - 1];
-            NavigationDocument document = new NavigationDocument(fileArgument, title, location);
+            NavigationDocument document = new NavigationDocument(fileArgument, title, location, weight, color);
             if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(fileName)) {
                 current.indexDocument = document;
             } else {
@@ -316,7 +350,10 @@ public final class GuideDocumentCache {
         private NavigationDirectory freezeAsDirectory(int level) {
             List<NavigationDocument> directoryDocuments = new ArrayList<>(this.documents);
 
-            directoryDocuments.sort(Comparator.comparing(NavigationDocument::fileArgument));
+            directoryDocuments.sort(
+                Comparator.comparingInt(NavigationDocument::weight)
+                    .thenComparing(NavigationDocument::fileArgument)
+            );
 
             if (level <= 1 && this.indexDocument != null) {
                 directoryDocuments.addFirst(this.indexDocument);

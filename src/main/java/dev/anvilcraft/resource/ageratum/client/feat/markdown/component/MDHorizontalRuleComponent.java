@@ -2,7 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
 
 /**
@@ -20,14 +20,14 @@ public class MDHorizontalRuleComponent extends MDComponent {
      * 在当前行中间绘制一条水平线。
      */
     @Override
-    public void extractRenderState(
+    public void render(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
-        GuiGraphicsExtractor guiGraphics = context.graphics();
+        GuiGraphics guiGraphics = context.graphics();
         int y = minecraft.font.lineHeight / 2;
-        guiGraphics.horizontalLine(0, Math.max(0, maxX - 1), y, 0x88000000);
+        guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
     }
 
     /**

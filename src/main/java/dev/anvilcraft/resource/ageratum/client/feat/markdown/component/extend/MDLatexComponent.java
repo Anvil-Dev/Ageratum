@@ -1,7 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
@@ -11,9 +10,9 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.loading.FMLLoader;
 
 import java.io.InputStream;
@@ -43,14 +42,14 @@ public class MDLatexComponent extends MDImageComponent {
     private static final float DEFAULT_SCALE = AgeratumConstants.LaTeX.Scale.DEFAULT;
     private static final float MIN_SCALE = AgeratumConstants.LaTeX.Scale.MIN;
     private static final float MAX_SCALE = AgeratumConstants.LaTeX.Scale.MAX;
-    private static final MDImageComponent.Size PLACEHOLDER_SIZE = new MDImageComponent.Size(16, 16, 1.0f);
+    private static final Size PLACEHOLDER_SIZE = new Size(16, 16, 1.0f);
     private static final Map<String, LatexTextureState> TEXTURE_STATES = new ConcurrentHashMap<>();
 
     private final String stateKey;
     private final float formulaScale;
     private final String formula;
 
-    private MDLatexComponent(String stateKey, Identifier textureLocation, String formula, float formulaScale, boolean center) {
+    private MDLatexComponent(String stateKey, ResourceLocation textureLocation, String formula, float formulaScale, boolean center) {
         super(textureLocation, false, center);
         this.stateKey = stateKey;
         this.formulaScale = formulaScale;
@@ -58,19 +57,19 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     @Override
-    public void extractRenderState(MDRenderContext context) {
+    public void render(MDRenderContext context) {
         LatexTextureState state = this.ensureTextureState(context.minecraft());
         if (state.status == LatexStatus.READY) {
-            super.extractRenderState(context);
+            super.render(context);
             return;
         }
 
         if (state.status == LatexStatus.FAILED) {
-            extractPlaceholderRenderState(context.graphics(), "[LaTeX load failed] " + this.formula, 0xAA0000);
+            renderPlaceholder(context.graphics(), "[LaTeX load failed] " + this.formula, 0xAA0000);
             return;
         }
 
-        extractPlaceholderRenderState(context.graphics(), "[LaTeX loading...]", 0x555555);
+        renderPlaceholder(context.graphics(), "[LaTeX loading...]", 0x555555);
     }
 
     @Override
@@ -83,7 +82,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     @Override
-    protected MDImageComponent.Size resolveSize(Minecraft minecraft) {
+    protected Size resolveSize(Minecraft minecraft) {
         LatexTextureState state = this.ensureTextureState(minecraft);
         if (state.status != LatexStatus.READY) {
             return PLACEHOLDER_SIZE;
@@ -92,7 +91,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     @Override
-    protected float computeScale(MDImageComponent.Size source, int maxX, int maxY) {
+    protected float computeScale(Size source, int maxX, int maxY) {
         int availableWidth = Math.max(1, maxX);
         int availableHeight = maxY <= 0 ? Integer.MAX_VALUE : maxY;
         float fitScale = Math.min((float) availableWidth / source.width(), (float) availableHeight / source.height());
@@ -103,8 +102,8 @@ public class MDLatexComponent extends MDImageComponent {
         return Math.min(clampedScale, fitScale);
     }
 
-    private static void extractPlaceholderRenderState(GuiGraphicsExtractor graphics, String text, int color) {
-        graphics.anvillib$text(AnvilLibFont.getSelectFont(), text, 0, 0, color, false);
+    private static void renderPlaceholder(GuiGraphics graphics, String text, int color) {
+        graphics.drawString(Minecraft.getInstance().font, text, 0, 0, color, false);
     }
 
     private LatexTextureState ensureTextureState(Minecraft minecraft) {
@@ -125,8 +124,8 @@ public class MDLatexComponent extends MDImageComponent {
         if (state.status == LatexStatus.FILE_READY) {
             try (InputStream inputStream = Files.newInputStream(state.cacheFile)) {
                 NativeImage image = NativeImage.read(inputStream);
-                state.size = new MDImageComponent.Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()), 1.0f);
-                minecraft.getTextureManager().register(state.textureLocation, new DynamicTexture(() -> "Image", image));
+                state.size = new Size(Math.max(1, image.getWidth()), Math.max(1, image.getHeight()), 1.0f);
+                minecraft.getTextureManager().register(state.textureLocation, new DynamicTexture(image));
                 state.status = LatexStatus.READY;
             } catch (Exception exception) {
                 log.warn("Failed to register latex texture {}", state.cacheFile, exception);
@@ -165,8 +164,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static Path getCacheDir() {
-        return FMLLoader.getCurrent().getGameDir()
-            .resolve("config")
+        return FMLLoader.getGamePath().resolve("config")
             .resolve(AgeratumConstants.Guide.ROOT_FOLDER)
             .resolve("cache")
             .resolve("latex");
@@ -234,7 +232,7 @@ public class MDLatexComponent extends MDImageComponent {
     private static MDComponent createFromFormula(String formula, float scale, int dpi, String color, boolean center) {
         String url = buildUrl(formula, dpi, color);
         String key = sha1Hex("formula=" + formula + "&dpi=" + dpi + "&color=" + color);
-        Identifier textureLocation = Identifier.fromNamespaceAndPath(Ageratum.MOD_ID, "latex/" + key);
+        ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath(Ageratum.MOD_ID, "latex/" + key);
         Path cacheFile = getCacheDir().resolve(key + ".png");
         TEXTURE_STATES.computeIfAbsent(key, ignored -> new LatexTextureState(textureLocation, cacheFile, url));
         return new MDLatexComponent(key, textureLocation, formula, scale, center);
@@ -278,13 +276,13 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static final class LatexTextureState {
-        private final Identifier textureLocation;
+        private final ResourceLocation textureLocation;
         private final Path cacheFile;
         private final String url;
         private volatile LatexStatus status = LatexStatus.NEW;
-        private volatile MDImageComponent.Size size = PLACEHOLDER_SIZE;
+        private volatile Size size = PLACEHOLDER_SIZE;
 
-        private LatexTextureState(Identifier textureLocation, Path cacheFile, String url) {
+        private LatexTextureState(ResourceLocation textureLocation, Path cacheFile, String url) {
             this.textureLocation = textureLocation;
             this.cacheFile = cacheFile;
             this.url = url;

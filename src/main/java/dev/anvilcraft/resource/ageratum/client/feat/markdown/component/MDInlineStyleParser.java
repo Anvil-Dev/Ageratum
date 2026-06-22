@@ -58,7 +58,7 @@ public interface MDInlineStyleParser {
     }
 
     /**
-     * 创建一个能够直接生成内联内容 {@link net.minecraft.network.chat.FormattedText} 的解析器工厂。
+     * 创建一个能够直接生成内联内容 {@link FormattedText} 的解析器工厂。
      *
      * @param priority       解析优先级
      * @param openTagPattern 开始标签正则

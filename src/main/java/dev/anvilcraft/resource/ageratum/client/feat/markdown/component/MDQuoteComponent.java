@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 
@@ -36,8 +36,8 @@ public class MDQuoteComponent extends MDBlockComponent<Integer> {
     }
 
     @Override
-    protected void extractDecorationRenderState(
-        GuiGraphicsExtractor guiGraphics,
+    protected void renderDecoration(
+        GuiGraphics guiGraphics,
         Minecraft minecraft,
         CachedItem<Integer> cachedItem,
         int y,
@@ -47,7 +47,7 @@ public class MDQuoteComponent extends MDBlockComponent<Integer> {
         int lineBottom = y + lineHeight - 1;
         for (int level = 0; level < cachedItem.level(); level++) {
             int lineX = level * LEVEL_INDENT + 1;
-            guiGraphics.verticalLine(lineX, y, lineBottom, getLevelLineColor(level));
+            guiGraphics.vLine(lineX, y, lineBottom, getLevelLineColor(level));
         }
     }
 

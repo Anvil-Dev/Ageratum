@@ -15,7 +15,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 
@@ -30,7 +30,7 @@ public final class GuideBookmarkStore {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final int FILE_VERSION = 1;
-    private static final Path BOOKMARK_DIRECTORY = FMLLoader.getCurrent().getGameDir()
+    private static final Path BOOKMARK_DIRECTORY = FMLLoader.getGamePath()
         .resolve("config")
         .resolve(Ageratum.MOD_ID)
         .resolve("bookmarks");
@@ -109,10 +109,10 @@ public final class GuideBookmarkStore {
         return BOOKMARK_DIRECTORY.resolve(namespace + ".json");
     }
 
-    public record BookmarkEntry(Component title, Identifier location) {
+    public record BookmarkEntry(Component title, ResourceLocation location) {
         public static final Codec<BookmarkEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ComponentSerialization.CODEC.fieldOf("title").forGetter(BookmarkEntry::title),
-            Identifier.CODEC.fieldOf("location").forGetter(BookmarkEntry::location)
+            ResourceLocation.CODEC.fieldOf("location").forGetter(BookmarkEntry::location)
         ).apply(instance, BookmarkEntry::new));
     }
 }

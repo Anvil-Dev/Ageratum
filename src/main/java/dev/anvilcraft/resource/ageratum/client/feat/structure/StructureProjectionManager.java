@@ -3,13 +3,12 @@ package dev.anvilcraft.resource.ageratum.client.feat.structure;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
-import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
 import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,6 +23,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,7 +37,7 @@ import java.util.Set;
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public final class StructureProjectionManager {
     private static final float PROJECTION_ALPHA = 0.45f;
-    private static final ReferenceHolder<Set<Item>> DEFAULT_SCROLL_ITEMS = ReferenceHolder.create(() -> Set.of(AgeratumItems.DEFAULT_GUIDE_ITEM.get()));
+    private static final ReferenceHolder<Set<Item>> DEFAULT_SCROLL_ITEMS = ReferenceHolder.create(() -> Set.of(Ageratum.DEFAULT_GUIDE_ITEM.get()));
 
     private static @Nullable ActiveProjection activeProjection;
 
@@ -64,6 +64,26 @@ public final class StructureProjectionManager {
         return true;
     }
 
+    /**
+     * 显示浮动结构投影：投影会跟随玩家视线移动，直到玩家右键固定。
+     */
+    public static boolean showFloatingProjection(StructureTemplate template, BlockPos origin, Collection<Item> moveControlItems) {
+        Minecraft minecraft = Minecraft.getInstance();
+        ClientLevel clientLevel = minecraft.level;
+        if (moveControlItems.isEmpty()) moveControlItems = DEFAULT_SCROLL_ITEMS.get();
+        if (clientLevel == null) {
+            return false;
+        }
+
+        SandboxRenderLevel previewLevel = StructureSandboxFactory.create(clientLevel, template, BlockPos.ZERO);
+        if (previewLevel == null || !previewLevel.hasFilledBlocks()) {
+            return false;
+        }
+
+        activeProjection = ActiveProjection.createFloating(previewLevel, origin, clientLevel.dimension(), Set.copyOf(moveControlItems));
+        return true;
+    }
+
     public static void clearProjection() {
         activeProjection = null;
     }
@@ -72,20 +92,20 @@ public final class StructureProjectionManager {
         return activeProjection != null;
     }
 
-    public static boolean handleMouseScroll(InputEvent.MouseScrollingEvent event) {
+    public static boolean handleMouseScroll(double scrollY) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
-        if (projection == null || event.getScrollDeltaY() == 0.0d || minecraft.player == null || minecraft.level == null) {
+        if (projection == null || scrollY == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
-        if (minecraft.screen != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
+        if (minecraft.screen != null || !Screen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
             return false;
         }
         if (!projection.canMoveWith(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
             return false;
         }
 
-        projection.moveAlongView(minecraft.player.getViewVector(1.0f), event.getScrollDeltaY() > 0.0d ? 1 : -1);
+        projection.moveAlongView(minecraft.player.getViewVector(1.0f), scrollY > 0.0d ? 1 : -1);
         return true;
     }
 
@@ -95,9 +115,30 @@ public final class StructureProjectionManager {
      */
     @SubscribeEvent
     public static void onMouseScrolling(InputEvent.MouseScrollingEvent event) {
-        if (handleMouseScroll(event)) {
+        if (handleMouseScroll(event.getScrollDeltaY())) {
             event.setCanceled(true);
         }
+    }
+
+    /**
+     * 拦截右键事件：当浮动投影存在时，固定投影而非触发物品的右键行为。
+     */
+    @SubscribeEvent
+    public static void onInteractionKeyMappingTriggered(InputEvent.InteractionKeyMappingTriggered event) {
+        if (activeProjection == null || !activeProjection.floating) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.screen != null) {
+            return;
+        }
+        // 仅拦截 USE（右键）键
+        if (!event.isUseItem() && !event.isAttack()) {
+            return;
+        }
+        event.setCanceled(true);
+        event.setSwingHand(false);
+        activeProjection.floating = false;
     }
 
     @SubscribeEvent
@@ -120,6 +161,15 @@ public final class StructureProjectionManager {
             return;
         }
 
+        // 浮动模式：投影跟随玩家视线
+        if (projection.floating && minecraft.player != null) {
+            // 跟随玩家视线（距离玩家 5 格）
+            Vec3 eyePos = minecraft.player.getEyePosition(1.0f);
+            Vec3 look = minecraft.player.getViewVector(1.0f);
+            BlockPos targetPos = BlockPos.containing(eyePos.add(look.scale(5.0)));
+            projection.origin = targetPos;
+        }
+
         if (AgeratumKeyMappings.REMOVE_KEY.consumeClick()) {
             activeProjection = null;
             return;
@@ -133,18 +183,22 @@ public final class StructureProjectionManager {
     }
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
         if (projection == null || minecraft.level == null || projection.isNotInLevel(minecraft.level)) {
             return;
         }
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+            return;
+        }
+
         PoseStack poseStack = event.getPoseStack();
         StructurePreviewRenderer.getInstance().renderWorldProjection(
             projection.level,
             poseStack,
             minecraft.renderBuffers().bufferSource(),
-            minecraft.gameRenderer.getMainCamera().position(),
+            minecraft.gameRenderer.getMainCamera().getPosition(),
             projection.origin,
             projection.visibleMinY,
             projection.visibleMinY + projection.visibleLayerCount,
@@ -156,6 +210,7 @@ public final class StructureProjectionManager {
         private final SandboxRenderLevel level;
         private final ResourceKey<Level> dimension;
         private final Set<Item> moveControlItems;
+        private boolean floating;
         private BlockPos origin;
         private final int visibleMinY;
         private final int totalLayerCount;
@@ -176,6 +231,7 @@ public final class StructureProjectionManager {
             this.visibleMinY = visibleMinY;
             this.totalLayerCount = totalLayerCount;
             this.visibleLayerCount = totalLayerCount;
+            this.floating = false;
         }
 
         private static ActiveProjection create(
@@ -189,6 +245,21 @@ public final class StructureProjectionManager {
             int maxYExclusive = Math.max(minY + 1, bounds.max().getY());
             int totalLayerCount = Math.max(1, maxYExclusive - minY);
             return new ActiveProjection(level, origin, dimension, moveControlItems, minY, totalLayerCount);
+        }
+
+        private static ActiveProjection createFloating(
+            SandboxRenderLevel level,
+            BlockPos origin,
+            ResourceKey<Level> dimension,
+            Set<Item> moveControlItems
+        ) {
+            SandboxRenderLevel.Bounds bounds = level.getBounds();
+            int minY = bounds.min().getY();
+            int maxYExclusive = Math.max(minY + 1, bounds.max().getY());
+            int totalLayerCount = Math.max(1, maxYExclusive - minY);
+            ActiveProjection projection = new ActiveProjection(level, origin, dimension, moveControlItems, minY, totalLayerCount);
+            projection.floating = true;
+            return projection;
         }
 
         private boolean isNotInLevel(Level level) {

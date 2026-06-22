@@ -2,6 +2,9 @@ package dev.anvilcraft.resource.ageratum.client.util;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /**
  * 为顶点坐标追加固定平移量的包装器。
@@ -50,11 +53,6 @@ public class OffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public VertexConsumer setLineWidth(float v) {
-        return this.delegate.setLineWidth(v);
-    }
-
-    @Override
     public void addVertex(
         float x,
         float y,
@@ -94,6 +92,11 @@ public class OffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
+    public VertexConsumer setWhiteAlpha(int alpha) {
+        return this.delegate.setWhiteAlpha(alpha);
+    }
+
+    @Override
     public VertexConsumer setLight(int light) {
         return this.delegate.setLight(light);
     }
@@ -104,8 +107,64 @@ public class OffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
+    public void putBulkData(
+        PoseStack.Pose pose,
+        BakedQuad quad,
+        float red,
+        float green,
+        float blue,
+        float alpha,
+        int packedLight,
+        int packedOverlay
+    ) {
+        this.delegate.putBulkData(pose, quad, red, green, blue, alpha, packedLight, packedOverlay);
+    }
+
+    @Override
+    public void putBulkData(
+        PoseStack.Pose pose,
+        BakedQuad quad,
+        float[] brightness,
+        float red,
+        float green,
+        float blue,
+        float alpha,
+        int[] lightmap,
+        int packedOverlay,
+        boolean useQuadColorData
+    ) {
+        this.delegate.putBulkData(
+            pose,
+            quad,
+            brightness,
+            red,
+            green,
+            blue,
+            alpha,
+            lightmap,
+            packedOverlay,
+            useQuadColorData
+        );
+    }
+
+    @Override
+    public VertexConsumer addVertex(Vector3f vector) {
+        return this.delegate.addVertex(new Vector3f(vector).add(this.offsetX, this.offsetY, this.offsetZ));
+    }
+
+    @Override
+    public VertexConsumer addVertex(PoseStack.Pose pose, Vector3f vector) {
+        return this.delegate.addVertex(pose, new Vector3f(vector).add(this.offsetX, this.offsetY, this.offsetZ));
+    }
+
+    @Override
     public VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z) {
         return this.delegate.addVertex(pose, x + this.offsetX, y + this.offsetY, z + this.offsetZ);
+    }
+
+    @Override
+    public VertexConsumer addVertex(Matrix4f matrix, float x, float y, float z) {
+        return this.delegate.addVertex(matrix, x + this.offsetX, y + this.offsetY, z + this.offsetZ);
     }
 
     @Override

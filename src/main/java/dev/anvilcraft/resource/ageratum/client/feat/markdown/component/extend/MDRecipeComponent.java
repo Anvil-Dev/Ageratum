@@ -1,6 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -9,14 +11,18 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextCom
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.resources.Identifier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
@@ -27,7 +33,7 @@ import javax.annotation.Nullable;
  * 负责在文档中渲染某个配方对应的 GUI 贴图与配方内容。</p>
  *
  * <p>配方类型到具体组件的映射通过
- * {@link dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries#RECIPE_COMPONENT_FACTORY_REGISTRY}
+ * {@link AgeratumRegistries#RECIPE_COMPONENT_FACTORY_REGISTRY}
  * 动态查找。</p>
  */
 @Getter
@@ -41,38 +47,86 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      */
     private final int height;
 
-    /**
+        /**
+     * 当前鼠标悬停的配方物品绑定的文档位置，用于配方内 W 键跳转。
+     */
+    protected @Nullable ResourceLocation hoveredDocLink;
+
+/**
      * 创建配方组件。
      */
-    public MDRecipeComponent(Identifier imageLocation, int width, int height, boolean enableAlignCenter) {
+    public MDRecipeComponent(ResourceLocation imageLocation, int width, int height, boolean enableAlignCenter) {
         super(imageLocation, false, enableAlignCenter);
         this.width = width;
         this.height = height;
-    }
+            this.hoveredDocLink = null;
+}
 
     @Override
-    protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphicsExtractor guiGraphics = context.graphics();
+    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphics guiGraphics = context.graphics();
         this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
-        this.extractRecipeRenderState(context, mouseX, mouseY);
+        this.hoveredDocLink = null;  // 每帧重置
+        this.renderRecipe(context, mouseX, mouseY);
     }
 
     /**
      * 在组件底图上绘制配方具体内容（输入、输出等）。
      */
-    protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
+    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
     }
+
+    /**
+     * 渲染配方物品并检查文档绑定，若存在则记录到 {@link #hoveredDocLink}
+     * 并在 tooltip 中显示 W 键跳转提示。
+     */
+    protected void renderRecipeItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+            Minecraft minecraft = context.minecraft();
+            String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
+            GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode).ifPresentOrElse(
+                doc -> {
+                    this.hoveredDocLink = doc;
+                    context.addTooltip(Component.translatable(
+                        "tooltip.ageratum.bind_item_hold",
+                        Component.keybind("key.ageratum.more_info")
+                    ));
+                },
+                () -> this.hoveredDocLink = null
+            );
+        }
+    }
+
+    @Override
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        if (this.hoveredDocLink != null
+            && keyCode == dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue()) {
+            AgeratumClient.openGuideOnClient(this.hoveredDocLink, List.of());
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * 解析 {@code recipe} 扩展标签。
      *
-     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link Identifier}。</p>
+     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link ResourceLocation}。</p>
      */
     public static MDComponent parse(MDExtensionContext context) {
         String id = context.params().get("id");
         boolean enableAlignCenter = "true".equals(context.params().getOrDefault("center", "true"));
-        Identifier location = Identifier.parse(id);
+        ResourceLocation location = ResourceLocation.parse(id);
         return new MDRecipeComponentProxy(location, enableAlignCenter);
     }
 
@@ -155,34 +209,33 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         /**
          * 文档中声明的配方资源 ID。
          */
-        private final Identifier location;
+        private final ResourceLocation location;
 
-        public MDRecipeComponentProxy(Identifier location, boolean enableAlignCenter) {
+        public MDRecipeComponentProxy(ResourceLocation location, boolean enableAlignCenter) {
             super(Ageratum.location("empty"), 0, 0, enableAlignCenter);
             this.location = location;
         }
 
         @Override
-        public void extractRenderState(MDRenderContext context) {
+        public void render(MDRenderContext context) {
             Minecraft minecraft = context.minecraft();
             if (component != null) {
-                this.component.extractRenderState(context.child());
+                this.component.render(context.child());
                 return;
             }
             ClientLevel level = minecraft.level;
             if (level == null) {
-                emptyComponent.extractRenderState(context.child());
+                emptyComponent.render(context.child());
                 return;
             }
-            // TODO
-//            RecipeManager manager = level.getRecipeManager();
-//            Optional<RecipeHolder<?>> holderOptional = manager.byKey(this.location);
-//            if (holderOptional.isPresent()) {
-//                if (this.setComponent(holderOptional.get())) {
-//                    return;
-//                }
-//            }
-//            emptyComponent.extractRenderState(context.child());
+            RecipeManager manager = level.getRecipeManager();
+            Optional<RecipeHolder<?>> holderOptional = manager.byKey(this.location);
+            if (holderOptional.isPresent()) {
+                if (this.setComponent(holderOptional.get())) {
+                    return;
+                }
+            }
+            emptyComponent.render(context.child());
         }
 
         /**

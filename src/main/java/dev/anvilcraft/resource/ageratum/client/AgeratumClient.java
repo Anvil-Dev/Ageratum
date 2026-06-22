@@ -19,7 +19,7 @@ import dev.anvilcraft.resource.ageratum.client.registries.BuiltinRecipeComponent
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -28,7 +28,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -87,9 +87,9 @@ public class AgeratumClient {
      * 注册客户端资源重载监听器。
      */
     @SubscribeEvent
-    public static void onReloadListenerRegister(AddClientReloadListenersEvent event) {
-        event.addListener(Ageratum.location("document"), GuideDocumentCache.reloadListener());
-        event.addListener(Ageratum.location("structure"), AgeratumStructureTemplateManager.reloadListener());
+    public static void onReloadListenerRegister(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(GuideDocumentCache.reloadListener());
+        event.registerReloadListener(AgeratumStructureTemplateManager.reloadListener());
     }
 
     /**
@@ -112,10 +112,10 @@ public class AgeratumClient {
 
         String languageCode = getClientLanguageCode(minecraft);
 
-        // 将 namespace + languageCode + fileArgument 解析为存在的 Identifier（带回退）
-        Identifier documentLocation;
+        // 将 namespace + languageCode + fileArgument 解析为存在的 ResourceLocation（带回退）
+        ResourceLocation documentLocation;
         try {
-            Optional<Identifier> resolved = GuideDocumentLoader.resolveExistingLocation(
+            Optional<ResourceLocation> resolved = GuideDocumentLoader.resolveExistingLocation(
                 minecraft.getResourceManager(),
                 namespace,
                 languageCode,
@@ -141,14 +141,14 @@ public class AgeratumClient {
     /**
      * 客户端本地打开文档；若不存在则返回 false。
      */
-    public static boolean openGuideOnClientWithoutLanguageCode(Identifier location, List<Identifier> breadCrumbs) {
+    public static boolean openGuideOnClientWithoutLanguageCode(ResourceLocation location, List<ResourceLocation> breadCrumbs) {
         Minecraft minecraft = Minecraft.getInstance();
         String languageCode = getClientLanguageCode(minecraft);
         String namespace = location.getNamespace();
         String fileArgument = location.getPath();
-        Identifier documentLocation;
+        ResourceLocation documentLocation;
         try {
-            Optional<Identifier> resolved = GuideDocumentLoader.resolveExistingLocation(
+            Optional<ResourceLocation> resolved = GuideDocumentLoader.resolveExistingLocation(
                 minecraft.getResourceManager(),
                 namespace,
                 languageCode,
@@ -167,7 +167,7 @@ public class AgeratumClient {
     /**
      * 客户端本地打开文档；若不存在则返回 false。
      */
-    public static boolean openGuideOnClient(Identifier location, List<Identifier> breadCrumbs) {
+    public static boolean openGuideOnClient(ResourceLocation location, List<ResourceLocation> breadCrumbs) {
         return openGuideOnClient(location, null, breadCrumbs);
     }
 
@@ -177,7 +177,7 @@ public class AgeratumClient {
      * @param location 文档资源位置
      * @param anchor   目标锚点（可为 null）
      */
-    public static boolean openGuideOnClient(Identifier location, @Nullable String anchor, List<Identifier> breadCrumbs) {
+    public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
         if (isPreviewLocation(location)) {
             return openPreviewGuideOnClient(location, anchor, breadCrumbs);
         }
@@ -219,9 +219,9 @@ public class AgeratumClient {
     }
 
     private static boolean openPreviewGuideOnClient(
-        Identifier location,
+        ResourceLocation location,
         @Nullable String anchor,
-        List<Identifier> breadCrumbs
+        List<ResourceLocation> breadCrumbs
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         Path previewFile = resolvePreviewDocumentPath(location);
@@ -257,9 +257,9 @@ public class AgeratumClient {
     }
 
     private static boolean parseDocumentAndSetScreen(
-        Identifier location,
+        ResourceLocation location,
         @Nullable String anchor,
-        List<Identifier> breadCrumbs,
+        List<ResourceLocation> breadCrumbs,
         Minecraft minecraft,
         int inheritedLabelScrollRows,
         double inheritedLabelScrollRemainder,
@@ -274,20 +274,20 @@ public class AgeratumClient {
         return true;
     }
 
-    public static boolean isPreviewLocation(Identifier location) {
+    public static boolean isPreviewLocation(ResourceLocation location) {
         return AgeratumConstants.Preview.NAMESPACE.equals(location.getNamespace());
     }
 
-    public static Identifier toPreviewLocation(@Nullable String fileArgument) {
+    public static ResourceLocation toPreviewLocation(@Nullable String fileArgument) {
         String normalized = normalizePreviewFileArgument(fileArgument);
-        return Identifier.fromNamespaceAndPath(AgeratumConstants.Preview.NAMESPACE, normalized);
+        return ResourceLocation.fromNamespaceAndPath(AgeratumConstants.Preview.NAMESPACE, normalized);
     }
 
     public static Path getPreviewRootPath() {
-        return FMLLoader.getCurrent().getGameDir().resolve(AgeratumClient.CONFIG.previewPath).normalize();
+        return FMLLoader.getGamePath().resolve(AgeratumClient.CONFIG.previewPath).normalize();
     }
 
-    public static Path resolvePreviewDocumentPath(Identifier location) {
+    public static Path resolvePreviewDocumentPath(ResourceLocation location) {
         String path = location.getPath();
         if (!path.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
             path += AgeratumConstants.Guide.MARKDOWN_EXTENSION;

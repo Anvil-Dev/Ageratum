@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -11,21 +12,22 @@ import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -38,14 +40,18 @@ import javax.annotation.Nullable;
 public class MDBlockComponent extends MDImageComponent {
     private static final int SLOT_SIZE = 32;
 
-    private final Identifier blockLoc;
+    private final ResourceLocation blockLoc;
     private final Map<String, String> stateProps;
     private final boolean showText;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
     private @Nullable BlockState blockState;
-    private @Nullable SandboxRenderLevel sandboxRenderLevel;
+        /**
+     * 当前悬停的方块关联文档位置，用于 W 键跳转。
+     */
+    private @Nullable ResourceLocation hoveredDocLink;
+private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
-    public MDBlockComponent(Identifier blockLoc, Map<String, String> stateProps, boolean showText) {
+    public MDBlockComponent(ResourceLocation blockLoc, Map<String, String> stateProps, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.blockLoc = blockLoc;
         this.stateProps = stateProps;
@@ -61,48 +67,81 @@ public class MDBlockComponent extends MDImageComponent {
     }
 
     @Override
-    protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphicsExtractor graphics = context.graphics();
+    protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
+        GuiGraphics graphics = context.graphics();
         this.innerBlit(graphics, this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
-        this.extractBlockRenderState(context, mouseX, mouseY);
+        this.renderBlock(context, mouseX, mouseY);
     }
 
-    private void extractBlockRenderState(MDRenderContext context, float mouseX, float mouseY) {
+    private void renderBlock(MDRenderContext context, float mouseX, float mouseY) {
         BlockState state = this.getBlockState();
         if (state == null) return;
 
-        GuiGraphicsExtractor graphics = context.graphics();
+        
+        this.hoveredDocLink = null;  // 每帧重置
+GuiGraphics graphics = context.graphics();
         Font font = context.minecraft().font;
 
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
-            this.cameraRig.setZoom(1.5f);
-            StructurePreviewRenderer.getInstance()
-                .render(
-                    level,
-                    this.cameraRig,
-                    graphics,
-                    32,
-                    Math.max(1, 32),
-                    Integer.MIN_VALUE,
-                    Integer.MAX_VALUE,
-                    0,
-                    0,
-                    context.scale()
-                );
+            this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
+            this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - context.offsetY() - context.topPos() - 24.25f);
+            this.cameraRig.setOffsetX(-context.screenWidth() / 2.0f + context.leftPos() + context.offsetX() + context.maxX() / 2.0f);
+            StructurePreviewRenderer.getInstance().render(level, this.cameraRig);
         }
 
         ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();
         if (!tooltipStack.isEmpty()) {
-            this.extractTooltipRenderState(context, tooltipStack, 8, 8, mouseX, mouseY);
+            this.renderBlockItem(context, tooltipStack, 8, 8, mouseX, mouseY);
         }
 
+        
         if (this.showText) {
             Component hoverName = state.getBlock().getName();
             int width = font.width(hoverName);
-            graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
+
+    /**
+     * 渲染方块物品 tooltip，并检查文档绑定添加 W 键提示。
+     */
+    private void renderBlockItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+            Minecraft minecraft = context.minecraft();
+            String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
+            GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode).ifPresentOrElse(
+                doc -> {
+                    this.hoveredDocLink = doc;
+                    context.addTooltip(Component.translatable(
+                        "tooltip.ageratum.bind_item_hold",
+                        Component.keybind("key.ageratum.more_info")
+                    ));
+                },
+                () -> this.hoveredDocLink = null
+            );
+        }
+    }
+
+    @Override
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        if (this.hoveredDocLink != null
+            && keyCode == dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue()) {
+            AgeratumClient.openGuideOnClient(this.hoveredDocLink, List.of());
+            return true;
+        }
+        return false;
+    }
+
 
     protected @Nullable BlockState getBlockState() {
         if (this.blockState != null) return this.blockState;
@@ -110,7 +149,7 @@ public class MDBlockComponent extends MDImageComponent {
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return null;
 
-        Optional<Registry<Block>> lookup = level.registryAccess().lookup(Registries.BLOCK);
+        Optional<HolderLookup.RegistryLookup<Block>> lookup = level.registryAccess().lookup(Registries.BLOCK);
         if (lookup.isEmpty()) return null;
 
         Optional<Holder.Reference<Block>> blockReference = lookup.get().get(ResourceKey.create(Registries.BLOCK, this.blockLoc));
@@ -133,8 +172,12 @@ public class MDBlockComponent extends MDImageComponent {
         return state;
     }
 
-    private static <T extends Comparable<T>> BlockState applyProperty(BlockState state, Property<T> property, String rawValue) {
-        return property.getValue(rawValue).map(v -> state.setValue(property, v)).orElse(state);
+    private static <T extends Comparable<T>> BlockState applyProperty(
+        BlockState state, Property<T> property, String rawValue
+    ) {
+        return property.getValue(rawValue)
+            .map(v -> state.setValue(property, v))
+            .orElse(state);
     }
 
     @Override
@@ -169,9 +212,9 @@ public class MDBlockComponent extends MDImageComponent {
             return new MDTextComponent("[错误：block 需要 id 参数]");
         }
 
-        Identifier id;
+        ResourceLocation id;
         try {
-            id = Identifier.parse(rawId);
+            id = ResourceLocation.parse(rawId);
         } catch (Exception e) {
             return new MDTextComponent("[错误：block 的 id 参数格式无效]");
         }

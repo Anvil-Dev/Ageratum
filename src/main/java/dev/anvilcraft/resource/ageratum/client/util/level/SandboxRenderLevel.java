@@ -1,57 +1,38 @@
 package dev.anvilcraft.resource.ageratum.client.util.level;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import dev.anvilcraft.resource.ageratum.mixin.accessor.ClientClockManager$ClockInstanceAccessor;
-import dev.anvilcraft.resource.ageratum.mixin.accessor.ClientClockManagerAccessor;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import lombok.Getter;
-import net.minecraft.client.ClientClockManager;
+import net.minecraft.Util;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.ClientRecipeContainer;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
-import net.minecraft.core.particles.ExplosionParticleInfo;
-import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.RandomSource;
-import net.minecraft.util.Util;
-import net.minecraft.util.random.WeightedList;
+import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.TickRateManager;
-import net.minecraft.world.attribute.EnvironmentAttributeSystem;
-import net.minecraft.world.clock.ClockManager;
-import net.minecraft.world.clock.WorldClock;
-import net.minecraft.world.clock.WorldClocks;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.alchemy.PotionBrewing;
-import net.minecraft.world.item.crafting.RecipeAccess;
-import net.minecraft.world.item.crafting.SelectableRecipe;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.CardinalLighting;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.ColorResolver;
-import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.FuelValues;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.ChunkSource;
 import net.minecraft.world.level.chunk.DataLayer;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
@@ -62,20 +43,15 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.ticks.BlackholeTickAccess;
 import net.minecraft.world.ticks.LevelTickAccess;
-import net.neoforged.neoforge.entity.PartEntity;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -83,7 +59,7 @@ import java.util.stream.Stream;
  *
  * <p>只实现渲染与结构放置所需能力，其他与玩法相关系统均采用桩实现。</p>
  */
-public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
+public class SandboxRenderLevel extends Level {
     private static final ResourceKey<Level> LEVEL_ID = ResourceKey.create(
         Registries.DIMENSION,
         Ageratum.location("structure")
@@ -97,10 +73,8 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     private final RegistryAccess registryAccess;
     private final LongSet filledBlocks = new LongOpenHashSet();
     private final LongSet litSections = new LongOpenHashSet();
-    private final WorldBorder worldBorder = new WorldBorder();
-    private final ClientClockManager clockManager;
     private final DataLayer defaultDataLayer;
-    private final ClientRecipeContainer recipeContainer = new ClientRecipeContainer(Map.of(), SelectableRecipe.SingleInputSet.empty());
+
     private final TickRateManager tickRateManager = new TickRateManager();
     private final ClientLevel.ClientLevelData clientLevelData;
     private final DeltaTracker.Timer tracker = new DeltaTracker.Timer(20.0F, 0L, def -> def);
@@ -112,7 +86,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     }
 
     public SandboxRenderLevel(RegistryAccess registryAccess) {
-        this(new ClientLevel.ClientLevelData(Difficulty.PEACEFUL, false, false), registryAccess);
+        this(createLevelData(), registryAccess);
     }
 
     private SandboxRenderLevel(ClientLevel.ClientLevelData levelData, RegistryAccess registryAccess) {
@@ -120,8 +94,9 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
             levelData,
             LEVEL_ID,
             registryAccess,
-            registryAccess.lookupOrThrow(Registries.DIMENSION_TYPE)
-                .getOrThrow(BuiltinDimensionTypes.OVERWORLD),
+            registryAccess.registryOrThrow(Registries.DIMENSION_TYPE)
+                .getHolderOrThrow(BuiltinDimensionTypes.OVERWORLD),
+            () -> InactiveProfiler.INSTANCE,
             true,
             false,
             0,
@@ -129,23 +104,17 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
         );
         this.clientLevelData = levelData;
         this.registryAccess = registryAccess;
-        this.clockManager = createClientClockManager(registryAccess);
-        this.biome = registryAccess.lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
+        this.biome = registryAccess.registryOrThrow(Registries.BIOME).getHolderOrThrow(Biomes.PLAINS);
+
         var nibbles = new byte[DataLayer.SIZE];
         Arrays.fill(nibbles, (byte) 0xFF);
         this.defaultDataLayer = new DataLayer(nibbles);
     }
 
-    private static ClientClockManager createClientClockManager(RegistryAccess registryAccess) {
-        ClientClockManager clockManager = new ClientClockManager();
-        Optional<Holder.Reference<WorldClock>> reference = registryAccess.lookup(Registries.WORLD_CLOCK).flatMap(
-            lookup -> lookup.get(WorldClocks.OVERWORLD)
-        );
-        if (reference.isPresent()) {
-            ClientClockManager.ClockInstance clockInstance = ((ClientClockManagerAccessor) clockManager).invokeGetInstance(reference.get());
-            ((ClientClockManager$ClockInstanceAccessor) clockInstance).totalTicks(6000L);
-        }
-        return clockManager;
+    private static ClientLevel.ClientLevelData createLevelData() {
+        var levelData = new ClientLevel.ClientLevelData(Difficulty.PEACEFUL, false, false);
+        levelData.setDayTime(6000);
+        return levelData;
     }
 
     @Override
@@ -154,7 +123,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
 
     @Override
     public void playSeededSound(
-        @Nullable Entity entity,
+        @Nullable Player player,
         double v,
         double v1,
         double v2,
@@ -164,53 +133,23 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
         float v4,
         long l
     ) {
-
     }
 
     @Override
     public void playSeededSound(
-        @Nullable Entity entity,
-        Entity entity1,
+        @Nullable Player player,
+        Entity entity,
         Holder<SoundEvent> holder,
         SoundSource soundSource,
         float v,
         float v1,
         long l
     ) {
-
-    }
-
-    @Override
-    public void explode(
-        @Nullable Entity entity,
-        @Nullable DamageSource damageSource,
-        @Nullable ExplosionDamageCalculator explosionDamageCalculator,
-        double v,
-        double v1,
-        double v2,
-        float v3,
-        boolean b,
-        ExplosionInteraction explosionInteraction,
-        ParticleOptions particleOptions,
-        ParticleOptions particleOptions1,
-        WeightedList<ExplosionParticleInfo> weightedList,
-        Holder<SoundEvent> holder
-    ) {
-
     }
 
     @Override
     public String gatherChunkSourceStats() {
         return "";
-    }
-
-    @Override
-    public void setRespawnData(LevelData.RespawnData respawnData) {
-    }
-
-    @Override
-    public LevelData.RespawnData getRespawnData() {
-        return LevelData.RespawnData.DEFAULT;
     }
 
     @Override
@@ -221,11 +160,6 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     @Override
     public @Nullable Entity getEntity(int id) {
         return this.getEntities().get(id);
-    }
-
-    @Override
-    public Collection<? extends PartEntity<?>> dragonParts() {
-        return List.of();
     }
 
     /**
@@ -250,26 +184,6 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
         }
     }
 
-    @Override
-    public WorldBorder getWorldBorder() {
-        return this.worldBorder;
-    }
-
-    // BlockAndTintGetter 实现
-    @Override
-    public CardinalLighting cardinalLighting() {
-        return CardinalLighting.DEFAULT;
-    }
-
-    @Override
-    public int getBlockTint(BlockPos pos, ColorResolver color) {
-        return -1;
-    }
-
-    public float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
-        return state.getShadeBrightness(level, pos);
-    }
-
     public record Bounds(BlockPos min, BlockPos max) {
     }
 
@@ -277,7 +191,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
      * 推进游戏时间并计算用于渲染插值的 partialTick。
      */
     public void tickFrameClock() {
-        var ticksElapsed = tracker.advanceGameTime(Util.getMillis());
+        var ticksElapsed = tracker.advanceTime(Util.getMillis(), true);
         if (ticksElapsed > 0) {
             clientLevelData.setGameTime(clientLevelData.getGameTime() + ticksElapsed);
         }
@@ -300,13 +214,6 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
                 mutablePos.set(pos);
                 return mutablePos;
             });
-    }
-
-    /**
-     * 供渲染器使用的随机源。
-     */
-    public RandomSource getRandom() {
-        return this.random;
     }
 
     /**
@@ -363,10 +270,10 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
      * 预热指定位置周围的光照数据，避免预览渲染出现黑块区域。
      */
     public void refreshLightingAround(BlockPos pos) {
-        var minChunk = ChunkPos.containing(pos.offset(-1, -1, -1));
-        var maxChunk = ChunkPos.containing(pos.offset(1, 1, 1));
+        var minChunk = new ChunkPos(pos.offset(-1, -1, -1));
+        var maxChunk = new ChunkPos(pos.offset(1, 1, 1));
         ChunkPos.rangeClosed(minChunk, maxChunk).forEach(chunkPos -> {
-            if (this.litSections.add(chunkPos.pack())) {
+            if (this.litSections.add(chunkPos.toLong())) {
                 var lightEngine = getLightEngine();
                 for (int i = 0; i < getSectionsCount(); ++i) {
                     int y = getSectionYFromSectionIndex(i);
@@ -393,6 +300,15 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     }
 
     @Override
+    public void setMapData(MapId mapId, MapItemSavedData mapItemSavedData) {
+    }
+
+    @Override
+    public MapId getFreeMapId() {
+        return new MapId(1);
+    }
+
+    @Override
     public void destroyBlockProgress(int i, BlockPos blockPos, int i1) {
     }
 
@@ -402,8 +318,8 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     }
 
     @Override
-    public RecipeAccess recipeAccess() {
-        return this.recipeContainer;
+    public RecipeManager getRecipeManager() {
+        return Objects.requireNonNull(Minecraft.getInstance().level).getRecipeManager();
     }
 
     @Override
@@ -412,8 +328,25 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     }
 
     @Override
-    public FuelValues fuelValues() {
-        return new FuelValues.Builder(this.registryAccess, FeatureFlagSet.of()).build();
+    @SuppressWarnings("UnstableApiUsage")
+    public void setDayTimeFraction(float v) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    @SuppressWarnings("UnstableApiUsage")
+    public float getDayTimeFraction() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public float getDayTimePerTick() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setDayTimePerTick(float v) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -432,26 +365,30 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     }
 
     @Override
-    public void levelEvent(@Nullable Entity entity, int i, BlockPos blockPos, int i1) {
-    }
-
-    @Override
     public RegistryAccess registryAccess() {
         return this.registryAccess;
     }
 
     @Override
-    public ClockManager clockManager() {
-        return this.clockManager;
-    }
-
-    @Override
-    public EnvironmentAttributeSystem environmentAttributes() {
-        return EnvironmentAttributeSystem.builder().build();
+    public void levelEvent(@Nullable Player player, int i, BlockPos blockPos, int i1) {
     }
 
     @Override
     public void gameEvent(Holder<GameEvent> holder, Vec3 vec3, GameEvent.Context context) {
+    }
+
+    @Override
+    public float getShade(Direction direction, boolean shade) {
+        if (!shade) {
+            return 1.0F;
+        } else {
+            return switch (direction) {
+                case DOWN -> 0.5F;
+                case NORTH, SOUTH -> 0.8F;
+                case WEST, EAST -> 0.6F;
+                default -> 1.0F;
+            };
+        }
     }
 
     @Override
@@ -462,11 +399,6 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     @Override
     public Holder<Biome> getUncachedNoiseBiome(int i, int i1, int i2) {
         return this.biome;
-    }
-
-    @Override
-    public int getSeaLevel() {
-        return 0;
     }
 
     @Override

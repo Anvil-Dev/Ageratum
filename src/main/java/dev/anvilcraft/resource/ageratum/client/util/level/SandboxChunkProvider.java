@@ -34,7 +34,7 @@ public class SandboxChunkProvider extends ChunkSource {
      */
     @Override
     public @Nullable ChunkAccess getChunk(int chunkX, int chunkZ, ChunkStatus chunkStatus, boolean load) {
-        var chunkKey = ChunkPos.pack(chunkX, chunkZ);
+        var chunkKey = ChunkPos.asLong(chunkX, chunkZ);
         var chunk = this.chunks.get(chunkKey);
         if (chunk == null) {
             chunk = new SandboxLevelChunk(this.level, new ChunkPos(chunkX, chunkZ));

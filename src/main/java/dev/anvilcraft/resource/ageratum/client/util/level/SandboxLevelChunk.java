@@ -3,7 +3,6 @@ package dev.anvilcraft.resource.ageratum.client.util.level;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.FullChunkStatus;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.jetbrains.annotations.Nullable;
@@ -24,10 +23,10 @@ public class SandboxLevelChunk extends LevelChunk {
      * 方块状态变化时同步更新光照与非空气方块索引。
      */
     @Nullable
-    public BlockState setBlockState(BlockPos pos, BlockState state, @Block.UpdateFlags int flags) {
+    public BlockState setBlockState(BlockPos pos, BlockState state, boolean isMoving) {
         this.getSandboxLevel().refreshLightingAround(pos);
 
-        var result = super.setBlockState(pos, state, flags);
+        var result = super.setBlockState(pos, state, isMoving);
         if (state.isAir()) {
             this.getSandboxLevel().removeFilledBlock(pos);
         } else {

@@ -15,14 +15,16 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.attribute.EnvironmentAttributeReader;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipBlockStateContext;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.LightLayer;
@@ -52,8 +54,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.ticks.LevelTickAccess;
 import net.minecraft.world.ticks.TickPriority;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.common.world.AuxiliaryLightManager;
-import net.neoforged.neoforge.model.data.ModelData;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,6 +85,11 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     @Override
     public ServerLevel getLevel() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long dayTime() {
+        return this.delegate.dayTime();
     }
 
     @Override
@@ -127,7 +134,7 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
 
     @Override
     public DifficultyInstance getCurrentDifficultyAt(BlockPos pos) {
-        return new DifficultyInstance(this.delegate.getDifficulty(), 0, 0, 0);
+        return this.delegate.getCurrentDifficultyAt(pos);
     }
 
     @Override
@@ -157,25 +164,42 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
-    public void playSound(
-        @org.jspecify.annotations.Nullable Entity entity,
-        BlockPos blockPos,
-        SoundEvent soundEvent,
-        SoundSource soundSource,
-        float v,
-        float v1
-    ) {
-
+    public void blockUpdated(BlockPos pos, Block block) {
+        this.delegate.blockUpdated(pos, block);
     }
 
     @Override
-    public void addParticle(ParticleOptions particleData, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
+    public void neighborShapeChanged(
+        Direction direction, BlockState queried, BlockPos pos, BlockPos offsetPos,
+        int flags, int recursionLevel
+    ) {
+        this.delegate.neighborShapeChanged(direction, queried, pos, offsetPos, flags, recursionLevel);
+    }
+
+    @Override
+    public void playSound(@Nullable Player player, BlockPos pos, SoundEvent sound, SoundSource source) {
+        this.delegate.playSound(player, pos, sound, source);
+    }
+
+    @Override
+    public void playSound(
+        @Nullable Player player, BlockPos pos, SoundEvent sound, SoundSource source, float volume,
+        float pitch
+    ) {
+        this.delegate.playSound(player, pos, sound, source, volume, pitch);
+    }
+
+    @Override
+    public void addParticle(
+        ParticleOptions particleData, double x, double y, double z, double xSpeed, double ySpeed,
+        double zSpeed
+    ) {
         this.delegate.addParticle(particleData, x, y, z, xSpeed, ySpeed, zSpeed);
     }
 
     @Override
-    public void levelEvent(@org.jspecify.annotations.Nullable Entity entity, int i, BlockPos blockPos, int i1) {
-
+    public void levelEvent(@Nullable Player player, int type, BlockPos pos, int data) {
+        this.delegate.levelEvent(player, type, pos, data);
     }
 
     @Override
@@ -229,7 +253,10 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
-    public <T extends Entity> List<T> getEntities(EntityTypeTest<Entity, T> entityTypeTest, AABB bounds, Predicate<? super T> predicate) {
+    public <T extends Entity> List<T> getEntities(
+        EntityTypeTest<Entity, T> entityTypeTest, AABB bounds,
+        Predicate<? super T> predicate
+    ) {
         return this.delegate.getEntities(entityTypeTest, bounds, predicate);
     }
 
@@ -255,7 +282,10 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
 
     @Override
     @Nullable
-    public Player getNearestPlayer(double x, double y, double z, double distance, @Nullable Predicate<Entity> predicate) {
+    public Player getNearestPlayer(
+        double x, double y, double z, double distance,
+        @Nullable Predicate<Entity> predicate
+    ) {
         return this.delegate.getNearestPlayer(x, y, z, distance, predicate);
     }
 
@@ -274,6 +304,55 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     @Override
     public boolean hasNearbyAlivePlayer(double x, double y, double z, double distance) {
         return this.delegate.hasNearbyAlivePlayer(x, y, z, distance);
+    }
+
+    @Override
+    @Nullable
+    public Player getNearestPlayer(TargetingConditions predicate, LivingEntity target) {
+        return this.delegate.getNearestPlayer(predicate, target);
+    }
+
+    @Override
+    @Nullable
+    public Player getNearestPlayer(TargetingConditions predicate, LivingEntity target, double x, double y, double z) {
+        return this.delegate.getNearestPlayer(predicate, target, x, y, z);
+    }
+
+    @Override
+    @Nullable
+    public Player getNearestPlayer(TargetingConditions predicate, double x, double y, double z) {
+        return this.delegate.getNearestPlayer(predicate, x, y, z);
+    }
+
+    @Override
+    @Nullable
+    public <T extends LivingEntity> T getNearestEntity(
+        Class<? extends T> entityClazz, TargetingConditions conditions,
+        @Nullable LivingEntity target, double x, double y, double z, AABB boundingBox
+    ) {
+        return this.delegate.getNearestEntity(entityClazz, conditions, target, x, y, z, boundingBox);
+    }
+
+    @Override
+    @Nullable
+    public <T extends LivingEntity> T getNearestEntity(
+        List<? extends T> entities, TargetingConditions predicate,
+        @Nullable LivingEntity target, double x, double y, double z
+    ) {
+        return this.delegate.getNearestEntity(entities, predicate, target, x, y, z);
+    }
+
+    @Override
+    public List<Player> getNearbyPlayers(TargetingConditions predicate, LivingEntity target, AABB area) {
+        return this.delegate.getNearbyPlayers(predicate, target, area);
+    }
+
+    @Override
+    public <T extends LivingEntity> List<T> getNearbyEntities(
+        Class<T> entityClazz, TargetingConditions entityPredicate,
+        LivingEntity entity, AABB area
+    ) {
+        return this.delegate.getNearbyEntities(entityClazz, entityPredicate, entity, area);
     }
 
     @Override
@@ -314,6 +393,11 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
+    public int getBlockTint(BlockPos blockPos, ColorResolver colorResolver) {
+        return this.delegate.getBlockTint(blockPos, colorResolver);
+    }
+
+    @Override
     public Holder<Biome> getNoiseBiome(int i, int j, int k) {
         return this.delegate.getNoiseBiome(i, j, k);
     }
@@ -336,6 +420,11 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     @Override
     public DimensionType dimensionType() {
         return this.delegate.dimensionType();
+    }
+
+    @Override
+    public int getMinBuildHeight() {
+        return this.delegate.getMinBuildHeight();
     }
 
     @Override
@@ -450,8 +539,8 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
-    public EnvironmentAttributeReader environmentAttributes() {
-        return this.delegate.environmentAttributes();
+    public float getShade(Direction direction, boolean shade) {
+        return this.delegate.getShade(direction, shade);
     }
 
     @Override
@@ -496,6 +585,11 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
+    public int getMaxLightLevel() {
+        return this.delegate.getMaxLightLevel();
+    }
+
+    @Override
     public Stream<BlockState> getBlockStates(AABB area) {
         return this.delegate.getBlockStates(area);
     }
@@ -512,7 +606,10 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
 
     @Override
     @Nullable
-    public BlockHitResult clipWithInteractionOverride(Vec3 startVec, Vec3 endVec, BlockPos pos, VoxelShape shape, BlockState state) {
+    public BlockHitResult clipWithInteractionOverride(
+        Vec3 startVec, Vec3 endVec, BlockPos pos, VoxelShape shape,
+        BlockState state
+    ) {
         return this.delegate.clipWithInteractionOverride(startVec, endVec, pos, shape, state);
     }
 
@@ -526,13 +623,31 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
         return this.delegate.getBlockFloorHeight(pos);
     }
 
-    public static <T, C> T traverseBlocks(Vec3 from, Vec3 to, C context, BiFunction<C, BlockPos, T> tester, Function<C, T> onFail) {
+    public static <T, C> T traverseBlocks(
+        Vec3 from, Vec3 to, C context, BiFunction<C, BlockPos, T> tester,
+        Function<C, T> onFail
+    ) {
         return BlockGetter.traverseBlocks(from, to, context, tester, onFail);
+    }
+
+    @Override
+    public int getMaxBuildHeight() {
+        return this.delegate.getMaxBuildHeight();
     }
 
     @Override
     public int getSectionsCount() {
         return this.delegate.getSectionsCount();
+    }
+
+    @Override
+    public int getMinSection() {
+        return this.delegate.getMinSection();
+    }
+
+    @Override
+    public int getMaxSection() {
+        return this.delegate.getMaxSection();
     }
 
     @Override
@@ -610,7 +725,10 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
-    public Optional<Vec3> findFreePosition(@Nullable Entity entity, VoxelShape shape, Vec3 pos, double x, double y, double z) {
+    public Optional<Vec3> findFreePosition(
+        @Nullable Entity entity, VoxelShape shape, Vec3 pos, double x, double y,
+        double z
+    ) {
         return this.delegate.findFreePosition(entity, shape, pos, x, y, z);
     }
 
@@ -660,6 +778,21 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     }
 
     @Override
+    public float getMoonBrightness() {
+        return this.delegate.getMoonBrightness();
+    }
+
+    @Override
+    public float getTimeOfDay(float partialTick) {
+        return this.delegate.getTimeOfDay(partialTick);
+    }
+
+    @Override
+    public int getMoonPhase() {
+        return this.delegate.getMoonPhase();
+    }
+
+    @Override
     public void gameEvent(ResourceKey<GameEvent> p_316780_, BlockPos p_316509_, GameEvent.Context p_316524_) {
         this.delegate.gameEvent(p_316780_, p_316509_, p_316524_);
     }
@@ -684,6 +817,11 @@ public class DelegatingServerLevelAccessor implements ServerLevelAccessor {
     @Override
     public ModelData getModelData(BlockPos pos) {
         return this.delegate.getModelData(pos);
+    }
+
+    @Override
+    public float getShade(float normalX, float normalY, float normalZ, boolean shade) {
+        return this.delegate.getShade(normalX, normalY, normalZ, shade);
     }
 
     @Override

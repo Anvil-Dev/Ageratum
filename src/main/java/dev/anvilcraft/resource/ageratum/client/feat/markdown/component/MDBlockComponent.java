@@ -1,13 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
-import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,13 +31,13 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     @Override
-    public final void extractRenderState(
+    public final void render(
         MDRenderContext context
     ) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphicsExtractor guiGraphics = context.graphics();
+        GuiGraphics guiGraphics = context.graphics();
         int y = 0;
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);
@@ -49,7 +48,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
                 return;
             }
 
-            this.extractDecorationRenderState(guiGraphics, minecraft, cachedItem, y, lineHeight, maxX);
+            this.renderDecoration(guiGraphics, minecraft, cachedItem, y, lineHeight, maxX);
             this.drawContent(guiGraphics, minecraft, split, textX, y);
             y += lineHeight;
             maxY -= lineHeight;
@@ -104,8 +103,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
 
     protected abstract int getTextX(CachedItem<E> cachedItem);
 
-    protected abstract void extractDecorationRenderState(
-        GuiGraphicsExtractor guiGraphics,
+    protected abstract void renderDecoration(
+        GuiGraphics guiGraphics,
         Minecraft minecraft,
         CachedItem<E> cachedItem,
         int y,
@@ -128,19 +127,19 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     private void drawContent(
-        GuiGraphicsExtractor guiGraphics,
+        GuiGraphics guiGraphics,
         Minecraft minecraft,
         List<FormattedCharSequence> split,
         int textX,
         int y
     ) {
-        Matrix3x2fStack pose = guiGraphics.pose();
-        pose.pushMatrix();
-        pose.translate(textX, y);
+        PoseStack pose = guiGraphics.pose();
+        pose.pushPose();
+        pose.translate(textX, y, 0);
         for (FormattedCharSequence sequence : split) {
-            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
-            pose.translate(0, minecraft.font.lineHeight);
+            guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
+            pose.translate(0, minecraft.font.lineHeight, 0);
         }
-        pose.popMatrix();
+        pose.popPose();
     }
 }
