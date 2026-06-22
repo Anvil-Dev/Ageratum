@@ -10,7 +10,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLLoader;
@@ -102,7 +102,7 @@ public class MDLatexComponent extends MDImageComponent {
         return Math.min(clampedScale, fitScale);
     }
 
-    private static void renderPlaceholder(GuiGraphics graphics, String text, int color) {
+    private static void renderPlaceholder(GuiGraphicsExtractor graphics, String text, int color) {
         graphics.drawString(Minecraft.getInstance().font, text, 0, 0, color, false);
     }
 

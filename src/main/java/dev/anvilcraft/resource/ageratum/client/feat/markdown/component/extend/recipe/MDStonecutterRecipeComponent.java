@@ -7,7 +7,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MD
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -54,9 +54,9 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
 
     @Override
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.resultItem == null || this.ingredient == null) return;
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         pose.translate(29F, 8F, 0.0F);
         mouseX -= 28;
@@ -66,12 +66,12 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
             if (this.ingredient.isEmpty()) break RENDER_INGREDIENT;
             ItemStack displaying = RecipeUtil.getDisplayItem(this.ingredient);
             if (displaying.isEmpty()) break RENDER_INGREDIENT;
-            guiGraphics.renderItem(displaying, 0, 0);
-            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
+            GuiGraphicsExtractor.renderItem(displaying, 0, 0);
+            GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
             this.renderRecipeItem(context, displaying, 0, 0, mouseX, mouseY);
         }
-        guiGraphics.renderItem(this.resultItem, 54, 0);
-        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
+        GuiGraphicsExtractor.renderItem(this.resultItem, 54, 0);
+        GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
         this.renderRecipeItem(context, this.resultItem, 54, 0, mouseX, mouseY);
         pose.popPose();
     }

@@ -17,7 +17,7 @@ import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.network.ShareGuidePayload;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -402,14 +402,14 @@ public class GuideScreen extends Screen {
     /**
      * 每帧渲染回调，依次绘制：透明背景遮罩、侧边标签、背景纹理、内容区域。
      *
-     * @param guiGraphics 当帧 GUI 绘制上下文
+     * @param GuiGraphicsExtractor 当帧 GUI 绘制上下文
      * @param mouseX      鼠标 X 坐标（屏幕像素）
      * @param mouseY      鼠标 Y 坐标（屏幕像素）
      * @param partialTick 当前帧的插值因子（0-1）
      */
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        PoseStack pose = guiGraphics.pose();
+    public void render(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick) {
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1.0f);
         mouseX = (int) Math.round(mouseX * this.scale);
@@ -418,31 +418,31 @@ public class GuideScreen extends Screen {
         this.lastMouseY = mouseY;
 
         // 绘制半透明背景遮罩
-        this.renderTransparentBackground(guiGraphics);
+        this.renderTransparentBackground(GuiGraphicsExtractor);
         int i = this.leftPos;
         int j = this.topPos;
         pose.pushPose();
         // 将坐标系移动到界面左上角，方便后续使用相对坐标
         pose.translate(i, j, 0);
-        this.renderLabel(guiGraphics, partialTick, mouseX - i, mouseY - j);
-        this.renderBookmarks(guiGraphics, partialTick, mouseX - i, mouseY - j);
-        this.renderBg(guiGraphics, partialTick, mouseX - i, mouseY - j);
-        this.renderContent(guiGraphics, partialTick, mouseX - i, mouseY - j);
+        this.renderLabel(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
+        this.renderBookmarks(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
+        this.renderBg(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
+        this.renderContent(GuiGraphicsExtractor, partialTick, mouseX - i, mouseY - j);
         pose.popPose();
 
         // 显示悬停提示信息
         if (this.mouseInContentRange(mouseX, mouseY)) {
-            this.renderHoverTooltip(guiGraphics, mouseX, mouseY);
+            this.renderHoverTooltip(GuiGraphicsExtractor, mouseX, mouseY);
         }
 
         // 渲染侧边标签 tooltip
-        this.renderLabelTooltips(guiGraphics, mouseX - i, mouseY - j);
+        this.renderLabelTooltips(GuiGraphicsExtractor, mouseX - i, mouseY - j);
         pose.popPose();
     }
 
     @Override
-    public void renderTransparentBackground(GuiGraphics guiGraphics) {
-        guiGraphics.fillGradient(
+    public void renderTransparentBackground(GuiGraphicsExtractor GuiGraphicsExtractor) {
+        GuiGraphicsExtractor.fillGradient(
             0,
             0,
             this.width + AgeratumConstants.GuideScreenUI.Positions.BACKGROUND_EXTRA_PADDING,
@@ -621,11 +621,11 @@ public class GuideScreen extends Screen {
     /**
      * 渲染鼠标悬停时的提示信息。
      *
-     * @param guiGraphics GuiGraphics 对象
+     * @param GuiGraphicsExtractor GuiGraphicsExtractor 对象
      * @param mouseX      鼠标 X 坐标（屏幕像素）
      * @param mouseY      鼠标 Y 坐标（屏幕像素）
      */
-    private void renderHoverTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderHoverTooltip(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY) {
         if (this.minecraft == null) return;
 
         Style style = this.getStyleAtContentPosition(mouseX, mouseY);
@@ -637,7 +637,7 @@ public class GuideScreen extends Screen {
         if (hoverEvent != null && hoverEvent.getAction() == HoverEvent.Action.SHOW_TEXT) {
             Component hoverComponent = hoverEvent.getValue(HoverEvent.Action.SHOW_TEXT);
             if (hoverComponent != null) {
-                guiGraphics.renderTooltip(this.minecraft.font, hoverComponent, mouseX, mouseY);
+                GuiGraphicsExtractor.renderTooltip(this.minecraft.font, hoverComponent, mouseX, mouseY);
             }
         }
     }
@@ -767,19 +767,19 @@ public class GuideScreen extends Screen {
     /**
      * 绘制书页背景纹理。
      *
-     * @param guiGraphics 绘制上下文
+     * @param GuiGraphicsExtractor 绘制上下文
      * @param partialTick 帧插值因子（未使用）
      * @param mouseX      相对鼠标 X（未使用）
      * @param mouseY      相对鼠标 Y（未使用）
      */
-    private void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    private void renderBg(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         // 将纹理左上角（UV 0,0）贴到界面左上角
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         float scaleX = (float) this.imageWidth / GUIDE_IMAGE_WIDTH;
         float scaleY = (float) this.imageHeight / GUIDE_IMAGE_HEIGHT;
         pose.scale(this.getBgImageScale(), this.getBgImageScale(), 1.0f);
-        guiGraphics.blit(GUIDE_LOCATION, 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
+        GuiGraphicsExtractor.blit(GUIDE_LOCATION, 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
         pose.popPose();
     }
 
@@ -793,19 +793,19 @@ public class GuideScreen extends Screen {
      * <p>共 11 个标签位，鼠标悬停时向左偏移 5px 以产生高亮效果。
      * 标签纹理位于背景纹理右侧（U = imageWidth）。</p>
      *
-     * @param guiGraphics 绘制上下文
+     * @param GuiGraphicsExtractor 绘制上下文
      * @param partialTick 帧插值因子（未使用）
      * @param mouseX      相对鼠标 X
      * @param mouseY      相对鼠标 Y
      */
-    private void renderLabel(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    private void renderLabel(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         // ── 检查是否需要固定父标签 ──
         int pinnedParentIndex = this.findPinnedParentIndex();
         int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
         int start = this.labelScrollRows;
         int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows() - pinnedRowCount);
         String currentFile = this.getCurrentFileArgument();
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         float labelImageScale = this.getLabelImageScale();
 
         // 渲染固定的父标签
@@ -814,7 +814,7 @@ public class GuideScreen extends Screen {
             int originX = this.getLabelBaseX();
             int originY = this.getLabelStartY();
             this.renderSingleLabel(
-                guiGraphics, pose, labelImageScale,
+                GuiGraphicsExtractor, pose, labelImageScale,
                 pinnedEntry, pinnedParentIndex, originX, originY,
                 0, currentFile, mouseX, mouseY
             );
@@ -828,7 +828,7 @@ public class GuideScreen extends Screen {
                 continue;
             }
             this.renderSingleLabel(
-                guiGraphics, pose, labelImageScale,
+                GuiGraphicsExtractor, pose, labelImageScale,
                 this.labelEntries.get(entryIndexInFull), entryIndexInFull,
                 this.getLabelBaseX() + (this.labelEntries.get(entryIndexInFull).level == 1 ? 0 : LABEL_LEVEL2_INDENT),
                 this.getLabelStartY() + row * this.getLabelRowOffset(),
@@ -841,7 +841,7 @@ public class GuideScreen extends Screen {
         boolean isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
         pose.pushPose();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
-        guiGraphics.blit(
+        GuiGraphicsExtractor.blit(
             BUTTON_CLOSE_LOCATION,
             originX * this.getLabelScaleCountDown(),
             originY * this.getLabelScaleCountDown(),
@@ -856,7 +856,7 @@ public class GuideScreen extends Screen {
         if (!this.preview) {
             originY += BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-            guiGraphics.blit(
+            GuiGraphicsExtractor.blit(
                 BUTTON_SHARE_LOCATION,
                 originX * this.getLabelScaleCountDown(),
                 originY * this.getLabelScaleCountDown(),
@@ -873,7 +873,7 @@ public class GuideScreen extends Screen {
         if (this.hasReturnButton()) {
             originY = this.getReturnButtonY();
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-            guiGraphics.blit(
+            GuiGraphicsExtractor.blit(
                 BUTTON_RETURN_LOCATION,
                 originX * this.getLabelScaleCountDown(),
                 originY * this.getLabelScaleCountDown(),
@@ -887,7 +887,7 @@ public class GuideScreen extends Screen {
             );
         }
         pose.popPose();
-        this.renderLabelScrollHint(guiGraphics);
+        this.renderLabelScrollHint(GuiGraphicsExtractor);
     }
 
     private int getCloseButtonX() {
@@ -967,7 +967,7 @@ public class GuideScreen extends Screen {
         return false;
     }
 
-    private void renderLabelScrollHint(GuiGraphics guiGraphics) {
+    private void renderLabelScrollHint(GuiGraphicsExtractor GuiGraphicsExtractor) {
         if (this.maxLabelScrollRows <= 0) {
             return;
         }
@@ -975,14 +975,14 @@ public class GuideScreen extends Screen {
         int arrowX = this.getLabelBaseX() + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2;
         int arrowUpY = this.getArrowUpY();
         int arrowDownY = this.getArrowDownY();
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         float labelImageScale = this.getLabelImageScale();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
         if (this.labelScrollRows > 0) {
             float alpha = this.computeArrowAlpha(this.labelScrollRows);
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-            guiGraphics.blit(
+            GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, alpha);
+            GuiGraphicsExtractor.blit(
                 BUTTON_UP_LOCATION,
                 arrowX * this.getLabelScaleCountDown(),
                 arrowUpY * this.getLabelScaleCountDown(),
@@ -994,13 +994,13 @@ public class GuideScreen extends Screen {
                 BUTTON_IMAGE_SIZE,
                 BUTTON_IMAGE_SIZE
             );
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
         int rowsToBottom = this.maxLabelScrollRows - this.labelScrollRows;
         if (rowsToBottom > 0) {
             float alpha = this.computeArrowAlpha(rowsToBottom);
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-            guiGraphics.blit(
+            GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, alpha);
+            GuiGraphicsExtractor.blit(
                 BUTTON_DOWN_LOCATION,
                 arrowX * this.getLabelScaleCountDown(),
                 arrowDownY * this.getLabelScaleCountDown(),
@@ -1012,7 +1012,7 @@ public class GuideScreen extends Screen {
                 BUTTON_IMAGE_SIZE,
                 BUTTON_IMAGE_SIZE
             );
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+            GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
         pose.popPose();
     }
@@ -1117,11 +1117,11 @@ public class GuideScreen extends Screen {
      * 渲染右侧书签列表和"添加书签"按钮。
      * 须在 renderBg 之前调用，使书签 tab 的嵌入部分被书页背景覆盖。
      */
-    private void renderBookmarks(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    private void renderBookmarks(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         if (!this.isBookmarkEnabled()) {
             return;
         }
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         float labelScale = this.getLabelImageScale();
         List<GuideBookmarkStore.BookmarkEntry> bookmarks = this.getBookmarks();
 
@@ -1131,7 +1131,7 @@ public class GuideScreen extends Screen {
         boolean addHover = this.mouseInRange(addX, addY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
         pose.pushPose();
         pose.scale(labelScale, labelScale, labelScale);
-        guiGraphics.blit(
+        GuiGraphicsExtractor.blit(
             BUTTON_ADD_LOCATION,
             addX * this.getLabelScaleCountDown(),
             addY * this.getLabelScaleCountDown(),
@@ -1160,7 +1160,7 @@ public class GuideScreen extends Screen {
             int renderX = isHover ? originX + BOOKMARK_HOVER_SHIFT : originX;
             pose.pushPose();
             pose.scale(labelScale, labelScale, labelScale);
-            guiGraphics.blit(
+            GuiGraphicsExtractor.blit(
                 LABEL_BOOKMARK_LOCATION,
                 renderX * this.getLabelScaleCountDown(),
                 originY * this.getLabelScaleCountDown(),
@@ -1175,7 +1175,7 @@ public class GuideScreen extends Screen {
             pose.popPose();
             int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
             int width = this.font.width(this.fitLabelTitle(entry.title()));
-            guiGraphics.drawString(
+            GuiGraphicsExtractor.drawString(
                 this.font,
                 this.fitLabelTitle(entry.title()),
                 renderX + AgeratumConstants.GuideScreenUI.Positions.BOOKMARK_TEXT_BASE_X - width,
@@ -1194,8 +1194,8 @@ public class GuideScreen extends Screen {
             pose.scale(labelScale, labelScale, labelScale);
             if (this.bookmarkScrollRows > 0) {
                 float alpha = this.computeArrowAlpha(this.bookmarkScrollRows);
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-                guiGraphics.blit(
+                GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, alpha);
+                GuiGraphicsExtractor.blit(
                     BUTTON_UP_LOCATION,
                     arrowX * this.getLabelScaleCountDown(),
                     arrowUpY * this.getLabelScaleCountDown(),
@@ -1207,13 +1207,13 @@ public class GuideScreen extends Screen {
                     BUTTON_IMAGE_SIZE,
                     BUTTON_IMAGE_SIZE
                 );
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+                GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
             int rowsToBottom = this.maxBookmarkScrollRows - this.bookmarkScrollRows;
             if (rowsToBottom > 0) {
                 float alpha = this.computeArrowAlpha(rowsToBottom);
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-                guiGraphics.blit(
+                GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, alpha);
+                GuiGraphicsExtractor.blit(
                     BUTTON_DOWN_LOCATION,
                     arrowX * this.getLabelScaleCountDown(),
                     arrowDownY * this.getLabelScaleCountDown(),
@@ -1225,7 +1225,7 @@ public class GuideScreen extends Screen {
                     BUTTON_IMAGE_SIZE,
                     BUTTON_IMAGE_SIZE
                 );
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+                GuiGraphicsExtractor.setColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
             pose.popPose();
         }
@@ -1236,7 +1236,7 @@ public class GuideScreen extends Screen {
      *
      * <p>对悬停的收藏标签显示完整标题和 Ctrl+右键 移除收藏提示。</p>
      */
-    private void renderBookmarkTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderBookmarkTooltips(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY) {
         if (!this.isBookmarkEnabled()) {
             return;
         }
@@ -1255,7 +1255,7 @@ public class GuideScreen extends Screen {
                 List<Component> lines = new ArrayList<>();
                 lines.add(Component.literal(entry.title().getString()));
                 lines.add(Component.literal("Ctrl+右键 移除收藏"));
-                guiGraphics.renderTooltip(
+                GuiGraphicsExtractor.renderTooltip(
                     this.font,
                     lines,
                     Optional.empty(),
@@ -1999,12 +1999,12 @@ public class GuideScreen extends Screen {
      * </ol>
      * </p>
      *
-     * @param guiGraphics 绘制上下文
+     * @param GuiGraphicsExtractor 绘制上下文
      * @param partialTick 帧插值因子（未使用）
      * @param mouseX      相对鼠标 X（未使用）
      * @param mouseY      相对鼠标 Y（未使用）
      */
-    private void renderContent(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    private void renderContent(GuiGraphicsExtractor GuiGraphicsExtractor, float partialTick, int mouseX, int mouseY) {
         if (this.minecraft == null) return;
         this.updateScrollBounds();
 
@@ -2013,13 +2013,13 @@ public class GuideScreen extends Screen {
         int scissorY1 = this.topPos + this.getContentStartY();
         int scissorX2 = scissorX1 + this.getContentWidth();
         int scissorY2 = scissorY1 + this.getContentHeight();
-        guiGraphics.enableScissor(
+        GuiGraphicsExtractor.enableScissor(
             (int) (scissorX1 / this.scale),
             (int) (scissorY1 / this.scale),
             (int) (scissorX2 / this.scale),
             (int) (scissorY2 / this.scale)
         );
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         // 移至内容区左上角，并向上平移以实现滚动（不再额外缩放）
         pose.translate(this.getContentStartX(), this.getContentStartY() - this.contentScroll, 0);
@@ -2031,7 +2031,7 @@ public class GuideScreen extends Screen {
         MDRenderContext rootContext = new MDRenderContext(
             null,
             this.minecraft,
-            guiGraphics,
+            GuiGraphicsExtractor,
             new ArrayList<>(),
             this.width,
             this.height,
@@ -2073,7 +2073,7 @@ public class GuideScreen extends Screen {
         }
         this.theNearestAnchor = nearestAnchor;
         pose.popPose();
-        guiGraphics.disableScissor();
+        GuiGraphicsExtractor.disableScissor();
         rootContext.renderTooltip();
         rootContext.onEnd(this);
     }
@@ -2201,7 +2201,7 @@ public class GuideScreen extends Screen {
      * 渲染单个标签条目。
      */
     private void renderSingleLabel(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         PoseStack pose,
         float labelImageScale,
         LabelEntry entry,
@@ -2227,7 +2227,7 @@ public class GuideScreen extends Screen {
         }
         pose.pushPose();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
-        guiGraphics.blit(
+        GuiGraphicsExtractor.blit(
             entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
             originX * this.getLabelScaleCountDown(),
             originY * this.getLabelScaleCountDown(),
@@ -2249,7 +2249,7 @@ public class GuideScreen extends Screen {
                         );
         int resolvedColor = (entry.color != null && !isActive) ? entry.color : textColor;
         String displayTitle = this.fitLabelTitle(entry.title);
-        guiGraphics.drawString(
+        GuiGraphicsExtractor.drawString(
             this.font,
             displayTitle,
             originX + (
@@ -2268,7 +2268,7 @@ public class GuideScreen extends Screen {
      *
      * <p>对父标签显示完整名称和 Shift+左键 折叠/展开提示。</p>
      */
-    private void renderLabelTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderLabelTooltips(GuiGraphicsExtractor GuiGraphicsExtractor, int mouseX, int mouseY) {
         int start = this.labelScrollRows;
         int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows());
         int pinnedParentIndex = this.findPinnedParentIndex();
@@ -2282,7 +2282,7 @@ public class GuideScreen extends Screen {
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY)
                 && mouseX < this.getContentStartX()) {
                 LabelEntry entry = this.labelEntries.get(pinnedParentIndex);
-                this.drawLabelTooltip(guiGraphics, entry, pinnedParentIndex, originX, originY, mouseX, mouseY);
+                this.drawLabelTooltip(GuiGraphicsExtractor, entry, pinnedParentIndex, originX, originY, mouseX, mouseY);
                 return;
             }
         }
@@ -2298,20 +2298,20 @@ public class GuideScreen extends Screen {
             int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, mouseX, mouseY)
                 && mouseX < this.getContentStartX()) {
-                this.drawLabelTooltip(guiGraphics, entry, entryIndexInFull, originX, originY, mouseX, mouseY);
+                this.drawLabelTooltip(GuiGraphicsExtractor, entry, entryIndexInFull, originX, originY, mouseX, mouseY);
                 return;
             }
         }
 
         // 渲染收藏标签 tooltip
-        this.renderBookmarkTooltips(guiGraphics, mouseX, mouseY);
+        this.renderBookmarkTooltips(GuiGraphicsExtractor, mouseX, mouseY);
     }
 
     /**
      * 绘制单个标签的 tooltip。
      */
     private void drawLabelTooltip(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         LabelEntry entry,
         int entryIndexInFull,
         int originX,
@@ -2327,7 +2327,7 @@ public class GuideScreen extends Screen {
             boolean collapsed = this.collapsedLabelGroups.contains(entryIndexInFull);
             lines.add(Component.literal(collapsed ? "Shift+左键 展开" : "Shift+左键 收起"));
         }
-        guiGraphics.renderTooltip(
+        GuiGraphicsExtractor.renderTooltip(
             this.font,
             lines,
             Optional.empty(),

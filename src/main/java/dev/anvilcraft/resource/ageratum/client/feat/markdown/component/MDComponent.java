@@ -9,7 +9,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.FormattedText;
@@ -104,13 +104,13 @@ public abstract class MDComponent {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         FormattedText textToRender = this.getEffectiveText();
         List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
         int line = 0;
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.drawString(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
+            GuiGraphicsExtractor.drawString(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
             line++;
             maxY -= minecraft.font.lineHeight;
         }

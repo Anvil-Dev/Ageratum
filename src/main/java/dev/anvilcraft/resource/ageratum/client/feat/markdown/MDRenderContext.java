@@ -2,7 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
@@ -16,7 +16,7 @@ import javax.annotation.Nullable;
 public record MDRenderContext(
     @Nullable MDRenderContext parent,
     Minecraft minecraft,
-    GuiGraphics graphics,
+    GuiGraphicsExtractor graphics,
     List<Tooltip> tooltips,
     int screenWidth,
     int screenHeight,

@@ -11,7 +11,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextCom
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -64,8 +64,8 @@ public abstract class MDRecipeComponent extends MDImageComponent {
 
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
-        this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        this.innerBlit(GuiGraphicsExtractor, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
         this.hoveredDocLink = null;  // 每帧重置
         this.renderRecipe(context, mouseX, mouseY);

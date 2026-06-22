@@ -7,7 +7,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MD
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.Identifier;
@@ -56,9 +56,9 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
 
     @Override
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.resultItem == null || this.ingredients == null) return;
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         pose.translate(9F, 9F, 0.0F);
         mouseX -= 9;
@@ -70,12 +70,12 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             if (displaying.isEmpty()) continue;
             int x = (i % 3) * 19;
             int y = (i / 3) * 19;
-            guiGraphics.renderItem(displaying, x, y);
-            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
+            GuiGraphicsExtractor.renderItem(displaying, x, y);
+            GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
             this.renderRecipeItem(context, displaying, x, y, mouseX, mouseY);
         }
-        guiGraphics.renderItem(this.resultItem, 93, 19);
-        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
+        GuiGraphicsExtractor.renderItem(this.resultItem, 93, 19);
+        GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
         this.renderRecipeItem(context, this.resultItem, 93, 19, mouseX, mouseY);
         pose.popPose();
     }

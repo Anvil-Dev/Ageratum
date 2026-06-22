@@ -5,7 +5,7 @@ import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 
@@ -85,8 +85,8 @@ public class MDHeaderComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
-        PoseStack pose = guiGraphics.pose();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         float scale = this.getScale();
         pose.scale(scale, scale, scale);
@@ -103,7 +103,7 @@ public class MDHeaderComponent extends MDComponent {
         pose.translate(0, height, 0);
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
-            guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
+            GuiGraphicsExtractor.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
         }
         pose.popPose();
     }

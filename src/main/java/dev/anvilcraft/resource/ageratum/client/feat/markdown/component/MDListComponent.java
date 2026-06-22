@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 
@@ -70,7 +70,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
 
     @Override
     protected void renderDecoration(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         Minecraft minecraft,
         CachedItem<ListItem> cachedItem,
         int y,
@@ -80,7 +80,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         int lineBottom = y + lineHeight;
         for (int level = 0; level <= cachedItem.level(); level++) {
             int bandStartX = level * INDENT_WIDTH;
-            guiGraphics.fill(
+            GuiGraphicsExtractor.fill(
                 bandStartX,
                 y,
                 bandStartX + INDENT_WIDTH - 1,
@@ -90,7 +90,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         }
 
         ListItem item = cachedItem.item();
-        guiGraphics.drawString(
+        GuiGraphicsExtractor.drawString(
             minecraft.font,
             marker(item),
             cachedItem.level() * INDENT_WIDTH,

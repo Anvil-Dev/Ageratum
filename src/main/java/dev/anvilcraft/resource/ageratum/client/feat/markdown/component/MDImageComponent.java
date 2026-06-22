@@ -14,7 +14,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.FormattedText;
@@ -141,13 +141,13 @@ public class MDImageComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         Size size = this.resolveSize(minecraft);
         Size renderSize = this.computeRenderSize(size, maxX, maxY);
         if (renderSize.width() <= 0 || renderSize.height() <= 0) {
             return;
         }
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         if (this.enableAlignCenter) {
             float translateX = (maxX - renderSize.width()) / 2.0f;
@@ -160,12 +160,12 @@ public class MDImageComponent extends MDComponent {
     }
 
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
-        this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        this.innerBlit(GuiGraphicsExtractor, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 
     protected void innerBlit(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         Identifier atlasLocation,
         int width,
         int height,
@@ -179,7 +179,7 @@ public class MDImageComponent extends MDComponent {
         RenderSystem.enableBlend();
         RenderSystem.setShaderTexture(0, atlasLocation);
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        Matrix4f matrix4f = guiGraphics.pose().last().pose();
+        Matrix4f matrix4f = GuiGraphicsExtractor.pose().last().pose();
         BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         bufferbuilder.addVertex(matrix4f, (float) 0, (float) 0, (float) 0).setUv(minU, minV);
         bufferbuilder.addVertex(matrix4f, (float) 0, (float) height, (float) 0).setUv(minU, maxV);

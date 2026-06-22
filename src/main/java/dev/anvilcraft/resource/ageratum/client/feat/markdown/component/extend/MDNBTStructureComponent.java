@@ -15,7 +15,7 @@ import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRender
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -109,7 +109,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     public void render(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         if (this.previewLevel == null) {
             this.previewLevel = this.prepare(minecraft.level, this.target);
             this.resetLayerPreview();
@@ -164,7 +164,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void renderButton(MDRenderContext context) {
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
         graphics.blit(
             BUTTON_PROJECTION_LOCATION,
@@ -326,7 +326,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.layerPreviewInitialized = false;
     }
 
-    private void renderLayerIndicator(MDRenderContext context, GuiGraphics graphics) {
+    private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
         int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
         String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
         int fontHeight = context.minecraft().font.lineHeight;

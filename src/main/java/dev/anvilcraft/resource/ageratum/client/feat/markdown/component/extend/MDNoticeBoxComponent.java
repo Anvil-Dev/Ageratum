@@ -5,7 +5,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 
@@ -75,7 +75,7 @@ public class MDNoticeBoxComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.contentComponents.isEmpty()) {
             return;
         }
@@ -84,13 +84,13 @@ public class MDNoticeBoxComponent extends MDComponent {
         int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
 
         // 绘制背景
-        guiGraphics.fill(0, 0, maxX, boxHeight, this.type.getBackgroundColor());
+        GuiGraphicsExtractor.fill(0, 0, maxX, boxHeight, this.type.getBackgroundColor());
 
         // 绘制左侧边框
-        guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
+        GuiGraphicsExtractor.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
 
         // 绘制内容
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         int translateX = PADDING + BORDER_WIDTH;
         pose.translate(translateX, PADDING, 0);

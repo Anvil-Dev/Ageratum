@@ -11,7 +11,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextCom
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -51,7 +51,7 @@ public final class MDEntityComponent extends MDComponent {
 
     @Override
     public void render(MDRenderContext context) {
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         Minecraft minecraft = context.minecraft();
 
         Entity entity = this.getEntity();
@@ -116,7 +116,7 @@ public final class MDEntityComponent extends MDComponent {
 
     private static void renderEntity(
         MDRenderContext context,
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         int x1,
         int y1,
         int x2,
@@ -167,7 +167,7 @@ public final class MDEntityComponent extends MDComponent {
     }
 
     private static void renderEntity(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         float x,
         float y,
         float scale,
@@ -176,11 +176,11 @@ public final class MDEntityComponent extends MDComponent {
         @Nullable Quaternionf cameraOrientation,
         Entity entity
     ) {
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(x, y, 50.0);
-        guiGraphics.pose().scale(scale, scale, -scale);
-        guiGraphics.pose().translate(translate.x, translate.y, translate.z);
-        guiGraphics.pose().mulPose(pose);
+        GuiGraphicsExtractor.pose().pushPose();
+        GuiGraphicsExtractor.pose().translate(x, y, 50.0);
+        GuiGraphicsExtractor.pose().scale(scale, scale, -scale);
+        GuiGraphicsExtractor.pose().translate(translate.x, translate.y, translate.z);
+        GuiGraphicsExtractor.pose().mulPose(pose);
         Lighting.setupForEntityInInventory();
         EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         if (cameraOrientation != null) {
@@ -196,13 +196,13 @@ public final class MDEntityComponent extends MDComponent {
             0.0,
             0.0F,
             1.0F,
-            guiGraphics.pose(),
-            guiGraphics.bufferSource(),
+            GuiGraphicsExtractor.pose(),
+            GuiGraphicsExtractor.bufferSource(),
             15728880
         ));
-        guiGraphics.flush();
+        GuiGraphicsExtractor.flush();
         entityrenderdispatcher.setRenderShadow(true);
-        guiGraphics.pose().popPose();
+        GuiGraphicsExtractor.pose().popPose();
         Lighting.setupFor3DItems();
     }
 

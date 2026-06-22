@@ -3,7 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
@@ -134,11 +134,11 @@ public class MDTableComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         if (this.rows.isEmpty()) return;
         int colWidth = computeColWidth(maxX);
         int totalHeight = getHeight(minecraft, maxX, maxY);
-        guiGraphics.renderOutline(0, 0, maxX, totalHeight, BORDER_COLOR);
+        GuiGraphicsExtractor.renderOutline(0, 0, maxX, totalHeight, BORDER_COLOR);
 
         int y = 0;
         for (int rowIdx = 0; rowIdx < this.rows.size(); rowIdx++) {
@@ -147,9 +147,9 @@ public class MDTableComponent extends MDComponent {
             int rowH = rowHeight(minecraft, row, colWidth, isHeader);
 
             if (isHeader) {
-                guiGraphics.fill(1, y, maxX - 1, y + rowH, HEADER_COLOR);
+                GuiGraphicsExtractor.fill(1, y, maxX - 1, y + rowH, HEADER_COLOR);
             } else if ((rowIdx - (this.hasHeader ? 1 : 0)) % 2 == 1) {
-                guiGraphics.fill(1, y, maxX - 1, y + rowH, ALT_ROW_COLOR);
+                GuiGraphicsExtractor.fill(1, y, maxX - 1, y + rowH, ALT_ROW_COLOR);
             }
 
             for (int col = 0; col < this.columnCount; col++) {
@@ -157,7 +157,7 @@ public class MDTableComponent extends MDComponent {
                 int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
                 List<FormattedCharSequence> lines = splitCellLines(minecraft, cell, colWidth, isHeader);
 
-                PoseStack pose = guiGraphics.pose();
+                PoseStack pose = GuiGraphicsExtractor.pose();
                 pose.pushPose();
                 pose.translate(cellX, y + PADDING_V, 0);
                 for (FormattedCharSequence seq : lines) {
@@ -166,19 +166,19 @@ public class MDTableComponent extends MDComponent {
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
                         default -> 0;
                     };
-                    guiGraphics.drawString(minecraft.font, seq, drawX, 0, 0x000000, false);
+                    GuiGraphicsExtractor.drawString(minecraft.font, seq, drawX, 0, 0x000000, false);
                     pose.translate(0, minecraft.font.lineHeight, 0);
                 }
                 pose.popPose();
             }
 
             for (int col = 1; col < this.columnCount; col++) {
-                guiGraphics.vLine(col * (colWidth + PADDING_H * 2), y, y + rowH - 1, BORDER_COLOR);
+                GuiGraphicsExtractor.vLine(col * (colWidth + PADDING_H * 2), y, y + rowH - 1, BORDER_COLOR);
             }
 
             if (rowIdx < this.rows.size() - 1) {
                 int sepColor = (isHeader) ? HEADER_SEP_COLOR : BORDER_COLOR;
-                guiGraphics.hLine(1, maxX - 2, y + rowH - 1, sepColor);
+                GuiGraphicsExtractor.hLine(1, maxX - 2, y + rowH - 1, sepColor);
             }
 
             y += rowH;

@@ -12,7 +12,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageCo
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -50,13 +50,13 @@ public class MDItemComponent extends MDImageComponent {
 
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
-        this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        this.innerBlit(GuiGraphicsExtractor, this.getImageLocation(), this.width, this.height, size.width(), size.height());
         this.renderItem(context, mouseX, mouseY);
     }
 
     private void renderItem(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         ItemStack itemStack = this.getItemStack();
         Font font = context.minecraft().font;
         if (itemStack == null) return;

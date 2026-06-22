@@ -6,7 +6,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 
@@ -104,7 +104,7 @@ public class MDRowComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
 
         // 先以无约束宽度计算各组件完整 preferredWidth
         int[] preferredWidths = this.calculateUnconstrainedWidths(minecraft);
@@ -129,7 +129,7 @@ public class MDRowComponent extends MDComponent {
         int totalWidth = sum(widths) + SPACING * (this.contentComponents.size() - 1);
         int baseX = alignOffset(maxX, totalWidth, this.horizontalAlign);
 
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         pose.translate(baseX, 0, 0);
 
@@ -193,9 +193,9 @@ public class MDRowComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
 
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
 
         int currentY = 0;

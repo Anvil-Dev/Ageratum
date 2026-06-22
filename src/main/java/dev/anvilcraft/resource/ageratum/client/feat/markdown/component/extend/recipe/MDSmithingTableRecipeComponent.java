@@ -9,7 +9,7 @@ import dev.anvilcraft.resource.ageratum.mixin.accessor.SmithingTrimRecipeAccesso
 import dev.anvilcraft.resource.ageratum.util.RecipeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -70,8 +70,8 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
 
     @Override
     protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphics guiGraphics = context.graphics();
-        PoseStack pose = guiGraphics.pose();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         pose.translate(8F, 8F, 0.0F);
         mouseX -= 8;
@@ -82,13 +82,13 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
             ItemStack displaying = RecipeUtil.getDisplayItem(ingredient);
             if (displaying.isEmpty()) continue;
             int x = (i % 3) * 19;
-            guiGraphics.renderItem(displaying, x, 0);
-            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, displaying, x, 0);
+            GuiGraphicsExtractor.renderItem(displaying, x, 0);
+            GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, displaying, x, 0);
             this.renderRecipeItem(context, displaying, x, 0, mouseX, mouseY);
         }
         ItemStack resultItem = this.resultSupplier.get();
-        guiGraphics.renderItem(resultItem, 92, 0);
-        guiGraphics.renderItemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
+        GuiGraphicsExtractor.renderItem(resultItem, 92, 0);
+        GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
         this.renderRecipeItem(context, resultItem, 92, 0, mouseX, mouseY);
         pose.popPose();
     }

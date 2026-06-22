@@ -3,7 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
@@ -37,7 +37,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphics guiGraphics = context.graphics();
+        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
         int y = 0;
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);
@@ -48,8 +48,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
                 return;
             }
 
-            this.renderDecoration(guiGraphics, minecraft, cachedItem, y, lineHeight, maxX);
-            this.drawContent(guiGraphics, minecraft, split, textX, y);
+            this.renderDecoration(GuiGraphicsExtractor, minecraft, cachedItem, y, lineHeight, maxX);
+            this.drawContent(GuiGraphicsExtractor, minecraft, split, textX, y);
             y += lineHeight;
             maxY -= lineHeight;
         }
@@ -104,7 +104,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     protected abstract int getTextX(CachedItem<E> cachedItem);
 
     protected abstract void renderDecoration(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         Minecraft minecraft,
         CachedItem<E> cachedItem,
         int y,
@@ -127,17 +127,17 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     private void drawContent(
-        GuiGraphics guiGraphics,
+        GuiGraphicsExtractor GuiGraphicsExtractor,
         Minecraft minecraft,
         List<FormattedCharSequence> split,
         int textX,
         int y
     ) {
-        PoseStack pose = guiGraphics.pose();
+        PoseStack pose = GuiGraphicsExtractor.pose();
         pose.pushPose();
         pose.translate(textX, y, 0);
         for (FormattedCharSequence sequence : split) {
-            guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
+            GuiGraphicsExtractor.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
             pose.translate(0, minecraft.font.lineHeight, 0);
         }
         pose.popPose();

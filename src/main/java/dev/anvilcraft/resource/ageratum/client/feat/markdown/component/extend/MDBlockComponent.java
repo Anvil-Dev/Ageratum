@@ -12,7 +12,7 @@ import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -68,7 +68,7 @@ private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
-        GuiGraphics graphics = context.graphics();
+        GuiGraphicsExtractor graphics = context.graphics();
         this.innerBlit(graphics, this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
         this.renderBlock(context, mouseX, mouseY);
     }
@@ -79,7 +79,7 @@ private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
         
         this.hoveredDocLink = null;  // 每帧重置
-GuiGraphics graphics = context.graphics();
+GuiGraphicsExtractor graphics = context.graphics();
         Font font = context.minecraft().font;
 
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
