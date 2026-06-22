@@ -136,6 +136,7 @@ public final class MDEntityComponent extends MDComponent {
         Quaternionf pose = new Quaternionf().rotateZ((float) Math.PI);
         Quaternionf cameraOrientation = new Quaternionf().rotateX(f3 * 20.0F * (float) (Math.PI / 180.0));
         pose.mul(cameraOrientation);
+        pose.mul(new Quaternionf().rotateY((float) Math.PI));
         float yRot = entity.getYRot();
         float xRot = entity.getXRot();
         entity.setYRot(180.0F + f2 * 40.0F);
@@ -160,9 +161,9 @@ public final class MDEntityComponent extends MDComponent {
             pose,
             new Quaternionf(),
             (int) centerX,
-            context.offsetY(),
+            (int) centerY,
             (int) (200 + centerX),
-            200 + context.offsetY()
+            (int) (200 + centerY)
         );
         /*TODO
         MDEntityComponent.renderEntity(
