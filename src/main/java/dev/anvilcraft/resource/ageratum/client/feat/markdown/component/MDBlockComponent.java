@@ -137,7 +137,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         pose.pushPose();
         pose.translate(textX, y, 0);
         for (FormattedCharSequence sequence : split) {
-            GuiGraphicsExtractor.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
+            GuiGraphicsExtractor.text(minecraft.font, sequence, 0, 0, 0x000000, false);
             pose.translate(0, minecraft.font.lineHeight, 0);
         }
         pose.popPose();

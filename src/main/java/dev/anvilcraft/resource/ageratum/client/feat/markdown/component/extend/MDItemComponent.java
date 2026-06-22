@@ -68,7 +68,7 @@ public class MDItemComponent extends MDImageComponent {
         if (this.showText) {
             Component hoverName = itemStack.getHoverName();
             int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.text(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
 

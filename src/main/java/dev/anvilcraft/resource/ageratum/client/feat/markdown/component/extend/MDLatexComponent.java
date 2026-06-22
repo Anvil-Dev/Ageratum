@@ -103,7 +103,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static void renderPlaceholder(GuiGraphicsExtractor graphics, String text, int color) {
-        graphics.drawString(Minecraft.getInstance().font, text, 0, 0, color, false);
+        graphics.text(Minecraft.getInstance().font, text, 0, 0, color, false);
     }
 
     private LatexTextureState ensureTextureState(Minecraft minecraft) {

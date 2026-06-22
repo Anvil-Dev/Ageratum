@@ -110,7 +110,7 @@ public abstract class MDComponent {
         int line = 0;
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            GuiGraphicsExtractor.drawString(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
+            GuiGraphicsExtractor.text(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
             line++;
             maxY -= minecraft.font.lineHeight;
         }

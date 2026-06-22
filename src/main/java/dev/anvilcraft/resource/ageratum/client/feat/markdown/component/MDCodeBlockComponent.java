@@ -270,7 +270,7 @@ public class MDCodeBlockComponent extends MDComponent {
                 String lineStr = String.valueOf(lineNumber);
                 int lineNumX = PADDING + gutterWidth - minecraft.font.width(lineStr) - 1;
                 int lineNumY = PADDING + y;
-                GuiGraphicsExtractor.drawString(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
+                GuiGraphicsExtractor.text(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
             }
 
             if (split.isEmpty()) {
@@ -281,7 +281,7 @@ public class MDCodeBlockComponent extends MDComponent {
                     strX = PADDING + offsetX;
                 }
                 for (FormattedCharSequence sequence : split) {
-                    GuiGraphicsExtractor.drawString(
+                    GuiGraphicsExtractor.text(
                         minecraft.font,
                         sequence,
                         strX,

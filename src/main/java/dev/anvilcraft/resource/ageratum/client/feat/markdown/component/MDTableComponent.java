@@ -166,7 +166,7 @@ public class MDTableComponent extends MDComponent {
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
                         default -> 0;
                     };
-                    GuiGraphicsExtractor.drawString(minecraft.font, seq, drawX, 0, 0x000000, false);
+                    GuiGraphicsExtractor.text(minecraft.font, seq, drawX, 0, 0x000000, false);
                     pose.translate(0, minecraft.font.lineHeight, 0);
                 }
                 pose.popPose();

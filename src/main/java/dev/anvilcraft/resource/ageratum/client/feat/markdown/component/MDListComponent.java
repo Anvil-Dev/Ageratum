@@ -90,7 +90,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         }
 
         ListItem item = cachedItem.item();
-        GuiGraphicsExtractor.drawString(
+        GuiGraphicsExtractor.text(
             minecraft.font,
             marker(item),
             cachedItem.level() * INDENT_WIDTH,

@@ -341,7 +341,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         // 背景
         graphics.fill(startX, startY, startX + totalWidth, startY + totalHeight, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
         // 层数文本
-        graphics.drawString(
+        graphics.text(
             context.minecraft().font,
             layerLabel,
             startX + padding,
@@ -362,8 +362,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         int btnBgDown = hoverDown ? 0x88AAAAAA : 0x88444444;
         graphics.fill(btnUpX, startY, btnUpX + btnSize, startY + btnSize, btnBgUp);
         graphics.fill(btnDownX, startY, btnDownX + btnSize, startY + btnSize, btnBgDown);
-        graphics.drawString(context.minecraft().font, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
-        graphics.drawString(context.minecraft().font, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
+        graphics.text(context.minecraft().font, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
+        graphics.text(context.minecraft().font, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
 
         // tooltip
         if (hoverUp || hoverDown) {

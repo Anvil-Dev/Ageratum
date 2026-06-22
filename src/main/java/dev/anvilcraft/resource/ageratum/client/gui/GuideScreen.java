@@ -1175,7 +1175,7 @@ public class GuideScreen extends Screen {
             pose.popPose();
             int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
             int width = this.font.width(this.fitLabelTitle(entry.title()));
-            GuiGraphicsExtractor.drawString(
+            GuiGraphicsExtractor.text(
                 this.font,
                 this.fitLabelTitle(entry.title()),
                 renderX + AgeratumConstants.GuideScreenUI.Positions.BOOKMARK_TEXT_BASE_X - width,
@@ -2249,7 +2249,7 @@ public class GuideScreen extends Screen {
                         );
         int resolvedColor = (entry.color != null && !isActive) ? entry.color : textColor;
         String displayTitle = this.fitLabelTitle(entry.title);
-        GuiGraphicsExtractor.drawString(
+        GuiGraphicsExtractor.text(
             this.font,
             displayTitle,
             originX + (
