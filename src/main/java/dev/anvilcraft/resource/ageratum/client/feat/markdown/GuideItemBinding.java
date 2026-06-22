@@ -22,8 +22,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -99,7 +99,7 @@ public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents
      * <p>会尽量复用绑定里声明的数据组件；若组件无法解析，则返回空。</p>
      */
     public Optional<ItemStack> createItemStack() {
-        Item item = BuiltInRegistries.ITEM.get(this.itemId);
+        Item item = BuiltInRegistries.ITEM.getValue(this.itemId);
         if (item == Items.AIR) {
             return Optional.empty();
         }
@@ -172,7 +172,12 @@ public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents
 
     private static @Nullable JsonObject tryParseSnbtObject(String text) {
         try {
-            CompoundTag tag = new TagParser(new StringReader(text)).readStruct();
+            TagParser<Tag> tagParser = TagParser.create(
+                Minecraft.getInstance().level
+                    .registryAccess()
+                    .createSerializationContext(NbtOps.INSTANCE)
+            );
+            Tag tag = tagParser.parseFully(text);
             JsonElement jsonElement = convertNbtToJson(tag);
             return jsonElement instanceof JsonObject object ? object : null;
         } catch (Exception exception) {

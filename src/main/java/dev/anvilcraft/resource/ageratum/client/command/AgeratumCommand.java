@@ -31,8 +31,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.api.distmarker.Dist;
@@ -137,19 +137,15 @@ public class AgeratumCommand {
         Component message = Component.literal(itemId.toString())
             .withStyle(style -> style.withColor(0xFF66CCFF)
                 .withUnderlined(true)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, refString))
-                .withHoverEvent(new HoverEvent(
-                    HoverEvent.Action.SHOW_TEXT,
-                    Component.translatable("commands.ageratum.item.id_copy_hint")
-                )));
+                .withClickEvent(new ClickEvent.CopyToClipboard(refString))
+                .withHoverEvent(new HoverEvent.ShowText(Component.translatable("commands.ageratum.item.id_copy_hint")))
+            );
         Component message1 = Component.literal(refString)
             .withStyle(style -> style.withColor(0xFF66CCFF)
                 .withUnderlined(true)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, refString))
-                .withHoverEvent(new HoverEvent(
-                    HoverEvent.Action.SHOW_TEXT,
-                    Component.translatable("commands.ageratum.item.ref_copy_hint")
-                )));
+                .withClickEvent(new ClickEvent.CopyToClipboard(refString))
+                .withHoverEvent(new HoverEvent.ShowText(Component.translatable("commands.ageratum.item.ref_copy_hint")))
+            );
 
         source.sendSuccess(() -> message, false);
         source.sendSuccess(() -> message1, false);
