@@ -29,7 +29,7 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
@@ -67,7 +67,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     private static final float ROTATE_YAW_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_YAW;
     private static final float ROTATE_PITCH_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_PITCH;
     private static final float PAN_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.PAN;
-    private static final ResourceLocation BUTTON_PROJECTION_LOCATION = AgeratumConstants.Structure.Textures.BUTTON_PROJECTION;
+    private static final Identifier BUTTON_PROJECTION_LOCATION = AgeratumConstants.Structure.Textures.BUTTON_PROJECTION;
 
     private final StructureTarget target;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
@@ -646,7 +646,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
         }
 
-        for (ResourceLocation candidate : candidateResourceLocations(target.location())) {
+        for (Identifier candidate : candidateIdentifiers(target.location())) {
             Resource directResource = Minecraft.getInstance().getResourceManager().getResource(candidate).orElse(null);
             if (directResource != null) {
                 return directResource.open();
@@ -662,22 +662,22 @@ public final class MDNBTStructureComponent extends MDComponent {
         return null;
     }
 
-    private static List<ResourceLocation> candidateResourceLocations(ResourceLocation location) {
+    private static List<Identifier> candidateIdentifiers(Identifier location) {
         String path = location.getPath();
         if (endsWithStructureExtension(path)) {
             return List.of(location);
         }
         return List.of(
             location,
-            ResourceLocation.fromNamespaceAndPath(location.getNamespace(), path + ".nbt"),
-            ResourceLocation.fromNamespaceAndPath(location.getNamespace(), path + ".snbt")
+            Identifier.fromNamespaceAndPath(location.getNamespace(), path + ".nbt"),
+            Identifier.fromNamespaceAndPath(location.getNamespace(), path + ".snbt")
         );
     }
 
     /**
      * 生成结构文件在 classpath 中的回退搜索路径。
      */
-    private static List<String> candidateResourcePaths(ResourceLocation location) {
+    private static List<String> candidateResourcePaths(Identifier location) {
         String normalizedPath = normalizeStructurePath(location.getPath());
         return List.of(
             "data/" + location.getNamespace() + "/structure/" + normalizedPath + ".nbt",
@@ -708,7 +708,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         return endsWithStructureExtension(normalized) ? List.of(normalized) : List.of(normalized + ".nbt", normalized + ".snbt");
     }
 
-    private static String getCurrentDirectoryPath(ResourceLocation location) {
+    private static String getCurrentDirectoryPath(Identifier location) {
         String currentFile = location.getPath();
         int slash = currentFile.lastIndexOf('/');
         if (slash < 0) {
@@ -717,14 +717,14 @@ public final class MDNBTStructureComponent extends MDComponent {
         return currentFile.substring(0, slash);
     }
 
-    public record StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths) {
+    public record StructureTarget(Identifier location, String displayPath, List<String> previewCandidatePaths) {
         /**
          * 基于 markdown 源文档位置解析显式或相对的结构引用。
          */
-        public static StructureTarget resolve(ResourceLocation sourceLocation, String rawTarget) {
+        public static StructureTarget resolve(Identifier sourceLocation, String rawTarget) {
             String trimmed = rawTarget.trim();
             if (trimmed.contains(":")) {
-                ResourceLocation location = ResourceLocation.parse(trimmed);
+                Identifier location = Identifier.parse(trimmed);
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
                                             ? expandStructureExtensions(RelativePathResolver.resolveWithinBase("", location.getPath()))
                                             : List.of();
@@ -732,7 +732,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
 
             String resolvedPath = RelativePathResolver.resolveWithinBase(getCurrentDirectoryPath(sourceLocation), trimmed);
-            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
+            Identifier location = Identifier.fromNamespaceAndPath(sourceLocation.getNamespace(), resolvedPath);
             List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
                                         ? expandStructureExtensions(resolvedPath)
                                         : List.of();

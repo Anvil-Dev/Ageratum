@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.constants;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.regex.Pattern;
 
@@ -194,16 +194,16 @@ public interface AgeratumConstants {
          * 背景纹理资源位置。
          */
         interface Textures {
-            ResourceLocation GUIDE = Ageratum.location("textures/gui/guide/guide.png");
-            ResourceLocation LABEL_PRIMARY = Ageratum.location("textures/gui/guide/label_primary.png");
-            ResourceLocation LABEL_SECONDARY = Ageratum.location("textures/gui/guide/label_secondary.png");
-            ResourceLocation BUTTON_DOWN = Ageratum.location("textures/gui/guide/button_down.png");
-            ResourceLocation BUTTON_UP = Ageratum.location("textures/gui/guide/button_up.png");
-            ResourceLocation BUTTON_CLOSE = Ageratum.location("textures/gui/guide/button_close.png");
-            ResourceLocation BUTTON_SHARE = Ageratum.location("textures/gui/guide/button_share.png");
-            ResourceLocation BUTTON_RETURN = Ageratum.location("textures/gui/guide/button_back.png");
-            ResourceLocation BUTTON_ADD = Ageratum.location("textures/gui/guide/button_add.png");
-            ResourceLocation LABEL_BOOKMARK = Ageratum.location("textures/gui/guide/label_bookmark.png");
+            Identifier GUIDE = Ageratum.location("textures/gui/guide/guide.png");
+            Identifier LABEL_PRIMARY = Ageratum.location("textures/gui/guide/label_primary.png");
+            Identifier LABEL_SECONDARY = Ageratum.location("textures/gui/guide/label_secondary.png");
+            Identifier BUTTON_DOWN = Ageratum.location("textures/gui/guide/button_down.png");
+            Identifier BUTTON_UP = Ageratum.location("textures/gui/guide/button_up.png");
+            Identifier BUTTON_CLOSE = Ageratum.location("textures/gui/guide/button_close.png");
+            Identifier BUTTON_SHARE = Ageratum.location("textures/gui/guide/button_share.png");
+            Identifier BUTTON_RETURN = Ageratum.location("textures/gui/guide/button_back.png");
+            Identifier BUTTON_ADD = Ageratum.location("textures/gui/guide/button_add.png");
+            Identifier LABEL_BOOKMARK = Ageratum.location("textures/gui/guide/label_bookmark.png");
         }
 
         /**
@@ -435,7 +435,7 @@ public interface AgeratumConstants {
          * 结构预览资源位置。
          */
         interface Textures {
-            ResourceLocation BUTTON_PROJECTION = Ageratum.location("textures/gui/guide/button_projection.png");
+            Identifier BUTTON_PROJECTION = Ageratum.location("textures/gui/guide/button_projection.png");
         }
 
         /**

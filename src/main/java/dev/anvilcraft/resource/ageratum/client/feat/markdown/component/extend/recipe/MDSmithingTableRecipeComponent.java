@@ -15,7 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.armortrim.ArmorTrim;
 import net.minecraft.world.item.armortrim.TrimMaterial;
@@ -42,7 +42,7 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
     /**
      * 锻造台组件背景纹理。
      */
-    public static final ResourceLocation SMITHING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/smithing_table.png");
+    public static final Identifier SMITHING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/smithing_table.png");
     /**
      * 输入材料列表
      */

@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Map;
 
@@ -13,5 +13,5 @@ import java.util.Map;
  * @param params    解析后的参数键值对。
  * @param baseStyle 组件输出应继承的基础样式。
  */
-public record MDInlineComponentContext(ResourceLocation id, String rawParams, Map<String, String> params, Style baseStyle) {
+public record MDInlineComponentContext(Identifier id, String rawParams, Map<String, String> params, Style baseStyle) {
 }

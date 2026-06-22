@@ -15,7 +15,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 
@@ -109,10 +109,10 @@ public final class GuideBookmarkStore {
         return BOOKMARK_DIRECTORY.resolve(namespace + ".json");
     }
 
-    public record BookmarkEntry(Component title, ResourceLocation location) {
+    public record BookmarkEntry(Component title, Identifier location) {
         public static final Codec<BookmarkEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ComponentSerialization.CODEC.fieldOf("title").forGetter(BookmarkEntry::title),
-            ResourceLocation.CODEC.fieldOf("location").forGetter(BookmarkEntry::location)
+            Identifier.CODEC.fieldOf("location").forGetter(BookmarkEntry::location)
         ).apply(instance, BookmarkEntry::new));
     }
 }

@@ -23,7 +23,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -45,7 +45,7 @@ import javax.annotation.Nullable;
  * <p>若未填写组件，匹配时忽略物品组件；若填写了组件，则只要求这些组件匹配，
  * 其余组件允许存在。</p>
  */
-public record GuideItemBinding(ResourceLocation itemId, @Nullable String rawComponents) {
+public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents) {
     public static Optional<GuideItemBinding> parse(@Nullable String rawValue) {
         if (rawValue == null) {
             return Optional.empty();
@@ -67,7 +67,7 @@ public record GuideItemBinding(ResourceLocation itemId, @Nullable String rawComp
             componentsText = normalized.substring(componentStart).trim();
         }
 
-        ResourceLocation itemId = ResourceLocation.tryParse(itemIdText);
+        Identifier itemId = Identifier.tryParse(itemIdText);
         if (itemId == null) {
             return Optional.empty();
         }
@@ -128,7 +128,7 @@ public record GuideItemBinding(ResourceLocation itemId, @Nullable String rawComp
         return Optional.of(stack);
     }
 
-    public Optional<ResourceLocation> resolveFirstDocument(@Nullable String languageCode) {
+    public Optional<Identifier> resolveFirstDocument(@Nullable String languageCode) {
         return this.createItemStack().flatMap(stack -> GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode));
     }
 

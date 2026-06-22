@@ -9,7 +9,7 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -27,7 +27,7 @@ public class MDFurnaceRecipeComponent extends MDRecipeComponent {
     /**
      * 熔炉类组件背景纹理。
      */
-    public static final ResourceLocation FURNACE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/furnace.png");
+    public static final Identifier FURNACE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/furnace.png");
     /**
      * 输入材料；客户端世界缺失时为 {@code null}。
      */

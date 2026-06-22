@@ -14,7 +14,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.function.TriFunction;
@@ -436,7 +436,7 @@ public abstract class MDComponent {
         if (target == null || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:")) {
             return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
         }
-        ResourceLocation docLocation = ResourceLocation.tryParse(target);
+        Identifier docLocation = Identifier.tryParse(target);
         if (docLocation == null || !GuideDocumentCache.isCacheLoaded()) {
             return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
         }
@@ -647,7 +647,7 @@ public abstract class MDComponent {
         }
     }
 
-    private record ParserMatch(ResourceLocation id, int priority, InlineStyleMatch match) {
+    private record ParserMatch(Identifier id, int priority, InlineStyleMatch match) {
         private int start() {
             return this.match.start();
         }
@@ -690,7 +690,7 @@ public abstract class MDComponent {
         ParserMatch earliest = null;
         Registry<MDInlineStyleParser> registry = AgeratumRegistries.INLINE_STYLE_PARSER_REGISTRY;
         for (MDInlineStyleParser parser : registry) {
-            ResourceLocation parserId = registry.getKey(parser);
+            Identifier parserId = registry.getKey(parser);
             if (parserId == null) {
                 continue;
             }
@@ -711,7 +711,7 @@ public abstract class MDComponent {
     private static @Nullable InlineComponentMatch findNextInlineComponent(String text, int pos, Style parentStyle) {
         Matcher matcher = INLINE_COMPONENT_TAG_PATTERN.matcher(text);
         while (matcher.find(pos)) {
-            ResourceLocation id = parseInlineComponentId(matcher.group(1));
+            Identifier id = parseInlineComponentId(matcher.group(1));
             if (id == null) {
                 pos = matcher.start() + 1;
                 continue;
@@ -732,16 +732,16 @@ public abstract class MDComponent {
         return null;
     }
 
-    private static @Nullable ResourceLocation parseInlineComponentId(String idText) {
+    private static @Nullable Identifier parseInlineComponentId(String idText) {
         String normalized = idText.contains(":") ? idText : "ageratum:" + idText;
         try {
-            return ResourceLocation.parse(normalized);
+            return Identifier.parse(normalized);
         } catch (RuntimeException exception) {
             return null;
         }
     }
 
-    private static int compareInlineStyleParser(ResourceLocation parserId, int priority, ParserMatch current) {
+    private static int compareInlineStyleParser(Identifier parserId, int priority, ParserMatch current) {
         int priorityCompare = Integer.compare(priority, current.priority());
         if (priorityCompare != 0) {
             return priorityCompare;

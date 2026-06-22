@@ -15,7 +15,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -50,12 +50,12 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         /**
      * 当前鼠标悬停的配方物品绑定的文档位置，用于配方内 W 键跳转。
      */
-    protected @Nullable ResourceLocation hoveredDocLink;
+    protected @Nullable Identifier hoveredDocLink;
 
 /**
      * 创建配方组件。
      */
-    public MDRecipeComponent(ResourceLocation imageLocation, int width, int height, boolean enableAlignCenter) {
+    public MDRecipeComponent(Identifier imageLocation, int width, int height, boolean enableAlignCenter) {
         super(imageLocation, false, enableAlignCenter);
         this.width = width;
         this.height = height;
@@ -121,12 +121,12 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     /**
      * 解析 {@code recipe} 扩展标签。
      *
-     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link ResourceLocation}。</p>
+     * <p>要求参数中包含 {@code id}，其值应为合法的 {@link Identifier}。</p>
      */
     public static MDComponent parse(MDExtensionContext context) {
         String id = context.params().get("id");
         boolean enableAlignCenter = "true".equals(context.params().getOrDefault("center", "true"));
-        ResourceLocation location = ResourceLocation.parse(id);
+        Identifier location = Identifier.parse(id);
         return new MDRecipeComponentProxy(location, enableAlignCenter);
     }
 
@@ -209,9 +209,9 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         /**
          * 文档中声明的配方资源 ID。
          */
-        private final ResourceLocation location;
+        private final Identifier location;
 
-        public MDRecipeComponentProxy(ResourceLocation location, boolean enableAlignCenter) {
+        public MDRecipeComponentProxy(Identifier location, boolean enableAlignCenter) {
             super(Ageratum.location("empty"), 0, 0, enableAlignCenter);
             this.location = location;
         }

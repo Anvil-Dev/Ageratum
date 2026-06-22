@@ -22,7 +22,7 @@ import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -31,16 +31,16 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 public class MDItemComponent extends MDImageComponent {
-    public static final ResourceLocation SLOT_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/slot.png");
+    public static final Identifier SLOT_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/slot.png");
     protected final int width = 32;
     protected final int height = 32;
     protected @Nullable ItemStack itemStack = null;
-    protected final ResourceLocation itemLoc;
+    protected final Identifier itemLoc;
     protected final int count;
     protected final @Nullable JsonElement components;
     protected final boolean showText;
 
-    public MDItemComponent(ResourceLocation itemLoc, int count, @Nullable JsonElement components, boolean showText) {
+    public MDItemComponent(Identifier itemLoc, int count, @Nullable JsonElement components, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.itemLoc = itemLoc;
         this.count = count;
@@ -116,7 +116,7 @@ public class MDItemComponent extends MDImageComponent {
         if (rawId == null || rawId.isBlank()) {
             return new MDTextComponent("[错误：item 需要 id 参数]");
         }
-        ResourceLocation id = ResourceLocation.parse(rawId);
+        Identifier id = Identifier.parse(rawId);
         int count;
         try {
             count = Integer.parseInt(context.params().getOrDefault("count", "1"));

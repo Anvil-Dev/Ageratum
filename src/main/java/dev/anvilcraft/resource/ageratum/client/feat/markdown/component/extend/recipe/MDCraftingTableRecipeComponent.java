@@ -10,7 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.NonNullList;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -29,7 +29,7 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
     /**
      * 工作台组件背景纹理。
      */
-    public static final ResourceLocation CRAFTING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/crafting_table.png");
+    public static final Identifier CRAFTING_TABLE_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/crafting_table.png");
     /**
      * 输入材料列表；客户端世界缺失时为 {@code null}。
      */

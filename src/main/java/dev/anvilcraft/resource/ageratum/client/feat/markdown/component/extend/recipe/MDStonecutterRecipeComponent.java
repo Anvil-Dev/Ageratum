@@ -9,7 +9,7 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.StonecutterRecipe;
@@ -27,7 +27,7 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
     /**
      * 切石机组件背景纹理。
      */
-    public static final ResourceLocation STONECUTTER_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/stonecutter.png");
+    public static final Identifier STONECUTTER_COMPONENT_TEXTURE = Ageratum.location("textures/gui/component/stonecutter.png");
     /**
      * 输入材料；客户端世界缺失时为 {@code null}。
      */

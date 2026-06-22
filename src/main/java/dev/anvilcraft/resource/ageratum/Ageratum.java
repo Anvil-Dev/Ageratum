@@ -4,7 +4,7 @@ import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -66,13 +66,13 @@ public class Ageratum {
     }
 
     /**
-     * 生成以本模组 ID 为命名空间的 {@link ResourceLocation}。
+     * 生成以本模组 ID 为命名空间的 {@link Identifier}。
      *
      * @param path 资源路径（不含命名空间前缀）
      * @return 完整的资源位置
      */
-    public static ResourceLocation location(String path) {
-        return ResourceLocation.fromNamespaceAndPath(Ageratum.MOD_ID, path);
+    public static Identifier location(String path) {
+        return Identifier.fromNamespaceAndPath(Ageratum.MOD_ID, path);
     }
 
     /**
@@ -82,7 +82,7 @@ public class Ageratum {
      * <p>服务端调用：通过网络包通知客户端打开文档。</p>
      * <p>若文档不存在则忽略，不抛出异常。</p>
      */
-    public static void openGuide(ServerPlayer player, ResourceLocation location) {
+    public static void openGuide(ServerPlayer player, Identifier location) {
         AgeratumNetwork.sendOpenGuide(player, location);
     }
 

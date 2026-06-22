@@ -11,7 +11,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -29,11 +29,11 @@ public final class BoundItemGuideNavigator {
 private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_STALE_MS;
 
     @Nullable
-    private static ResourceLocation hoveredDocumentLocation;
+    private static Identifier hoveredDocumentLocation;
     private static long hoverSeenAtMs;
 
     @Nullable
-    private static ResourceLocation holdingDocumentLocation;
+    private static Identifier holdingDocumentLocation;
     private static long holdStartAtMs = -1L;
     private static boolean openedDuringCurrentHold;
 
@@ -50,14 +50,14 @@ private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_S
 
         Minecraft minecraft = Minecraft.getInstance();
         String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-        Optional<ResourceLocation> targetDocument = GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode);
+        Optional<Identifier> targetDocument = GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode);
         if (targetDocument.isEmpty()) {
             hoveredDocumentLocation = null;
             return;
         }
 
         long now = System.currentTimeMillis();
-        ResourceLocation documentLocation = targetDocument.get();
+        Identifier documentLocation = targetDocument.get();
         hoveredDocumentLocation = documentLocation;
         hoverSeenAtMs = now;
 
@@ -120,7 +120,7 @@ private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_S
         }
     }
 
-    private static double getCurrentProgressPercent(long now, ResourceLocation documentLocation, boolean wDown) {
+    private static double getCurrentProgressPercent(long now, Identifier documentLocation, boolean wDown) {
         if (!wDown || holdStartAtMs < 0L || !documentLocation.equals(holdingDocumentLocation)) {
             return 0;
         }

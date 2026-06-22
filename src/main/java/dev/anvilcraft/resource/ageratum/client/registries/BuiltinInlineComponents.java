@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.neoforged.fml.loading.FMLLoader;
@@ -66,7 +66,7 @@ public final class BuiltinInlineComponents {
             if (itemIdStr == null || itemIdStr.isBlank()) {
                 return Component.empty().withStyle(context.baseStyle());
             }
-            ResourceLocation itemId = ResourceLocation.tryParse(itemIdStr.trim());
+            Identifier itemId = Identifier.tryParse(itemIdStr.trim());
             if (itemId == null) {
                 return Component.empty().withStyle(context.baseStyle());
             }
@@ -105,7 +105,7 @@ public final class BuiltinInlineComponents {
                     linkStyle.set(linkStyle.get()
                         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackInfo(stack))));
                 });
-                Optional<ResourceLocation> document = binding.resolveFirstDocument(languageCode);
+                Optional<Identifier> document = binding.resolveFirstDocument(languageCode);
                 if (document.isEmpty()) {
                     if (!FMLLoader.isProduction()) {
                         LOGGER.debug(

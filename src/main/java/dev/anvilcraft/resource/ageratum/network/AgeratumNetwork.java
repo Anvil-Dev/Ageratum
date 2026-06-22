@@ -3,7 +3,7 @@ package dev.anvilcraft.resource.ageratum.network;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.network.ClientPayloadHandler;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -42,7 +42,7 @@ public final class AgeratumNetwork {
     /**
      * 向客户端发送打开文档请求。
      */
-    public static void sendOpenGuide(ServerPlayer serverPlayer, ResourceLocation location) {
+    public static void sendOpenGuide(ServerPlayer serverPlayer, Identifier location) {
         PacketDistributor.sendToPlayer(serverPlayer, new OpenGuidePayload(location));
     }
 }

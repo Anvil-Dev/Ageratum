@@ -25,7 +25,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -61,22 +61,22 @@ import javax.annotation.Nullable;
 @SuppressWarnings("unused")
 public class GuideScreen extends Screen {
     // ...existing texture and size constants, delegated to AgeratumConstants...
-    protected static final ResourceLocation GUIDE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.GUIDE;
+    protected static final Identifier GUIDE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.GUIDE;
     protected static final int GUIDE_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_SIZE;
     protected static final int GUIDE_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_WIDTH;
     protected static final int GUIDE_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_HEIGHT;
-    protected static final ResourceLocation LABEL_PRIMARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_PRIMARY;
-    protected static final ResourceLocation LABEL_SECONDARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_SECONDARY;
+    protected static final Identifier LABEL_PRIMARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_PRIMARY;
+    protected static final Identifier LABEL_SECONDARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_SECONDARY;
     protected static final int LABEL_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_SIZE;
     protected static final int LABEL_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_WIDTH;
     protected static final int LABEL_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_HEIGHT;
-    protected static final ResourceLocation BUTTON_DOWN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_DOWN;
-    protected static final ResourceLocation BUTTON_UP_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_UP;
-    protected static final ResourceLocation BUTTON_CLOSE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_CLOSE;
-    protected static final ResourceLocation BUTTON_SHARE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_SHARE;
-    protected static final ResourceLocation BUTTON_RETURN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_RETURN;
-    protected static final ResourceLocation BUTTON_ADD_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_ADD;
-    protected static final ResourceLocation LABEL_BOOKMARK_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_BOOKMARK;
+    protected static final Identifier BUTTON_DOWN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_DOWN;
+    protected static final Identifier BUTTON_UP_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_UP;
+    protected static final Identifier BUTTON_CLOSE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_CLOSE;
+    protected static final Identifier BUTTON_SHARE_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_SHARE;
+    protected static final Identifier BUTTON_RETURN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_RETURN;
+    protected static final Identifier BUTTON_ADD_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_ADD;
+    protected static final Identifier LABEL_BOOKMARK_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_BOOKMARK;
     protected static final int BUTTON_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.BUTTON_IMAGE_SIZE;
     protected static final int BUTTON_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.BUTTON_IMAGE_WIDTH;
     protected static final int BUTTON_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.BUTTON_IMAGE_HEIGHT;
@@ -98,7 +98,7 @@ public class GuideScreen extends Screen {
     /**
      * 当前文档资源位置。
      */
-    protected final ResourceLocation documentLocation;
+    protected final Identifier documentLocation;
 
     /**
      * 解析后得到的 Markdown 渲染组件列表，按文档顺序排列。
@@ -202,7 +202,7 @@ public class GuideScreen extends Screen {
      */
     protected @Nullable String pendingAnchor;
     protected @Nullable String theNearestAnchor;
-    protected List<ResourceLocation> breadCrumbs;
+    protected List<Identifier> breadCrumbs;
     @Getter
     protected double scale = 1.0f;
     protected double scaleCountDown = 1.0f;
@@ -216,7 +216,7 @@ public class GuideScreen extends Screen {
      * @param document         预解析后的文档
      * @param preview          是否为预览
      */
-    public GuideScreen(ResourceLocation documentLocation, MDDocument document, List<ResourceLocation> breadCrumbs, boolean preview) {
+    public GuideScreen(Identifier documentLocation, MDDocument document, List<Identifier> breadCrumbs, boolean preview) {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
         this.parser = new MarkdownParser();
@@ -956,9 +956,9 @@ public class GuideScreen extends Screen {
     }
 
     private boolean tryReturnToPreviousGuide() {
-        ArrayList<ResourceLocation> remainingBreadCrumbs = new ArrayList<>(this.breadCrumbs);
+        ArrayList<Identifier> remainingBreadCrumbs = new ArrayList<>(this.breadCrumbs);
         while (!remainingBreadCrumbs.isEmpty()) {
-            ResourceLocation previousLocation = remainingBreadCrumbs.removeLast();
+            Identifier previousLocation = remainingBreadCrumbs.removeLast();
             if (previousLocation.equals(this.documentLocation)) {
                 continue;
             }
@@ -1483,7 +1483,7 @@ public class GuideScreen extends Screen {
             String segment = segments[i];
             current = current.children.computeIfAbsent(segment, PreviewDirectoryNode::new);
         }
-        ResourceLocation location = AgeratumClient.toPreviewLocation(fileArgument);
+        Identifier location = AgeratumClient.toPreviewLocation(fileArgument);
         PreviewDocument document = new PreviewDocument(
             fileArgument,
             this.resolvePreviewDocumentTitle(absolutePath, fileArgument, location),
@@ -1497,7 +1497,7 @@ public class GuideScreen extends Screen {
         }
     }
 
-    private String resolvePreviewDocumentTitle(Path absolutePath, String fileArgument, ResourceLocation location) {
+    private String resolvePreviewDocumentTitle(Path absolutePath, String fileArgument, Identifier location) {
         try {
             String markdown = Files.readString(absolutePath, StandardCharsets.UTF_8);
             return this.parser.parseDocument(location, markdown).getTitle(fileArgument);
@@ -1636,7 +1636,7 @@ public class GuideScreen extends Screen {
                 if (!entry.clickable || entry.location == null) {
                     return false;
                 }
-                List<ResourceLocation> breadCrumbs = this.breadCrumbs;
+                List<Identifier> breadCrumbs = this.breadCrumbs;
                 if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
                     breadCrumbs = new ArrayList<>(this.breadCrumbs);
                     breadCrumbs.add(this.documentLocation);
@@ -1750,12 +1750,12 @@ public class GuideScreen extends Screen {
         }
 
         ResourceManager resourceManager = this.minecraft.getResourceManager();
-        ResourceLocation parsed = ResourceLocation.tryParse(target);
+        Identifier parsed = Identifier.tryParse(target);
         if (target.contains(":") && parsed == null) {
             return false;
         }
 
-        Optional<ResourceLocation> resolved;
+        Optional<Identifier> resolved;
         if (parsed != null && target.contains(":")) {
             if (AgeratumClient.isPreviewLocation(parsed)) {
                 resolved = this.resolvePreviewLocation(parsed.getPath(), false);
@@ -1763,7 +1763,7 @@ public class GuideScreen extends Screen {
                 // 显式 namespace: 优先视为文档 fileArgument；若是完整资源路径则直接打开。
                 if (parsed.getPath().startsWith(AgeratumConstants.Guide.ROOT_FOLDER + "/") && parsed.getPath()
                     .endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
-                    List<ResourceLocation> breadCrumbs = this.breadCrumbs;
+                    List<Identifier> breadCrumbs = this.breadCrumbs;
                     if (!parsed.equals(this.documentLocation)) {
                         breadCrumbs = new ArrayList<>(this.breadCrumbs);
                         breadCrumbs.add(this.documentLocation);
@@ -1782,7 +1782,7 @@ public class GuideScreen extends Screen {
             resolved = this.resolveLocationWithoutNamespace(resourceManager, target);
         }
 
-        ArrayList<ResourceLocation> breadCrumbs = new ArrayList<>(this.breadCrumbs);
+        ArrayList<Identifier> breadCrumbs = new ArrayList<>(this.breadCrumbs);
         breadCrumbs.add(this.documentLocation);
         if (resolved.isPresent() && resolved.get().equals(this.documentLocation)) {
             return anchor == null || this.tryScrollToAnchor(anchor);
@@ -1885,9 +1885,9 @@ public class GuideScreen extends Screen {
      * 2) 当前 namespace 根目录
      * 3) ageratum namespace 根目录
      */
-    private Optional<ResourceLocation> resolveLocationWithoutNamespace(ResourceManager resourceManager, String rawTarget) {
+    private Optional<Identifier> resolveLocationWithoutNamespace(ResourceManager resourceManager, String rawTarget) {
         if (AgeratumClient.isPreviewLocation(this.documentLocation)) {
-            Optional<ResourceLocation> previewResolved = this.resolvePreviewLocation(rawTarget, true);
+            Optional<Identifier> previewResolved = this.resolvePreviewLocation(rawTarget, true);
             if (previewResolved.isPresent()) {
                 return previewResolved;
             }
@@ -1900,7 +1900,7 @@ public class GuideScreen extends Screen {
 
         String currentDir = this.getCurrentDirectoryPath();
         String inCurrentDir = RelativePathResolver.resolveWithinBase(currentDir, normalizedTarget);
-        Optional<ResourceLocation> currentDirResolved = GuideDocumentLoader.resolveExistingLocation(
+        Optional<Identifier> currentDirResolved = GuideDocumentLoader.resolveExistingLocation(
             resourceManager,
             this.documentLocation.getNamespace(),
             this.currentLanguageCode,
@@ -1911,7 +1911,7 @@ public class GuideScreen extends Screen {
         }
 
         String inNamespaceRoot = RelativePathResolver.resolveWithinBase("", normalizedTarget);
-        Optional<ResourceLocation> namespaceRootResolved = GuideDocumentLoader.resolveExistingLocation(
+        Optional<Identifier> namespaceRootResolved = GuideDocumentLoader.resolveExistingLocation(
             resourceManager,
             this.documentLocation.getNamespace(),
             this.currentLanguageCode,
@@ -1924,7 +1924,7 @@ public class GuideScreen extends Screen {
         return GuideDocumentLoader.resolveExistingLocation(resourceManager, Ageratum.MOD_ID, this.currentLanguageCode, inNamespaceRoot);
     }
 
-    private Optional<ResourceLocation> resolvePreviewLocation(String rawTarget, boolean resolveRelative) {
+    private Optional<Identifier> resolvePreviewLocation(String rawTarget, boolean resolveRelative) {
         String normalizedTarget = rawTarget.replace('\\', '/').trim();
         if (normalizedTarget.isEmpty()) {
             return Optional.empty();
@@ -1933,7 +1933,7 @@ public class GuideScreen extends Screen {
         if (resolveRelative) {
             String currentDir = this.getCurrentDirectoryPath();
             String inCurrentDir = RelativePathResolver.resolveWithinBase(currentDir, normalizedTarget);
-            Optional<ResourceLocation> inCurrentDirLocation = this.tryResolvePreviewDocument(inCurrentDir);
+            Optional<Identifier> inCurrentDirLocation = this.tryResolvePreviewDocument(inCurrentDir);
             if (inCurrentDirLocation.isPresent()) {
                 return inCurrentDirLocation;
             }
@@ -1943,12 +1943,12 @@ public class GuideScreen extends Screen {
         return this.tryResolvePreviewDocument(inRoot);
     }
 
-    private Optional<ResourceLocation> tryResolvePreviewDocument(String candidate) {
-        ResourceLocation direct = AgeratumClient.toPreviewLocation(candidate);
+    private Optional<Identifier> tryResolvePreviewDocument(String candidate) {
+        Identifier direct = AgeratumClient.toPreviewLocation(candidate);
         if (Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(direct))) {
             return Optional.of(direct);
         }
-        ResourceLocation index = AgeratumClient.toPreviewLocation(candidate + "/index");
+        Identifier index = AgeratumClient.toPreviewLocation(candidate + "/index");
         if (Files.isRegularFile(AgeratumClient.resolvePreviewDocumentPath(index))) {
             return Optional.of(index);
         }
@@ -2087,7 +2087,7 @@ public class GuideScreen extends Screen {
             }
             path.append(split[i]);
         }
-        ResourceLocation location = ResourceLocation.fromNamespaceAndPath(this.documentLocation.getNamespace(), path.toString());
+        Identifier location = Identifier.fromNamespaceAndPath(this.documentLocation.getNamespace(), path.toString());
         PacketDistributor.sendToServer(new ShareGuidePayload(
             location,
             Objects.requireNonNullElse(this.theNearestAnchor, ""),
@@ -2395,7 +2395,7 @@ public class GuideScreen extends Screen {
 
     protected record LabelEntry(
         @Nullable String fileArgument,
-        @Nullable ResourceLocation location,
+        @Nullable Identifier location,
         int level,
         Component title,
         boolean clickable,
@@ -2403,7 +2403,7 @@ public class GuideScreen extends Screen {
     ) {
         public LabelEntry(
             @Nullable String fileArgument,
-            @Nullable ResourceLocation location,
+            @Nullable Identifier location,
             int level,
             Component title,
             boolean clickable
@@ -2426,7 +2426,7 @@ public class GuideScreen extends Screen {
         }
     }
 
-    private record PreviewDocument(String fileArgument, String title, ResourceLocation location) {
+    private record PreviewDocument(String fileArgument, String title, Identifier location) {
     }
 
     /**

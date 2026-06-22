@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -37,7 +37,7 @@ public final class BlockExtensionState extends SelfClosingBlockExtensionState {
      */
     private BlockExtensionState(
         ExtensionBlockType type,
-        ResourceLocation id,
+        Identifier id,
         String rawParams,
         Map<String, String> params,
         String closeTagWithNamespace,
@@ -52,7 +52,7 @@ public final class BlockExtensionState extends SelfClosingBlockExtensionState {
     /**
      * 创建冒号语法（{@code :::}）的扩展块。
      */
-    public static BlockExtensionState colon(ResourceLocation id, String rawParams) {
+    public static BlockExtensionState colon(Identifier id, String rawParams) {
         return new BlockExtensionState(
             ExtensionBlockType.COLON,
             id,
@@ -67,7 +67,7 @@ public final class BlockExtensionState extends SelfClosingBlockExtensionState {
      * 创建标签语法（{@code <...>}）的扩展块。
      */
     public static BlockExtensionState tag(
-        ResourceLocation id,
+        Identifier id,
         String rawParams,
         Map<String, String> params
     ) {

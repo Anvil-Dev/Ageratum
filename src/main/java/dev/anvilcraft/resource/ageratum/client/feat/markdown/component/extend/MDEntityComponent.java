@@ -20,7 +20,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -35,14 +35,14 @@ import javax.annotation.Nullable;
  * 实体展示组件，使用背包界面同款实体预览渲染。
  */
 public final class MDEntityComponent extends MDComponent {
-    private final ResourceLocation entityId;
+    private final Identifier entityId;
     private final CompoundTag entityNbt;
     private final boolean showText;
     private @Nullable Entity cachedEntity;
     private @Nullable SandboxRenderLevel cachedLevel;
     private Vector2f entityBbSize = new Vector2f(1.0F, 1.0F);
 
-    public MDEntityComponent(ResourceLocation entityId, CompoundTag entityNbt, boolean showText) {
+    public MDEntityComponent(Identifier entityId, CompoundTag entityNbt, boolean showText) {
         super(Component.literal("[entity load failed]").withStyle(ChatFormatting.RED));
         this.entityId = entityId;
         this.entityNbt = entityNbt;
@@ -241,9 +241,9 @@ public final class MDEntityComponent extends MDComponent {
             return new MDTextComponent("[错误：entity 需要 id 参数]");
         }
 
-        ResourceLocation id;
+        Identifier id;
         try {
-            id = ResourceLocation.parse(rawId);
+            id = Identifier.parse(rawId);
         } catch (Exception exception) {
             return new MDTextComponent("[错误：entity 的 id 参数格式无效]");
         }

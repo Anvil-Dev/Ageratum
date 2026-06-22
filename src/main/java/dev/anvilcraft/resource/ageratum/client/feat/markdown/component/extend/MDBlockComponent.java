@@ -20,7 +20,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -40,7 +40,7 @@ import javax.annotation.Nullable;
 public class MDBlockComponent extends MDImageComponent {
     private static final int SLOT_SIZE = 32;
 
-    private final ResourceLocation blockLoc;
+    private final Identifier blockLoc;
     private final Map<String, String> stateProps;
     private final boolean showText;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
@@ -48,10 +48,10 @@ public class MDBlockComponent extends MDImageComponent {
         /**
      * 当前悬停的方块关联文档位置，用于 W 键跳转。
      */
-    private @Nullable ResourceLocation hoveredDocLink;
+    private @Nullable Identifier hoveredDocLink;
 private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
-    public MDBlockComponent(ResourceLocation blockLoc, Map<String, String> stateProps, boolean showText) {
+    public MDBlockComponent(Identifier blockLoc, Map<String, String> stateProps, boolean showText) {
         super(MDItemComponent.SLOT_COMPONENT_TEXTURE, false, true);
         this.blockLoc = blockLoc;
         this.stateProps = stateProps;
@@ -212,9 +212,9 @@ GuiGraphics graphics = context.graphics();
             return new MDTextComponent("[错误：block 需要 id 参数]");
         }
 
-        ResourceLocation id;
+        Identifier id;
         try {
-            id = ResourceLocation.parse(rawId);
+            id = Identifier.parse(rawId);
         } catch (Exception e) {
             return new MDTextComponent("[错误：block 的 id 参数格式无效]");
         }

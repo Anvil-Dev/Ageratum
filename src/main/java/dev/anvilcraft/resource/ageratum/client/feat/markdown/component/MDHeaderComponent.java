@@ -7,7 +7,7 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.regex.Matcher;
 import javax.annotation.Nullable;
@@ -38,7 +38,7 @@ public class MDHeaderComponent extends MDComponent {
     /**
      * 尝试从单行文本解析标题组件。
      */
-    public static @Nullable MDHeaderComponent parse(ResourceLocation sourceLocation, String text) {
+    public static @Nullable MDHeaderComponent parse(Identifier sourceLocation, String text) {
         Matcher matcher = AgeratumConstants.Patterns.HEADER_PATTERN.matcher(text);
         if (!matcher.matches()) return null;
         int level = matcher.group(1).length();

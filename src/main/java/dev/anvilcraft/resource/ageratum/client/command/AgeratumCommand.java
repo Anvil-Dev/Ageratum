@@ -23,7 +23,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentMap;
@@ -32,7 +32,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.api.distmarker.Dist;
@@ -90,7 +90,7 @@ public class AgeratumCommand {
                 .then(Commands.literal("item").executes(AgeratumCommand::itemCommand))
                 .then(Commands.literal("preview").executes(AgeratumCommand::preview))
                 .then(Commands.literal("structure")
-                    .then(Commands.argument("template", ResourceLocationArgument.id())
+                    .then(Commands.argument("template", IdentifierArgument.id())
                         .suggests(SUGGEST_TEMPLATES)
                         .then(Commands.argument("pos", BlockPosArgument.blockPos()).executes(AgeratumCommand::structure))))
                 .then(Commands.argument("namespace", StringArgumentType.string())
@@ -118,7 +118,7 @@ public class AgeratumCommand {
             return 0;
         }
 
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(held.getItem());
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(held.getItem());
         StringBuilder refText = new StringBuilder("<ref item=\"").append(itemId).append("\"");
 
         ItemStack defaultStack = new ItemStack(held.getItem());
@@ -189,7 +189,7 @@ public class AgeratumCommand {
             source.sendFailure(Component.translatable("commands.ageratum.preview.disable"));
             return 0;
         }
-        ResourceLocation previewLocation = AgeratumClient.toPreviewLocation(AgeratumConstants.Guide.INDEX_FILE);
+        Identifier previewLocation = AgeratumClient.toPreviewLocation(AgeratumConstants.Guide.INDEX_FILE);
         if (!AgeratumClient.openGuideOnClient(previewLocation, List.of())) {
             source.sendFailure(Component.literal("Preview index.md not found: " + AgeratumClient.resolvePreviewDocumentPath(previewLocation)));
             return 0;
@@ -201,7 +201,7 @@ public class AgeratumCommand {
      * 在指定位置显示结构投影（纯客户端，从资源包中读取模板）。
      */
     public static int structure(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ResourceLocation templateId = ResourceLocationArgument.getId(context, "template");
+        Identifier templateId = IdentifierArgument.getId(context, "template");
         BlockPos pos = BlockPosArgument.getBlockPos(context, "pos");
 
         Optional<StructureTemplate> optional = AgeratumStructureTemplateManager.get(templateId);
@@ -276,10 +276,10 @@ public class AgeratumCommand {
      * 从已解析的文档数据预热命令建议缓存。
      * 在 {@link GuideDocumentCache} 重载完成后调用。
      */
-    public static void warmSuggestionCache(Map<ResourceLocation, ?> documents) {
+    public static void warmSuggestionCache(Map<Identifier, ?> documents) {
         cachedFiles.clear();
         Map<String, Map<String, List<String>>> grouped = new HashMap<>();
-        for (ResourceLocation location : documents.keySet()) {
+        for (Identifier location : documents.keySet()) {
             String path = location.getPath();
             // path: ageratum/<languageCode>/<file>.md
             int prefixEnd = path.indexOf('/', AgeratumConstants.Guide.ROOT_FOLDER.length() + 1);

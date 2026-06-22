@@ -8,7 +8,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>在资源重载时扫描并缓存所有资源包中 {@code assets/<namespace>/ageratum/} 目录下的
  * {@code .nbt} 文件。</p>
  *
- * <p>模板 ResourceLocation 格式为 {@code namespace:relative/path}（相对于 {@code ageratum/}
+ * <p>模板 Identifier 格式为 {@code namespace:relative/path}（相对于 {@code ageratum/}
  * 目录，不含 {@code .nbt} 后缀）。</p>
  *
  * <p>例如：{@code assets/minecraft/ageratum/village/house.nbt} → {@code minecraft:village/house}</p>
@@ -48,12 +48,12 @@ public final class AgeratumStructureTemplateManager {
     /**
      * 原始 NBT 数据，在资源重载时以原子方式整体替换。
      */
-    private static volatile Map<ResourceLocation, CompoundTag> nbtCache = Map.of();
+    private static volatile Map<Identifier, CompoundTag> nbtCache = Map.of();
 
     /**
      * 编译后的 StructureTemplate 懒加载缓存，资源重载时清空。
      */
-    private static final Map<ResourceLocation, StructureTemplate> templateCache = new ConcurrentHashMap<>();
+    private static final Map<Identifier, StructureTemplate> templateCache = new ConcurrentHashMap<>();
 
     private AgeratumStructureTemplateManager() {
     }
@@ -63,7 +63,7 @@ public final class AgeratumStructureTemplateManager {
     // ──────────────────────────────────────────────────────────────────────────
 
     /**
-     * 根据 ResourceLocation 获取结构模板。
+     * 根据 Identifier 获取结构模板。
      *
      * <p>首次调用时从缓存的 CompoundTag 编译模板；编译结果会被缓存供后续调用复用。
      * 调用时需要游戏关卡已加载（{@code Minecraft.getInstance().level != null}）。</p>
@@ -71,7 +71,7 @@ public final class AgeratumStructureTemplateManager {
      * @param location 模板标识，格式见类文档
      * @return 模板，若未找到或当前无法编译则为 empty
      */
-    public static Optional<StructureTemplate> get(ResourceLocation location) {
+    public static Optional<StructureTemplate> get(Identifier location) {
         StructureTemplate cached = templateCache.get(location);
         if (cached != null) {
             return Optional.of(cached);
@@ -101,9 +101,9 @@ public final class AgeratumStructureTemplateManager {
     }
 
     /**
-     * 返回所有已发现的结构模板 ResourceLocation 集合（不可修改视图）。
+     * 返回所有已发现的结构模板 Identifier 集合（不可修改视图）。
      */
-    public static Set<ResourceLocation> listAll() {
+    public static Set<Identifier> listAll() {
         return nbtCache.keySet();
     }
 
@@ -119,9 +119,9 @@ public final class AgeratumStructureTemplateManager {
     // ──────────────────────────────────────────────────────────────────────────
 
     private static final PreparableReloadListener RELOAD_LISTENER =
-        new SimplePreparableReloadListener<Map<ResourceLocation, CompoundTag>>() {
+        new SimplePreparableReloadListener<Map<Identifier, CompoundTag>>() {
             @Override
-            protected Map<ResourceLocation, CompoundTag> prepare(
+            protected Map<Identifier, CompoundTag> prepare(
                 ResourceManager manager,
                 ProfilerFiller profiler
             ) {
@@ -129,7 +129,7 @@ public final class AgeratumStructureTemplateManager {
                 int prefixLen = prefix.length();
                 int nbtSuffixLen = ".nbt".length();
 
-                Map<ResourceLocation, CompoundTag> result = new HashMap<>();
+                Map<Identifier, CompoundTag> result = new HashMap<>();
 
                 manager.listResources(
                     ASSET_FOLDER,
@@ -143,7 +143,7 @@ public final class AgeratumStructureTemplateManager {
                     }
 
                     String relative = rawPath.substring(prefixLen, rawPath.length() - nbtSuffixLen);
-                    ResourceLocation location = ResourceLocation.fromNamespaceAndPath(rl.getNamespace(), relative);
+                    Identifier location = Identifier.fromNamespaceAndPath(rl.getNamespace(), relative);
 
                     try (InputStream stream = resource.open()) {
                         CompoundTag tag = NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
@@ -159,7 +159,7 @@ public final class AgeratumStructureTemplateManager {
 
             @Override
             protected void apply(
-                Map<ResourceLocation, CompoundTag> data,
+                Map<Identifier, CompoundTag> data,
                 ResourceManager manager,
                 ProfilerFiller profiler
             ) {

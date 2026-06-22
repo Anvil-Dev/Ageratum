@@ -18,7 +18,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import org.joml.Matrix4f;
 
@@ -41,9 +41,9 @@ import javax.annotation.Nullable;
 @Getter
 @Slf4j
 public class MDImageComponent extends MDComponent {
-    private static final Map<ResourceLocation, Size> IMAGE_SIZE_CACHE = new HashMap<>();
-    private static final Map<ResourceLocation, PreviewImageState> PREVIEW_IMAGE_CACHE = new HashMap<>();
-    protected final ResourceLocation imageLocation;
+    private static final Map<Identifier, Size> IMAGE_SIZE_CACHE = new HashMap<>();
+    private static final Map<Identifier, PreviewImageState> PREVIEW_IMAGE_CACHE = new HashMap<>();
+    protected final Identifier imageLocation;
     protected final boolean shouldScaleUp;
     protected final boolean enableAlignCenter;
     protected float scale = 1.0f;
@@ -51,21 +51,21 @@ public class MDImageComponent extends MDComponent {
     /**
      * 创建图片组件。
      */
-    public MDImageComponent(ResourceLocation imageLocation) {
+    public MDImageComponent(Identifier imageLocation) {
         this(imageLocation, false);
     }
 
     /**
      * 创建图片组件。
      */
-    public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp) {
+    public MDImageComponent(Identifier imageLocation, boolean shouldScaleUp) {
         this(imageLocation, shouldScaleUp, false);
     }
 
     /**
      * 创建图片组件。
      */
-    public MDImageComponent(ResourceLocation imageLocation, boolean shouldScaleUp, boolean enableAlignCenter) {
+    public MDImageComponent(Identifier imageLocation, boolean shouldScaleUp, boolean enableAlignCenter) {
         super(FormattedText.EMPTY);
         this.imageLocation = imageLocation;
         this.shouldScaleUp = shouldScaleUp;
@@ -75,7 +75,7 @@ public class MDImageComponent extends MDComponent {
     /**
      * 尝试将一行文本解析为图片组件。
      */
-    public static @Nullable MDImageComponent parse(ResourceLocation sourceLocation, String text) {
+    public static @Nullable MDImageComponent parse(Identifier sourceLocation, String text) {
         Matcher matcher = AgeratumConstants.Patterns.IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return MDImageComponent.fallbackParse(sourceLocation, text);
@@ -86,14 +86,14 @@ public class MDImageComponent extends MDComponent {
             file = file.substring(1);
         }
         try {
-            ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
+            Identifier imageLocation = Identifier.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
             return new MDImageComponent(imageLocation);
         } catch (RuntimeException exception) {
             return null;
         }
     }
 
-    public static @Nullable MDImageComponent fallbackParse(ResourceLocation sourceLocation, String text) {
+    public static @Nullable MDImageComponent fallbackParse(Identifier sourceLocation, String text) {
         Matcher matcher = AgeratumConstants.Patterns.FALLBACK_IMAGE_PATTERN.matcher(text);
         if (!matcher.matches()) {
             return null;
@@ -107,7 +107,7 @@ public class MDImageComponent extends MDComponent {
         }
     }
 
-    private static String getParsedPath(ResourceLocation sourceLocation, String path) {
+    private static String getParsedPath(Identifier sourceLocation, String path) {
         String[] splitPath = path.split("/");
         String locationPath = sourceLocation.getPath();
         LinkedList<String> splitLocationPathList = new LinkedList<>(List.of(locationPath.split("/")));
@@ -166,7 +166,7 @@ public class MDImageComponent extends MDComponent {
 
     protected void innerBlit(
         GuiGraphics guiGraphics,
-        ResourceLocation atlasLocation,
+        Identifier atlasLocation,
         int width,
         int height,
         int textureWidth,

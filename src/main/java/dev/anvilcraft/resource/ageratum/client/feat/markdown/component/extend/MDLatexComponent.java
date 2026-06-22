@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLLoader;
 
 import java.io.InputStream;
@@ -49,7 +49,7 @@ public class MDLatexComponent extends MDImageComponent {
     private final float formulaScale;
     private final String formula;
 
-    private MDLatexComponent(String stateKey, ResourceLocation textureLocation, String formula, float formulaScale, boolean center) {
+    private MDLatexComponent(String stateKey, Identifier textureLocation, String formula, float formulaScale, boolean center) {
         super(textureLocation, false, center);
         this.stateKey = stateKey;
         this.formulaScale = formulaScale;
@@ -232,7 +232,7 @@ public class MDLatexComponent extends MDImageComponent {
     private static MDComponent createFromFormula(String formula, float scale, int dpi, String color, boolean center) {
         String url = buildUrl(formula, dpi, color);
         String key = sha1Hex("formula=" + formula + "&dpi=" + dpi + "&color=" + color);
-        ResourceLocation textureLocation = ResourceLocation.fromNamespaceAndPath(Ageratum.MOD_ID, "latex/" + key);
+        Identifier textureLocation = Identifier.fromNamespaceAndPath(Ageratum.MOD_ID, "latex/" + key);
         Path cacheFile = getCacheDir().resolve(key + ".png");
         TEXTURE_STATES.computeIfAbsent(key, ignored -> new LatexTextureState(textureLocation, cacheFile, url));
         return new MDLatexComponent(key, textureLocation, formula, scale, center);
@@ -276,13 +276,13 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static final class LatexTextureState {
-        private final ResourceLocation textureLocation;
+        private final Identifier textureLocation;
         private final Path cacheFile;
         private final String url;
         private volatile LatexStatus status = LatexStatus.NEW;
         private volatile Size size = PLACEHOLDER_SIZE;
 
-        private LatexTextureState(ResourceLocation textureLocation, Path cacheFile, String url) {
+        private LatexTextureState(Identifier textureLocation, Path cacheFile, String url) {
             this.textureLocation = textureLocation;
             this.cacheFile = cacheFile;
             this.url = url;

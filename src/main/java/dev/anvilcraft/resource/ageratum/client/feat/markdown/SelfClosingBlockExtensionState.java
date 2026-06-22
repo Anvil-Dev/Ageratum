@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -13,7 +13,7 @@ import java.util.Map;
  * 提供与 {@link BlockExtensionState} 兼容的接口以便统一处理。</p>
  */
 public class SelfClosingBlockExtensionState {
-    private final ResourceLocation id;
+    private final Identifier id;
     private final String rawParams;
     private final Map<String, String> params;
 
@@ -21,7 +21,7 @@ public class SelfClosingBlockExtensionState {
      * 创建自闭合扩展块状态。
      */
     public SelfClosingBlockExtensionState(
-        ResourceLocation id,
+        Identifier id,
         String rawParams,
         Map<String, String> params
     ) {
@@ -33,7 +33,7 @@ public class SelfClosingBlockExtensionState {
     /**
      * 获取扩展组件 ID。
      */
-    public ResourceLocation id() {
+    public Identifier id() {
         return this.id;
     }
 

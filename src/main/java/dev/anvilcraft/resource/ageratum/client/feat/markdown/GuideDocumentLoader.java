@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
@@ -42,16 +42,16 @@ public final class GuideDocumentLoader {
     }
 
     /**
-     * 将命名空间与文件参数组合为标准 {@link ResourceLocation}。
+     * 将命名空间与文件参数组合为标准 {@link Identifier}。
      *
      * <p>该重载默认使用 {@link #DEFAULT_LANGUAGE_CODE} 目录。</p>
      */
-    public static ResourceLocation toDocumentLocation(String namespace, String fileArgument) {
+    public static Identifier toDocumentLocation(String namespace, String fileArgument) {
         return toDocumentLocation(namespace, DEFAULT_LANGUAGE_CODE, fileArgument);
     }
 
     /**
-     * 将命名空间、语言代码与文件参数组合为标准 {@link ResourceLocation}。
+     * 将命名空间、语言代码与文件参数组合为标准 {@link Identifier}。
      *
      * <p>文件名会经过规范化处理（见 {@link #normalizeFileArgument}）:
      * 缺省时使用 {@code index}，自动补全 {@code .md} 后缀。</p>
@@ -62,28 +62,28 @@ public final class GuideDocumentLoader {
      * @return 指向该文档的资源位置，格式为
      * {@code namespace:ageratum/<languageCode>/<normalizedFile>.md}
      */
-    public static ResourceLocation toDocumentLocation(String namespace, String languageCode, @Nullable String fileArgument) {
+    public static Identifier toDocumentLocation(String namespace, String languageCode, @Nullable String fileArgument) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
         String normalizedFile = normalizeFileArgument(fileArgument);
-        return ResourceLocation.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/" + normalizedFile);
+        return Identifier.fromNamespaceAndPath(namespace, GUIDE_ROOT + "/" + normalizedLanguage + "/" + normalizedFile);
     }
 
     /**
      * 按“当前语言 -> en_us”顺序解析第一个存在的文档位置。
      */
-    public static Optional<ResourceLocation> resolveExistingLocation(
+    public static Optional<Identifier> resolveExistingLocation(
         ResourceManager resourceManager,
         String namespace,
         String languageCode,
         @Nullable String fileArgument
     ) {
         String normalizedLanguage = normalizeLanguageCode(languageCode);
-        List<ResourceLocation> candidates = new ArrayList<>();
+        List<Identifier> candidates = new ArrayList<>();
         candidates.add(toDocumentLocation(namespace, normalizedLanguage, fileArgument));
         if (!DEFAULT_LANGUAGE_CODE.equals(normalizedLanguage)) {
             candidates.add(toDocumentLocation(namespace, DEFAULT_LANGUAGE_CODE, fileArgument));
         }
-        for (ResourceLocation location : candidates) {
+        for (Identifier location : candidates) {
             if (exists(resourceManager, location)) {
                 return Optional.of(location);
             }
@@ -98,7 +98,7 @@ public final class GuideDocumentLoader {
      * @param location        要检查的资源位置
      * @return 存在返回 {@code true}，否则返回 {@code false}
      */
-    public static boolean exists(ResourceManager resourceManager, ResourceLocation location) {
+    public static boolean exists(ResourceManager resourceManager, Identifier location) {
         return resourceManager.getResource(location).isPresent();
     }
 
@@ -111,7 +111,7 @@ public final class GuideDocumentLoader {
      * @throws IllegalArgumentException 若文档不存在
      * @throws UncheckedIOException     若读取时发生 I/O 错误
      */
-    public static String read(ResourceManager resourceManager, ResourceLocation location) {
+    public static String read(ResourceManager resourceManager, Identifier location) {
         Resource resource = resourceManager.getResource(location)
             .orElseThrow(() -> new IllegalArgumentException("Missing guide: " + location));
         try (var stream = resource.open()) {
@@ -162,13 +162,13 @@ public final class GuideDocumentLoader {
 
     private static List<String> listNamespacesForRoot(ResourceManager resourceManager, String rootPrefix) {
         String rootDirectory = rootPrefix.substring(0, rootPrefix.length() - 1);
-        Map<ResourceLocation, Resource> files = resourceManager.listResources(
+        Map<Identifier, Resource> files = resourceManager.listResources(
             rootDirectory,
             location -> location.getPath().startsWith(rootPrefix)
                         && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
         );
         Set<String> namespaces = new TreeSet<>();
-        for (ResourceLocation location : files.keySet()) {
+        for (Identifier location : files.keySet()) {
             namespaces.add(location.getNamespace());
         }
         return new ArrayList<>(namespaces);
@@ -176,14 +176,14 @@ public final class GuideDocumentLoader {
 
     private static List<String> listFilesForRoot(ResourceManager resourceManager, String namespace, String rootPrefix) {
         String rootDirectory = rootPrefix.substring(0, rootPrefix.length() - 1);
-        Map<ResourceLocation, Resource> files = resourceManager.listResources(
+        Map<Identifier, Resource> files = resourceManager.listResources(
             rootDirectory,
             location -> location.getNamespace().equals(namespace)
                         && location.getPath().startsWith(rootPrefix)
                         && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
         );
         List<String> result = new ArrayList<>();
-        for (ResourceLocation location : files.keySet()) {
+        for (Identifier location : files.keySet()) {
             String path = location.getPath();
             String relativePath = path.substring(rootPrefix.length());
             if (relativePath.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {

@@ -5,7 +5,7 @@ import dev.anvilcraft.resource.ageratum.client.command.AgeratumCommand;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -37,9 +37,9 @@ public final class GuideDocumentCache {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String GUIDE_ROOT = AgeratumConstants.Guide.ROOT_FOLDER;
 
-    private static volatile Map<ResourceLocation, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
+    private static volatile Map<Identifier, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
     private static volatile Map<NavigationTreeKey, NavigationTree> NAVIGATION_TREE_CACHE = Map.of();
-    private static volatile Map<ResourceLocation, List<ItemDocumentBinding>> ITEM_DOCUMENT_CACHE = Map.of();
+    private static volatile Map<Identifier, List<ItemDocumentBinding>> ITEM_DOCUMENT_CACHE = Map.of();
 
     
 
@@ -54,16 +54,16 @@ private static final PreparableReloadListener RELOAD_LISTENER =
             @Override
             protected PreparedGuideData prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
                 MarkdownParser parser = new MarkdownParser();
-                Map<ResourceLocation, Resource> resources = resourceManager.listResources(
+                Map<Identifier, Resource> resources = resourceManager.listResources(
                     GUIDE_ROOT,
                     location -> location.getPath().startsWith(GUIDE_ROOT + "/")
                                 && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
                 // 第一趟：读取文件、提取 front matter、建立物品绑定缓存
-                Map<ResourceLocation, String> rawMarkdowns = new LinkedHashMap<>();
-                Map<ResourceLocation, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
-                for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
-                    ResourceLocation location = entry.getKey();
+                Map<Identifier, String> rawMarkdowns = new LinkedHashMap<>();
+                Map<Identifier, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
+                for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
+                    Identifier location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
                         rawMarkdowns.put(location, markdown);
@@ -84,10 +84,10 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                 ITEM_DOCUMENT_CACHE = Map.copyOf(freezeItemDocuments(itemDocuments));
 
                 // 第二趟：完整解析文档，<ref> 可查新的物品绑定缓存
-                Map<ResourceLocation, MDDocument> prepared = new HashMap<>();
+                Map<Identifier, MDDocument> prepared = new HashMap<>();
                 Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
-                for (Map.Entry<ResourceLocation, String> entry : rawMarkdowns.entrySet()) {
-                    ResourceLocation location = entry.getKey();
+                for (Map.Entry<Identifier, String> entry : rawMarkdowns.entrySet()) {
+                    Identifier location = entry.getKey();
                     try {
                         MDDocument document = parser.parseDocument(location, entry.getValue());
                         prepared.put(location, document);
@@ -113,11 +113,11 @@ private static final PreparableReloadListener RELOAD_LISTENER =
             }
         };
 
-    private static Map<ResourceLocation, List<ItemDocumentBinding>> freezeItemDocuments(
-        Map<ResourceLocation, List<ItemDocumentBinding>> source
+    private static Map<Identifier, List<ItemDocumentBinding>> freezeItemDocuments(
+        Map<Identifier, List<ItemDocumentBinding>> source
     ) {
-        Map<ResourceLocation, List<ItemDocumentBinding>> result = new HashMap<>();
-        for (Map.Entry<ResourceLocation, List<ItemDocumentBinding>> entry : source.entrySet()) {
+        Map<Identifier, List<ItemDocumentBinding>> result = new HashMap<>();
+        for (Map.Entry<Identifier, List<ItemDocumentBinding>> entry : source.entrySet()) {
             List<ItemDocumentBinding> sorted = new ArrayList<>(entry.getValue());
             sorted.sort(Comparator
                 .comparing((ItemDocumentBinding binding) -> binding.location().toString())
@@ -129,7 +129,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
 
     private static void registerNavigationNode(
         Map<NavigationTreeKey, MutableDirectoryNode> treeRoots,
-        ResourceLocation location,
+        Identifier location,
         MDDocument document
     ) {
         String path = location.getPath();
@@ -190,7 +190,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
     /**
      * 根据文档资源位置读取预解析文档。
      */
-    public static Optional<MDDocument> getParsedDocument(ResourceLocation location) {
+    public static Optional<MDDocument> getParsedDocument(Identifier location) {
         MDDocument document = PARSED_DOCUMENT_CACHE.get(location);
         return Optional.ofNullable(document);
     }
@@ -206,18 +206,18 @@ private static final PreparableReloadListener RELOAD_LISTENER =
     /**
      * 根据物品栈返回文档位置（当前语言优先，其次 en_us，最后回退列表中的第一个）。
      */
-    public static Optional<ResourceLocation> getFirstDocumentByItemStack(ItemStack stack, @Nullable String languageCode) {
+    public static Optional<Identifier> getFirstDocumentByItemStack(ItemStack stack, @Nullable String languageCode) {
         if (stack.isEmpty()) {
             return Optional.empty();
         }
 
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         List<ItemDocumentBinding> bindings = ITEM_DOCUMENT_CACHE.get(itemId);
         if (bindings == null || bindings.isEmpty()) {
             return Optional.empty();
         }
 
-        List<ResourceLocation> matchedLocations = new ArrayList<>();
+        List<Identifier> matchedLocations = new ArrayList<>();
         for (ItemDocumentBinding binding : bindings) {
             if (!binding.binding().matches(stack) || matchedLocations.contains(binding.location())) {
                 continue;
@@ -232,10 +232,10 @@ private static final PreparableReloadListener RELOAD_LISTENER =
         return selectPreferredLocation(matchedLocations, languageCode);
     }
 
-    private static Optional<ResourceLocation> selectPreferredLocation(List<ResourceLocation> locations, @Nullable String languageCode) {
+    private static Optional<Identifier> selectPreferredLocation(List<Identifier> locations, @Nullable String languageCode) {
         String preferredLanguage = normalizeLanguageCode(languageCode);
         if (!preferredLanguage.isEmpty()) {
-            for (ResourceLocation location : locations) {
+            for (Identifier location : locations) {
                 if (preferredLanguage.equals(extractLanguageCode(location))) {
                     return Optional.of(location);
                 }
@@ -243,7 +243,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
         }
 
         if (!GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(preferredLanguage)) {
-            for (ResourceLocation location : locations) {
+            for (Identifier location : locations) {
                 if (GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(extractLanguageCode(location))) {
                     return Optional.of(location);
                 }
@@ -253,7 +253,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
         return Optional.of(locations.getFirst());
     }
 
-    private static String extractLanguageCode(ResourceLocation location) {
+    private static String extractLanguageCode(Identifier location) {
         String path = location.getPath().replace('\\', '/');
         String prefix = GUIDE_ROOT + "/";
         if (!path.startsWith(prefix)) {
@@ -270,18 +270,18 @@ private static final PreparableReloadListener RELOAD_LISTENER =
     /**
      * 根据文档资源位置读取预解析组件。
      */
-    public static Optional<List<MDComponent>> getParsedComponents(ResourceLocation location) {
+    public static Optional<List<MDComponent>> getParsedComponents(Identifier location) {
         return getParsedDocument(location).map(MDDocument::components).map(ArrayList::new);
     }
 
     private record PreparedGuideData(
-        Map<ResourceLocation, MDDocument> documents,
+        Map<Identifier, MDDocument> documents,
         Map<NavigationTreeKey, NavigationTree> navigationTrees,
-        Map<ResourceLocation, List<ItemDocumentBinding>> itemDocuments
+        Map<Identifier, List<ItemDocumentBinding>> itemDocuments
     ) {
     }
 
-    private record ItemDocumentBinding(ResourceLocation location, GuideItemBinding binding) {
+    private record ItemDocumentBinding(Identifier location, GuideItemBinding binding) {
     }
 
     private record NavigationTreeKey(String namespace, String languageCode) {
@@ -305,11 +305,11 @@ private static final PreparableReloadListener RELOAD_LISTENER =
     public record NavigationDocument(
         String fileArgument,
         String title,
-        ResourceLocation location,
+        Identifier location,
         int weight,
         @Nullable String color
     ) {
-        public NavigationDocument(String fileArgument, String title, ResourceLocation location) {
+        public NavigationDocument(String fileArgument, String title, Identifier location) {
             this(fileArgument, title, location, 0, null);
         }
     }
@@ -326,7 +326,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
             this.namespace = namespace;
             this.name = name;
         }
-        private void insert(String fileArgument, ResourceLocation location, String title, int weight, @Nullable String color) {
+        private void insert(String fileArgument, Identifier location, String title, int weight, @Nullable String color) {
             String[] segments = fileArgument.split("/");
             MutableDirectoryNode current = this;
             for (int i = 0; i < segments.length - 1; i++) {
