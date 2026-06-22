@@ -4,7 +4,7 @@
 
 <img src=".idea/icon.png" style="width: 128px; height: 128px" alt="Ageratum Logo">
 
-![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/built-with/java21_vector.svg)
+![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/built-with/java25_vector.svg)
 ![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/neoforge_vector.svg)
 
 ![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/unsupported/fabric_vector.svg)
@@ -227,9 +227,7 @@ documents:
 Ageratum.openGuide(ResourceLocation location);
 
 // Server: notify client via network packet
-Ageratum.
-
-openGuide(ResourceLocation location);
+Ageratum.openGuide(ResourceLocation location);
 ```
 
 ## Project Structure
@@ -315,9 +313,7 @@ public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionCompo
     );
 
 // In your mod constructor
-EXT_COMPONENT_FACTORIES.
-
-register(modEventBus);
+EXT_COMPONENT_FACTORIES.register(modEventBus);
 ```
 
 #### Register Custom Inline Style Parser
