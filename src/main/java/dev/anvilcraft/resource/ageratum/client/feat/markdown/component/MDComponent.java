@@ -1,14 +1,16 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
+import dev.anvilcraft.resource.ageratum.mixin.accessor.StringSplitterAccessor;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.ClickEvent;
@@ -16,9 +18,13 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.FormattedCharSink;
 import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.function.TriFunction;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.joml.Matrix3x2fStack;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +58,6 @@ public abstract class MDComponent {
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
-    private static final int BROKEN_LINK_COLOR = AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
@@ -61,13 +66,6 @@ public abstract class MDComponent {
      */
     @SuppressWarnings("JavadocDeclaration")
     protected final FormattedText text;
-
-
-    /**
-     * 渲染时实际使用的文本，若不为 null 则覆盖 {@link #text}。
-     * 用于 post-process 后的文本替换（如断链红色标记）。
-     */
-    private @Nullable FormattedText effectiveText;
 
     /**
      * 使用原始文本创建组件，文本会按默认规则进行 Markdown 内联解析。
@@ -84,34 +82,18 @@ public abstract class MDComponent {
     }
 
     /**
-     * 设置渲染时覆盖文本（null 表示使用原始 text）。
-     */
-    public void setEffectiveText(@Nullable FormattedText effectiveText) {
-        this.effectiveText = effectiveText;
-    }
-
-    /**
-     * 获取渲染时实际使用的 FormattingText。
-     */
-    protected FormattedText getEffectiveText() {
-        return this.effectiveText != null ? this.effectiveText : this.text;
-    }
-
-    /**
      * 在给定区域内渲染组件内容。
      */
     public void extractRenderState(MDRenderContext context) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
-        FormattedText textToRender = this.getEffectiveText();
-        List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
-        int line = 0;
+        GuiGraphicsExtractor guiGraphics = context.graphics();
+        List<FormattedCharSequence> split = minecraft.font.split(this.text, maxX);
+        Matrix3x2fStack pose = guiGraphics.pose();
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            GuiGraphicsExtractor.text(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
-            line++;
+            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
             maxY -= minecraft.font.lineHeight;
         }
     }
@@ -138,8 +120,7 @@ public abstract class MDComponent {
      * 计算组件在指定宽度下的渲染高度。
      */
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        FormattedText textToRender = this.getEffectiveText();
-        return minecraft.font.split(textToRender, maxX).size() * minecraft.font.lineHeight;
+        return minecraft.font.split(this.text, maxX).size() * minecraft.font.lineHeight;
     }
 
     /**
@@ -149,8 +130,7 @@ public abstract class MDComponent {
      */
     @Nullable
     public Style getStyleAtPosition(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
-        FormattedText textToRender = this.getEffectiveText();
-        return this.getStyleAtFormattedTextPosition(minecraft, textToRender, mouseX, mouseY, maxX);
+        return this.getStyleAtFormattedTextPosition(minecraft, this.text, mouseX, mouseY, maxX);
     }
 
     /**
@@ -176,15 +156,7 @@ public abstract class MDComponent {
      *
      * @return 若组件消费事件返回 {@code true}
      */
-    public boolean mouseDragged(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int button,
-        double dragX,
-        double dragY,
-        int maxX
-    ) {
+    public boolean mouseDragged(Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX) {
         return false;
     }
 
@@ -202,15 +174,7 @@ public abstract class MDComponent {
      *
      * @return 若组件消费事件返回 {@code true}
      */
-    public boolean keyPressed(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int keyCode,
-        int scanCode,
-        int modifiers,
-        int maxX
-    ) {
+    public boolean keyPressed(Minecraft minecraft, double mouseX, double mouseY, int keyCode, int scanCode, int modifiers, int maxX) {
         return false;
     }
 
@@ -235,9 +199,7 @@ public abstract class MDComponent {
      * 根据格式化文本在指定宽度下的换行结果获取命中的文本样式。
      */
     @Nullable
-    protected final Style getStyleAtFormattedTextPosition(
-        Minecraft minecraft, FormattedText text, double mouseX, double mouseY, int maxX
-    ) {
+    protected final Style getStyleAtFormattedTextPosition(Minecraft minecraft, FormattedText text, double mouseX, double mouseY, int maxX) {
         if (mouseX < 0 || mouseY < 0 || maxX <= 0) {
             return null;
         }
@@ -249,7 +211,7 @@ public abstract class MDComponent {
         }
 
         FormattedCharSequence line = lines.get(lineIndex);
-        return minecraft.font.getSplitter().componentStyleAtWidth(line, (int) Math.floor(mouseX));
+        return MDComponent.componentStyleAtWidth(minecraft.font.getSplitter(), line, (int) Math.floor(mouseX));
     }
 
     /**
@@ -421,29 +383,11 @@ public abstract class MDComponent {
      * 为链接文本构造带点击事件的样式。
      */
     private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
-        int color = resolveLinkColor(target);
-        Style style = parentStyle.withUnderlined(true).withColor(color);
+        Style style = parentStyle.withUnderlined(true).withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR);
         if (target == null || target.isBlank()) {
             return style;
         }
-        return style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, target));
-    }
-
-    /**
-     * 解析链接颜色：若为内部文档链接且目标不存在，返回断链红色。
-     */
-    private static int resolveLinkColor(@Nullable String target) {
-        if (target == null || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:")) {
-            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
-        }
-        Identifier docLocation = Identifier.tryParse(target);
-        if (docLocation == null || !GuideDocumentCache.isCacheLoaded()) {
-            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
-        }
-        if (GuideDocumentCache.getParsedDocument(docLocation).isEmpty()) {
-            return BROKEN_LINK_COLOR;
-        }
-        return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
+        return style.withClickEvent(new ClickEvent.OpenUrl(URI.create(target)));
     }
 
     /**
@@ -577,9 +521,9 @@ public abstract class MDComponent {
      * <p>此类可保存两类工厂之一：
      * <ul>
      *   <li>传统的 {@code BiFunction<Style, Matcher, Style>}：用于在解析时返回一个新的
-     *   {@link Style}，随后由解析器对标签内部文本递归解析并应用该样式；</li>
+     *   {@link net.minecraft.network.chat.Style}，随后由解析器对标签内部文本递归解析并应用该样式；</li>
      *   <li>新的 {@code TriFunction<String, Style, Matcher, FormattedText>}：直接基于原始
-     *   内部字符串 (innerText)、父样式与匹配器生产最终的 {@link FormattedText}，
+     *   内部字符串 (innerText)、父样式与匹配器生产最终的 {@link net.minecraft.network.chat.FormattedText}，
      *   这使得解析器可以一次性生成多段文本（例如按字符的渐变色片段）。</li>
      * </ul>
      *
@@ -661,12 +605,7 @@ public abstract class MDComponent {
     }
 
     private enum MarkdownTokenType {
-        IMAGE,
-        LINK,
-        STRIKE,
-        BOLD,
-        ITALIC,
-        AUTOLINK
+        IMAGE, LINK, STRIKE, BOLD, ITALIC, AUTOLINK
     }
 
     private record MarkdownTokenMatch(MarkdownTokenType type, int start, int end, String content) {
@@ -699,9 +638,9 @@ public abstract class MDComponent {
                 continue;
             }
 
-            if (earliest == null
-                || match.start() < earliest.start()
-                || (match.start() == earliest.start() && compareInlineStyleParser(parserId, parser.priority(), earliest) < 0)) {
+            if (earliest == null || match.start() < earliest.start() || (
+                match.start() == earliest.start() && compareInlineStyleParser(parserId, parser.priority(), earliest) < 0
+            )) {
                 earliest = new ParserMatch(parserId, parser.priority(), match);
             }
         }
@@ -791,9 +730,47 @@ public abstract class MDComponent {
         return mouseX >= startX && mouseX <= startX + width && mouseY >= startY && mouseY <= startY + height;
     }
 
-    protected void renderTooltip(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+    protected void extractTooltipRenderState(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
+        }
+    }
+
+    @Nullable
+    public static Style componentStyleAtWidth(StringSplitter stringSplitter, FormattedCharSequence content, int maxWidth) {
+        WidthLimitedCharSink stringsplitter$widthlimitedcharsink = new WidthLimitedCharSink(stringSplitter, maxWidth);
+        MutableObject<Style> mutableobject = new MutableObject<>();
+        content.accept((positionInCurrentSequence, style, codePoint) -> {
+            if (!stringsplitter$widthlimitedcharsink.accept(positionInCurrentSequence, style, codePoint)) {
+                mutableobject.setValue(style);
+                return false;
+            } else {
+                return true;
+            }
+        });
+        return mutableobject.get();
+    }
+
+    private static class WidthLimitedCharSink implements FormattedCharSink {
+        StringSplitter stringSplitter;
+        private float maxWidth;
+        @Getter
+        private int position;
+
+        public WidthLimitedCharSink(StringSplitter stringSplitter, float maxWidth) {
+            this.stringSplitter = stringSplitter;
+            this.maxWidth = maxWidth;
+        }
+
+        @Override
+        public boolean accept(int positionInCurrentSequence, Style style, int codePoint) {
+            this.maxWidth = this.maxWidth - ((StringSplitterAccessor) this.stringSplitter).widthProvider().getWidth(codePoint, style);
+            if (this.maxWidth >= 0.0F) {
+                this.position = positionInCurrentSequence + Character.charCount(codePoint);
+                return true;
+            } else {
+                return false;
+            }
         }
     }
 }

@@ -2,10 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.util;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.core.SectionPos;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 /**
  * 将区块分段局部坐标转换为世界坐标的 VertexConsumer 包装器。
@@ -55,13 +52,36 @@ public class SectionOffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
+    public VertexConsumer setLineWidth(float v) {
+        return delegate.setLineWidth(v);
+    }
+
+    @Override
     public void addVertex(
-        float p_351049_, float p_350528_, float p_351018_, int p_350427_, float p_350508_,
-        float p_350864_, int p_350846_, int p_350731_, float p_350784_, float p_351051_, float p_350759_
+        float p_351049_,
+        float p_350528_,
+        float p_351018_,
+        int p_350427_,
+        float p_350508_,
+        float p_350864_,
+        int p_350846_,
+        int p_350731_,
+        float p_350784_,
+        float p_351051_,
+        float p_350759_
     ) {
         delegate.addVertex(
-            p_351049_, p_350528_, p_351018_, p_350427_, p_350508_, p_350864_, p_350846_, p_350731_,
-            p_350784_, p_351051_, p_350759_
+            p_351049_,
+            p_350528_,
+            p_351018_,
+            p_350427_,
+            p_350508_,
+            p_350864_,
+            p_350846_,
+            p_350731_,
+            p_350784_,
+            p_351051_,
+            p_350759_
         );
     }
 
@@ -76,11 +96,6 @@ public class SectionOffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public VertexConsumer setWhiteAlpha(int p_350979_) {
-        return delegate.setWhiteAlpha(p_350979_);
-    }
-
-    @Override
     public VertexConsumer setLight(int p_350855_) {
         return delegate.setLight(p_350855_);
     }
@@ -91,42 +106,8 @@ public class SectionOffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public void putBulkData(
-        PoseStack.Pose pPose, BakedQuad pQuad, float pRed, float pGreen, float pBlue, float pAlpha,
-        int pPackedLight, int pPackedOverlay
-    ) {
-        delegate.putBulkData(pPose, pQuad, pRed, pGreen, pBlue, pAlpha, pPackedLight, pPackedOverlay);
-    }
-
-    @Override
-    public void putBulkData(
-        PoseStack.Pose pPose, BakedQuad pQuad, float[] pBrightness, float pRed, float pGreen,
-        float pBlue, float pAlpha, int[] pLightmap, int pPackedOverlay, boolean p_331268_
-    ) {
-        delegate.putBulkData(
-            pPose, pQuad, pBrightness, pRed, pGreen, pBlue, pAlpha, pLightmap, pPackedOverlay,
-            p_331268_
-        );
-    }
-
-    @Override
-    public VertexConsumer addVertex(Vector3f p_350685_) {
-        return delegate.addVertex(p_350685_);
-    }
-
-    @Override
-    public VertexConsumer addVertex(PoseStack.Pose p_352288_, Vector3f p_352298_) {
-        return delegate.addVertex(p_352288_, p_352298_);
-    }
-
-    @Override
     public VertexConsumer addVertex(PoseStack.Pose p_350506_, float p_350934_, float p_350873_, float p_350981_) {
         return delegate.addVertex(p_350506_, p_350934_, p_350873_, p_350981_);
-    }
-
-    @Override
-    public VertexConsumer addVertex(Matrix4f p_350929_, float p_350884_, float p_350885_, float p_350942_) {
-        return delegate.addVertex(p_350929_, p_350884_, p_350885_, p_350942_);
     }
 
     @Override

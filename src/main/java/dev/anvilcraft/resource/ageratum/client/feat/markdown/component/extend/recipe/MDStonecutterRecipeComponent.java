@@ -48,17 +48,21 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
             this.resultItem = null;
             return;
         }
+        /*TODO
         this.ingredient = recipe.getIngredients().getFirst();
         this.resultItem = recipe.getResultItem(level.registryAccess());
+         */
+        this.ingredient = null;
+        this.resultItem = null;
     }
 
     @Override
-    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+    protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         if (this.resultItem == null || this.ingredient == null) return;
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
-        pose.translate(29F, 8F, 0.0F);
+        pose.translate(29F, 8F);
         mouseX -= 28;
         mouseY -= 7;
         RENDER_INGREDIENT:
@@ -66,13 +70,13 @@ public class MDStonecutterRecipeComponent extends MDRecipeComponent {
             if (this.ingredient.isEmpty()) break RENDER_INGREDIENT;
             ItemStack displaying = RecipeUtil.getDisplayItem(this.ingredient);
             if (displaying.isEmpty()) break RENDER_INGREDIENT;
-            GuiGraphicsExtractor.renderItem(displaying, 0, 0);
-            GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
-            this.renderRecipeItem(context, displaying, 0, 0, mouseX, mouseY);
+            guiGraphics.item(displaying, 0, 0);
+            guiGraphics.itemDecorations(Minecraft.getInstance().font, displaying, 0, 0);
+            this.extractTooltipRenderState(context, displaying, 0, 0, mouseX, mouseY);
         }
-        GuiGraphicsExtractor.renderItem(this.resultItem, 54, 0);
-        GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
-        this.renderRecipeItem(context, this.resultItem, 54, 0, mouseX, mouseY);
+        guiGraphics.item(this.resultItem, 54, 0);
+        guiGraphics.itemDecorations(Minecraft.getInstance().font, this.resultItem, 54, 0);
+        this.extractTooltipRenderState(context, this.resultItem, 54, 0, mouseX, mouseY);
         pose.popMatrix();
     }
 }

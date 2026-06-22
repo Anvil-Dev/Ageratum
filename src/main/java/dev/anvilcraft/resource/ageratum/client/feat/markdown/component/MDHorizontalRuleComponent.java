@@ -25,9 +25,9 @@ public class MDHorizontalRuleComponent extends MDComponent {
     ) {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         int y = minecraft.font.lineHeight / 2;
-        GuiGraphicsExtractor.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
+        guiGraphics.horizontalLine(0, Math.max(0, maxX - 1), y, 0x88000000);
     }
 
     /**

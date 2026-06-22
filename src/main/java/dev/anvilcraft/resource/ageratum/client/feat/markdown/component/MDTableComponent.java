@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -134,11 +135,11 @@ public class MDTableComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         if (this.rows.isEmpty()) return;
         int colWidth = computeColWidth(maxX);
         int totalHeight = getHeight(minecraft, maxX, maxY);
-        GuiGraphicsExtractor.renderOutline(0, 0, maxX, totalHeight, BORDER_COLOR);
+        guiGraphics.outline(0, 0, maxX, totalHeight, BORDER_COLOR);
 
         int y = 0;
         for (int rowIdx = 0; rowIdx < this.rows.size(); rowIdx++) {
@@ -147,9 +148,9 @@ public class MDTableComponent extends MDComponent {
             int rowH = rowHeight(minecraft, row, colWidth, isHeader);
 
             if (isHeader) {
-                GuiGraphicsExtractor.fill(1, y, maxX - 1, y + rowH, HEADER_COLOR);
+                guiGraphics.fill(1, y, maxX - 1, y + rowH, HEADER_COLOR);
             } else if ((rowIdx - (this.hasHeader ? 1 : 0)) % 2 == 1) {
-                GuiGraphicsExtractor.fill(1, y, maxX - 1, y + rowH, ALT_ROW_COLOR);
+                guiGraphics.fill(1, y, maxX - 1, y + rowH, ALT_ROW_COLOR);
             }
 
             for (int col = 0; col < this.columnCount; col++) {
@@ -157,28 +158,28 @@ public class MDTableComponent extends MDComponent {
                 int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
                 List<FormattedCharSequence> lines = splitCellLines(minecraft, cell, colWidth, isHeader);
 
-                Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+                Matrix3x2fStack pose = guiGraphics.pose();
                 pose.pushMatrix();
-                pose.translate(cellX, y + PADDING_V, 0);
+                pose.translate(cellX, y + PADDING_V);
                 for (FormattedCharSequence seq : lines) {
                     int drawX = switch (this.alignments[col]) {
                         case CENTER -> Math.max(0, (colWidth - minecraft.font.width(seq)) / 2);
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
                         default -> 0;
                     };
-                    GuiGraphicsExtractor.text(minecraft.font, seq, drawX, 0, 0x000000, false);
-                    pose.translate(0, minecraft.font.lineHeight, 0);
+                    guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), seq, drawX, 0, 0xFF000000, false);
+                    pose.translate(0, minecraft.font.lineHeight);
                 }
                 pose.popMatrix();
             }
 
             for (int col = 1; col < this.columnCount; col++) {
-                GuiGraphicsExtractor.vLine(col * (colWidth + PADDING_H * 2), y, y + rowH - 1, BORDER_COLOR);
+                guiGraphics.verticalLine(col * (colWidth + PADDING_H * 2), y, y + rowH - 1, BORDER_COLOR);
             }
 
             if (rowIdx < this.rows.size() - 1) {
                 int sepColor = (isHeader) ? HEADER_SEP_COLOR : BORDER_COLOR;
-                GuiGraphicsExtractor.hLine(1, maxX - 2, y + rowH - 1, sepColor);
+                guiGraphics.horizontalLine(1, maxX - 2, y + rowH - 1, sepColor);
             }
 
             y += rowH;
@@ -238,7 +239,8 @@ public class MDTableComponent extends MDComponent {
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(line));
                         default -> 0;
                     };
-                    return minecraft.font.getSplitter().componentStyleAtWidth(
+                    return MDComponent.componentStyleAtWidth(
+                        minecraft.font.getSplitter(),
                         line,
                         (int) Math.floor(mouseX - cellX - drawX)
                     );

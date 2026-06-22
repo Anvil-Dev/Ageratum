@@ -1,27 +1,23 @@
 package dev.anvilcraft.resource.ageratum;
 
+import dev.anvilcraft.lib.v2.registrum.Registrum;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
+import dev.anvilcraft.resource.ageratum.data.AgeratumDatagen;
+import dev.anvilcraft.resource.ageratum.init.AgeratumItemGroups;
+import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
 import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Ageratum 模组主类。
@@ -35,23 +31,7 @@ public class Ageratum {
      * 模组 ID，也是默认命名空间。
      */
     public static final String MOD_ID = "ageratum";
-    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Ageratum.MOD_ID);
-    public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Ageratum.MOD_ID);
-    public static final DeferredItem<Item> DEFAULT_GUIDE_ITEM = ITEMS.register(
-        "guidebook",
-        () -> new Item(new Item.Properties().stacksTo(1))
-    );
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DEFAULT_TAB = TABS.register(
-        "default",
-        () -> CreativeModeTab.builder()
-            .icon(DEFAULT_GUIDE_ITEM::toStack)
-            .title(Component.translatable("itemGroup.ageratum.default"))
-            .displayItems((parameters, output) -> {
-                output.accept(DEFAULT_GUIDE_ITEM.get());
-                output.accept(Items.STRUCTURE_BLOCK);
-            })
-            .build()
-    );
+    public static final Registrum REGISTRUM = Registrum.create(Ageratum.MOD_ID);
 
     /**
      * 模组构造函数，由 NeoForge 在加载时调用。
@@ -60,9 +40,10 @@ public class Ageratum {
      * @param modContainer 模组容器
      */
     public Ageratum(IEventBus modEventBus, ModContainer modContainer) {
-        ITEMS.register(modEventBus);
-        TABS.register(modEventBus);
+        AgeratumItems.register();
+        AgeratumItemGroups.TABS.register(modEventBus);
         NeoForge.EVENT_BUS.register(this);
+        AgeratumDatagen.init();
     }
 
     /**
@@ -90,7 +71,7 @@ public class Ageratum {
     public void useGuideItem(PlayerInteractEvent.RightClickItem event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         ItemStack stack = event.getItemStack();
-        if (!stack.is(Ageratum.DEFAULT_GUIDE_ITEM.get())) return;
+        if (!stack.is(AgeratumItems.DEFAULT_GUIDE_ITEM.get())) return;
         Ageratum.openGuide(player, Ageratum.location(AgeratumConstants.Guide.INDEX_FILE));
         event.getLevel().playSound(null, player, SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);
         event.setCancellationResult(InteractionResult.SUCCESS);

@@ -16,16 +16,14 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.armortrim.ArmorTrim;
-import net.minecraft.world.item.armortrim.TrimMaterial;
-import net.minecraft.world.item.armortrim.TrimMaterials;
-import net.minecraft.world.item.armortrim.TrimPattern;
-import net.minecraft.world.item.armortrim.TrimPatterns;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SmithingTransformRecipe;
 import net.minecraft.world.item.crafting.SmithingTrimRecipe;
+import net.minecraft.world.item.equipment.trim.ArmorTrim;
+import net.minecraft.world.item.equipment.trim.TrimMaterial;
+import net.minecraft.world.item.equipment.trim.TrimPattern;
 import org.joml.Matrix3x2fStack;
 
 import java.util.Optional;
@@ -61,7 +59,10 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
         if (level == null) {
             throw new IllegalStateException("ClientLevel cannot be null while creating MDSmithingTableRecipeComponent!");
         }
+        /* TODO
         this.ingredients = NonNullList.withSize(3, Ingredient.EMPTY);
+         */
+        this.ingredients = NonNullList.create();
         this.ingredients.set(0, MDSmithingTableRecipeComponent.getRecipeTemplate(recipe));
         this.ingredients.set(1, MDSmithingTableRecipeComponent.getRecipeBase(recipe));
         this.ingredients.set(2, MDSmithingTableRecipeComponent.getRecipeAddition(recipe));
@@ -69,11 +70,11 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
     }
 
     @Override
-    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+    protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
+        GuiGraphicsExtractor guiGraphics = context.graphics();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
-        pose.translate(8F, 8F, 0.0F);
+        pose.translate(8F, 8F);
         mouseX -= 8;
         mouseY -= 8;
         for (int i = 0; i < this.ingredients.size(); i++) {
@@ -82,38 +83,38 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
             ItemStack displaying = RecipeUtil.getDisplayItem(ingredient);
             if (displaying.isEmpty()) continue;
             int x = (i % 3) * 19;
-            GuiGraphicsExtractor.renderItem(displaying, x, 0);
-            GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, displaying, x, 0);
-            this.renderRecipeItem(context, displaying, x, 0, mouseX, mouseY);
+            guiGraphics.item(displaying, x, 0);
+            guiGraphics.itemDecorations(Minecraft.getInstance().font, displaying, x, 0);
+            this.extractTooltipRenderState(context, displaying, x, 0, mouseX, mouseY);
         }
         ItemStack resultItem = this.resultSupplier.get();
-        GuiGraphicsExtractor.renderItem(resultItem, 92, 0);
-        GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
-        this.renderRecipeItem(context, resultItem, 92, 0, mouseX, mouseY);
+        guiGraphics.item(resultItem, 92, 0);
+        guiGraphics.itemDecorations(Minecraft.getInstance().font, resultItem, 92, 0);
+        this.extractTooltipRenderState(context, resultItem, 92, 0, mouseX, mouseY);
         pose.popMatrix();
     }
 
     private static Ingredient getRecipeTemplate(SmithingRecipe smithingRecipe) {
         return switch (smithingRecipe) {
-            case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).getTemplate();
-            case SmithingTrimRecipe recipe -> ((SmithingTrimRecipeAccessor) recipe).getTemplate();
-            default -> Ingredient.EMPTY;
+            case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).template().orElseThrow();
+            case SmithingTrimRecipe recipe -> ((SmithingTrimRecipeAccessor) recipe).template();
+            default -> Ingredient.of();
         };
     }
 
     private static Ingredient getRecipeBase(SmithingRecipe smithingRecipe) {
         return switch (smithingRecipe) {
-            case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).getBase();
-            case SmithingTrimRecipe recipe -> ((SmithingTrimRecipeAccessor) recipe).getBase();
-            default -> Ingredient.EMPTY;
+            case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).base();
+            case SmithingTrimRecipe recipe -> ((SmithingTrimRecipeAccessor) recipe).base();
+            default -> Ingredient.of();
         };
     }
 
     private static Ingredient getRecipeAddition(SmithingRecipe smithingRecipe) {
         return switch (smithingRecipe) {
-            case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).getAddition();
-            case SmithingTrimRecipe recipe -> ((SmithingTrimRecipeAccessor) recipe).getAddition();
-            default -> Ingredient.EMPTY;
+            case SmithingTransformRecipe recipe -> ((SmithingTransformRecipeAccessor) recipe).addition().orElseThrow();
+            case SmithingTrimRecipe recipe -> ((SmithingTrimRecipeAccessor) recipe).addition();
+            default -> Ingredient.of();
         };
     }
 
@@ -121,20 +122,26 @@ public class MDSmithingTableRecipeComponent extends MDRecipeComponent {
         return switch (smithingRecipe) {
             case SmithingTransformRecipe recipe -> {
                 SmithingTransformRecipeAccessor accessor = (SmithingTransformRecipeAccessor) recipe;
-                yield accessor.getResult();
+                yield accessor.result().create();
             }
             case SmithingTrimRecipe recipe -> {
                 SmithingTrimRecipeAccessor accessor = (SmithingTrimRecipeAccessor) recipe;
 
-                ItemStack base = RecipeUtil.getDisplayItem(accessor.getBase());
-                Optional<Holder.Reference<TrimMaterial>> materialOp = TrimMaterials.getFromIngredient(
+                ItemStack base = RecipeUtil.getDisplayItem(accessor.base());
+                Optional<Holder.Reference<TrimMaterial>> materialOp = Optional.empty();
+                /* TODO
+                TrimMaterials.getFromIngredient(
                     registries,
-                    RecipeUtil.getDisplayItem(accessor.getAddition())
+                    RecipeUtil.getDisplayItem(accessor.addition())
                 );
-                Optional<Holder.Reference<TrimPattern>> patternOp = TrimPatterns.getFromTemplate(
+                 */
+                Optional<Holder.Reference<TrimPattern>> patternOp = Optional.empty();
+                /* TODO
+                TrimPatterns.getFromTemplate(
                     registries,
-                    RecipeUtil.getDisplayItem(accessor.getTemplate())
+                    RecipeUtil.getDisplayItem(accessor.template())
                 );
+                 */
                 if (materialOp.isEmpty() || patternOp.isEmpty()) yield ItemStack.EMPTY;
 
                 ItemStack baseCopied = base.copyWithCount(1);

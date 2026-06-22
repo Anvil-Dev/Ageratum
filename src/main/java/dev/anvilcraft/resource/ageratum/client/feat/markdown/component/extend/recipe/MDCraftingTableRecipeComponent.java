@@ -13,7 +13,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.ShapedRecipe;
 import org.joml.Matrix3x2fStack;
 
 import javax.annotation.Nullable;
@@ -51,16 +50,16 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             return;
         }
         this.ingredients = MDCraftingTableRecipeComponent.getIngredients(recipe);
-        this.resultItem = recipe.getResultItem(level.registryAccess());
+        this.resultItem = null;//TODO recipe.getResultItem(level.registryAccess());
     }
 
     @Override
-    protected void renderRecipe(MDRenderContext context, float mouseX, float mouseY) {
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+    protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         if (this.resultItem == null || this.ingredients == null) return;
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
-        pose.translate(9F, 9F, 0.0F);
+        pose.translate(9F, 9F);
         mouseX -= 9;
         mouseY -= 9;
         for (int i = 0; i < this.ingredients.size(); i++) {
@@ -70,30 +69,31 @@ public class MDCraftingTableRecipeComponent extends MDRecipeComponent {
             if (displaying.isEmpty()) continue;
             int x = (i % 3) * 19;
             int y = (i / 3) * 19;
-            GuiGraphicsExtractor.renderItem(displaying, x, y);
-            GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, displaying, x, y);
-            this.renderRecipeItem(context, displaying, x, y, mouseX, mouseY);
+            guiGraphics.item(displaying, x, y);
+            guiGraphics.itemDecorations(Minecraft.getInstance().font, displaying, x, y);
+            this.extractTooltipRenderState(context, displaying, x, y, mouseX, mouseY);
         }
-        GuiGraphicsExtractor.renderItem(this.resultItem, 93, 19);
-        GuiGraphicsExtractor.renderItemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
-        this.renderRecipeItem(context, this.resultItem, 93, 19, mouseX, mouseY);
+        guiGraphics.item(this.resultItem, 93, 19);
+        guiGraphics.itemDecorations(Minecraft.getInstance().font, this.resultItem, 93, 19);
+        this.extractTooltipRenderState(context, this.resultItem, 93, 19, mouseX, mouseY);
         pose.popMatrix();
     }
 
     private static NonNullList<Ingredient> getIngredients(CraftingRecipe recipe) {
-        NonNullList<Ingredient> ingredients = recipe.getIngredients();
-        if (!(recipe instanceof ShapedRecipe shaped)) return ingredients;
-
-        int width = shaped.pattern.width();
-        int height = shaped.pattern.height();
-        if (width == 3 && height == 3) return ingredients;
-
-        NonNullList<Ingredient> result = NonNullList.withSize(3 * 3, Ingredient.EMPTY);
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                result.set(x + y * 3, ingredients.get(x + y * width));
-            }
-        }
-        return result;
+        // TODO
+//        NonNullList<Ingredient> ingredients = recipe.getIngredients();
+//        if (!(recipe instanceof ShapedRecipe shaped)) return ingredients;
+//
+//        int width = shaped.pattern.width();
+//        int height = shaped.pattern.height();
+//        if (width == 3 && height == 3) return ingredients;
+//
+//        NonNullList<Ingredient> result = NonNullList.withSize(3 * 3, Ingredient.EMPTY);
+//        for (int y = 0; y < height; y++) {
+//            for (int x = 0; x < width; x++) {
+//                result.set(x + y * 3, ingredients.get(x + y * width));
+//            }
+//        }
+        return NonNullList.create();
     }
 }

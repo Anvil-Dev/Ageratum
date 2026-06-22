@@ -335,7 +335,7 @@ public class MarkdownParser {
         return components;
     }
 
-    static FrontMatterParseResult extractFrontMatter(String markdown) {
+    private static FrontMatterParseResult extractFrontMatter(String markdown) {
         String[] lines = markdown.split("\n", -1);
         if (lines.length == 0 || !"---".equals(lines[0].trim())) {
             return new FrontMatterParseResult(Map.of(), markdown);
@@ -1002,7 +1002,7 @@ public class MarkdownParser {
         }
     }
 
-    record FrontMatterParseResult(Map<String, Object> frontMatter, String body) {
+    private record FrontMatterParseResult(Map<String, Object> frontMatter, String body) {
     }
 }
 

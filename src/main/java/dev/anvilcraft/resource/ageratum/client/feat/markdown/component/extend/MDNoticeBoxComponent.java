@@ -54,19 +54,6 @@ public class MDNoticeBoxComponent extends MDComponent {
     }
 
     @Override
-    public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        int maxChildWidth = 0;
-        for (MDComponent child : this.contentComponents) {
-            int w = child.getPreferredWidth(minecraft, maxX, maxY);
-            if (w > 0) maxChildWidth = Math.max(maxChildWidth, w);
-        }
-        if (maxChildWidth > 0) {
-            return maxChildWidth + PADDING * 2 + BORDER_WIDTH;
-        }
-        return -1;
-    }
-
-    @Override
     public void extractRenderState(
         MDRenderContext context
     ) {
@@ -75,7 +62,7 @@ public class MDNoticeBoxComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         if (this.contentComponents.isEmpty()) {
             return;
         }
@@ -84,21 +71,21 @@ public class MDNoticeBoxComponent extends MDComponent {
         int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
 
         // 绘制背景
-        GuiGraphicsExtractor.fill(0, 0, maxX, boxHeight, this.type.getBackgroundColor());
+        guiGraphics.fill(0, 0, maxX, boxHeight, this.type.getBackgroundColor());
 
         // 绘制左侧边框
-        GuiGraphicsExtractor.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
+        guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
 
         // 绘制内容
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
         int translateX = PADDING + BORDER_WIDTH;
-        pose.translate(translateX, PADDING, 0);
+        pose.translate(translateX, PADDING);
 
         for (MDComponent component : this.contentComponents) {
-            component.render(context.child(contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING, 1.0f));
+            component.extractRenderState(context.child(contentWidth, Integer.MAX_VALUE, mouseX - translateX, mouseY - PADDING, 1.0f));
             int componentHeight = component.getHeight(minecraft, contentWidth, Integer.MAX_VALUE);
-            pose.translate(0, componentHeight, 0);
+            pose.translate(0, componentHeight);
         }
 
         pose.popMatrix();

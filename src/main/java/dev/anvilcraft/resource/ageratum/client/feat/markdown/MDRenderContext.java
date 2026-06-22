@@ -4,10 +4,13 @@ import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -73,10 +76,6 @@ public record MDRenderContext(
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
-        minX = Math.round((minX + this.offsetX() + this.leftPos()) / this.scale());
-        maxX = Math.round((maxX + this.offsetX() + this.leftPos()) / this.scale());
-        minY = Math.round((minY + this.offsetY() + this.topPos()) / this.scale());
-        maxY = Math.round((maxY + this.offsetY() + this.topPos()) / this.scale());
         this.graphics().enableScissor(minX, minY, maxX, maxY);
     }
 
@@ -88,16 +87,19 @@ public record MDRenderContext(
         this.onEnd().add(consumer);
     }
 
-    public void renderTooltip() {
-        for (Tooltip tooltip : this.tooltips()) {
-            this.graphics()
-                .renderTooltip(
-                    this.minecraft().font,
-                    tooltip.tooltipLines(),
-                    tooltip.visualTooltipComponent(),
-                    Math.round(this.mouseX()),
-                    Math.round(this.mouseY())
-                );
+    public void extractTooltipRenderState() {
+        for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
+            List<ClientTooltipComponent> list = new ArrayList<>();
+            tooltip.tooltipLines().forEach(component -> list.add(ClientTooltipComponent.create(component.getVisualOrderText())));
+            tooltip.visualTooltipComponent().ifPresent(component -> list.add(ClientTooltipComponent.create(component)));
+            this.graphics().tooltip(
+                this.minecraft().font,
+                list,
+                Math.round(this.mouseX()),
+                Math.round(this.mouseY()),
+                DefaultTooltipPositioner.INSTANCE,
+                null
+            );
         }
     }
 

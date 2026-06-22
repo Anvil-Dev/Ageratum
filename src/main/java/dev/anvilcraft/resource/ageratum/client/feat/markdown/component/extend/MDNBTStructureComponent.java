@@ -1,13 +1,14 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.brigadier.StringReader;
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
-import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
@@ -16,7 +17,7 @@ import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactor
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
@@ -28,14 +29,12 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraft.world.phys.BlockHitResult;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.BufferedInputStream;
@@ -115,29 +114,29 @@ public final class MDNBTStructureComponent extends MDComponent {
             this.resetLayerPreview();
         }
         if (this.previewLevel == null) {
-            super.render(context.child());
+            super.extractRenderState(context.child());
             return;
         }
 
         this.ensureLayerPreviewInitialized();
 
         int height = this.getHeight(minecraft, maxX, context.maxY()); // 确保 scale 计算正确
-        graphics.renderOutline(0, 0, maxX, height, 0xAA000000);
+        graphics.outline(0, 0, maxX, height, 0xAA000000);
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
-        this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
         this.cameraRig.setZoom(2.0f);
-        // 将结构投影居中到组件分配区域的中心（考虑 offsetX + maxX 与屏幕中心的偏移）
-        this.cameraRig.setOffsetX(context.offsetX() + maxX / 2.0f - context.screenWidth() / 2.0f + this.panOffsetX);
-        this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
-        StructurePreviewRenderer.getInstance()
-            .render(
-                this.previewLevel,
-                this.cameraRig,
-                graphics.bufferSource(),
-                this.visibleMinY,
-                this.visibleMinY + this.visibleLayerCount
-            );
+        StructurePreviewRenderer.getInstance().render(
+            this.previewLevel,
+            this.cameraRig,
+            graphics,
+            maxX,
+            height,
+            this.visibleMinY,
+            this.visibleMinY + this.visibleLayerCount,
+            this.panOffsetX,
+            this.panOffsetY,
+            context.scale()
+        );
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
@@ -147,32 +146,18 @@ public final class MDNBTStructureComponent extends MDComponent {
         return isHover(maxX - 21, 5, 16, 16, mouseX, mouseY);
     }
 
-    /**
-     * 计算层数指示器区域中 [+] 按钮的 X 坐标。
-     */
-    private int getLayerUpButtonX(MDRenderContext context) {
-        int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
-        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
-        int labelWidth = context.minecraft().font.width(layerLabel);
-        int btnSize = context.minecraft().font.lineHeight + padding;
-        int btnGap = 2;
-        return 4 + padding + labelWidth + padding + btnGap;
-    }
-
-    private int getLayerButtonSize(MDRenderContext context) {
-        return context.minecraft().font.lineHeight + AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
-    }
-
     private void renderButton(MDRenderContext context) {
         GuiGraphicsExtractor graphics = context.graphics();
         boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
         graphics.blit(
+            RenderPipelines.GUI_TEXTURED,
             BUTTON_PROJECTION_LOCATION,
             context.maxX() - AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_RIGHT_MARGIN,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_TOP_MARGIN,
             0,
-            0,
             isHover ? AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT : 0,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
+            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
@@ -215,7 +200,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
-        if (!Screen.hasControlDown() || scrollY == 0.0d) {
+        if (!GuideScreen.hasControlDown() || scrollY == 0.0d) {
             return false;
         }
 
@@ -229,26 +214,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != 0 && button != 1) {
             return false;
         }
-        // 层数调节按钮
-        if (button == 0 && this.previewLevel != null) {
-            int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
-            String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
-            int labelWidth = minecraft.font.width(layerLabel);
-            int btnSize = minecraft.font.lineHeight + padding;
-            int btnGap = 2;
-            int btnUpX = 4 + padding + labelWidth + padding + btnGap;
-            int btnDownX = btnUpX + btnSize + btnGap;
-            if (isHover(btnUpX, 4, btnSize, btnSize, (float) mouseX, (float) mouseY)) {
-                this.ensureLayerPreviewInitialized();
-                this.visibleLayerCount = Math.min(this.totalLayerCount, this.visibleLayerCount + 1);
-                return true;
-            }
-            if (isHover(btnDownX, 4, btnSize, btnSize, (float) mouseX, (float) mouseY)) {
-                this.ensureLayerPreviewInitialized();
-                this.visibleLayerCount = Math.max(1, this.visibleLayerCount - 1);
-                return true;
-            }
-        }
+        /* TODO
         if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
             if (this.structureTemplateCache != null && minecraft.cameraEntity != null) {
                 BlockPos blockPos;
@@ -257,11 +223,12 @@ public final class MDNBTStructureComponent extends MDComponent {
                 } else {
                     blockPos = minecraft.cameraEntity.getOnPos().above();
                 }
-                StructureProjectionApi.showFloating(this.structureTemplateCache, blockPos);
+                StructureProjectionApi.show(this.structureTemplateCache, blockPos);
                 minecraft.setScreen(null);
             }
             return true;
         }
+         */
         this.dragButton = button;
         return true;
     }
@@ -327,48 +294,22 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
-        int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
         String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
-        int fontHeight = context.minecraft().font.lineHeight;
-        int labelWidth = context.minecraft().font.width(layerLabel);
-        int btnSize = fontHeight + padding;
-        int btnGap = 2;
-        int totalWidth = padding + labelWidth + padding + btnGap + btnSize + btnGap + btnSize + padding;
-        int totalHeight = fontHeight + padding * 2;
-        int startX = 4;
-        int startY = 4;
+        int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
+        int x = 4;
+        int y = 4;
+        int width = context.minecraft().font.width(layerLabel) + padding * 2;
+        int height = context.minecraft().font.lineHeight + padding * 2;
 
-        // 背景
-        graphics.fill(startX, startY, startX + totalWidth, startY + totalHeight, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
-        // 层数文本
-        graphics.text(
-            context.minecraft().font,
+        graphics.fill(x, y, x + width, y + height, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
+        graphics.anvillib$text(
+            AnvilLibFont.getSelectFont(),
             layerLabel,
-            startX + padding,
-            startY + padding,
+            x + padding,
+            y + padding,
             AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_TEXT,
             false
         );
-
-        // [+] 按钮
-        int btnUpX = startX + padding + labelWidth + padding + btnGap;
-        int btnDownX = btnUpX + btnSize + btnGap;
-        float mouseX = context.mouseX();
-        float mouseY = context.mouseY();
-        boolean hoverUp = isHover(btnUpX, startY, btnSize, btnSize, mouseX, mouseY);
-        boolean hoverDown = isHover(btnDownX, startY, btnSize, btnSize, mouseX, mouseY);
-
-        int btnBgUp = hoverUp ? 0x88AAAAAA : 0x88444444;
-        int btnBgDown = hoverDown ? 0x88AAAAAA : 0x88444444;
-        graphics.fill(btnUpX, startY, btnUpX + btnSize, startY + btnSize, btnBgUp);
-        graphics.fill(btnDownX, startY, btnDownX + btnSize, startY + btnSize, btnBgDown);
-        graphics.text(context.minecraft().font, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
-        graphics.text(context.minecraft().font, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
-
-        // tooltip
-        if (hoverUp || hoverDown) {
-            context.addTooltip(Component.literal("快捷键: PageUp/PageDown"));
-        }
     }
 
     private static float clamp(float value, float min, float max) {
@@ -392,7 +333,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (clientLevel == null) return null;
         try {
             StructureTemplate template = new StructureTemplate();
-            HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
+            HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
             CompoundTag root = readStructureRoot(target);
             if (root == null) {
                 return null;
@@ -469,7 +410,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (!snbt.isEmpty() && snbt.charAt(0) == '\ufeff') {
             snbt = snbt.substring(1);
         }
-        return new TagParser(new StringReader(snbt)).readStruct();
+        return TagParser.parseCompoundAsArgument(new StringReader(snbt));
     }
 
     private static ParseMode detectParseMode(InputStream stream) throws IOException {
@@ -481,6 +422,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         return first == 0x1f && second == 0x8b ? ParseMode.COMPRESSED_NBT : ParseMode.SNBT;
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static String readUtf8WithLimit(InputStream stream, int maxBytes) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(maxBytes, 8192));
         byte[] buffer = new byte[8192];
@@ -522,9 +464,9 @@ public final class MDNBTStructureComponent extends MDComponent {
      */
     private static CompoundTag normalizeStructureRoot(CompoundTag root) {
         Tag paletteTag = root.get("palette");
-        boolean paletteIsStringList = paletteTag instanceof ListTag list && list.getElementType() == Tag.TAG_STRING;
+        boolean paletteIsStringList = paletteTag instanceof ListTag list && (list.isEmpty() || list.getFirst().getId() == Tag.TAG_STRING);
         Tag dataTag = root.get("data");
-        boolean hasSimplifiedData = dataTag instanceof ListTag list && list.getElementType() == Tag.TAG_COMPOUND;
+        boolean hasSimplifiedData = dataTag instanceof ListTag list && (list.isEmpty() || list.getFirst().getId() == Tag.TAG_COMPOUND);
 
         if (!paletteIsStringList && !hasSimplifiedData) {
             return root;
@@ -537,10 +479,12 @@ public final class MDNBTStructureComponent extends MDComponent {
         Set<String> seenPaletteStates = new HashSet<>();
         if (paletteIsStringList) {
             ListTag paletteStrings = (ListTag) converted.get("palette");
-            for (int i = 0; i < paletteStrings.size(); i++) {
-                String state = paletteStrings.getString(i);
-                if (!state.isBlank() && seenPaletteStates.add(state)) {
-                    paletteStates.add(state);
+            if (paletteStrings != null) {
+                for (int i = 0; i < paletteStrings.size(); i++) {
+                    String state = paletteStrings.getStringOr(i, "minecraft:air");
+                    if (!state.isBlank() && seenPaletteStates.add(state)) {
+                        paletteStates.add(state);
+                    }
                 }
             }
         }
@@ -548,8 +492,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         ListTag dataList = hasSimplifiedData ? (ListTag) converted.get("data") : null;
         if (paletteStates.isEmpty() && dataList != null) {
             for (int i = 0; i < dataList.size(); i++) {
-                CompoundTag entry = dataList.getCompound(i);
-                String state = entry.getString("state");
+                CompoundTag entry = dataList.getCompoundOrEmpty(i);
+                String state = entry.getStringOr("state", "minecraft:air");
                 if (!state.isBlank() && seenPaletteStates.add(state)) {
                     paletteStates.add(state);
                 }
@@ -567,8 +511,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (dataList != null && !converted.contains("blocks")) {
             ListTag blocks = new ListTag();
             for (int i = 0; i < dataList.size(); i++) {
-                CompoundTag entry = dataList.getCompound(i);
-                String state = entry.getString("state");
+                CompoundTag entry = dataList.getCompoundOrEmpty(i);
+                String state = entry.getStringOr("state", "minecraft:air");
 
                 Integer index = paletteIndex.get(state);
                 if (index == null) {

@@ -36,8 +36,8 @@ public class MDQuoteComponent extends MDBlockComponent<Integer> {
     }
 
     @Override
-    protected void renderDecoration(
-        GuiGraphicsExtractor GuiGraphicsExtractor,
+    protected void extractDecorationRenderState(
+        GuiGraphicsExtractor guiGraphics,
         Minecraft minecraft,
         CachedItem<Integer> cachedItem,
         int y,
@@ -47,7 +47,7 @@ public class MDQuoteComponent extends MDBlockComponent<Integer> {
         int lineBottom = y + lineHeight - 1;
         for (int level = 0; level < cachedItem.level(); level++) {
             int lineX = level * LEVEL_INDENT + 1;
-            GuiGraphicsExtractor.vLine(lineX, y, lineBottom, getLevelLineColor(level));
+            guiGraphics.verticalLine(lineX, y, lineBottom, getLevelLineColor(level));
         }
     }
 

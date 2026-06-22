@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;
@@ -218,18 +219,18 @@ public class MDCodeBlockComponent extends MDComponent {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         int blockHeight = this.getHeight(minecraft, maxX, maxY);
-        GuiGraphicsExtractor.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
-        GuiGraphicsExtractor.renderOutline(0, 0, maxX, blockHeight, BORDER_COLOR);
+        guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
+        guiGraphics.outline(0, 0, maxX, blockHeight, BORDER_COLOR);
         int gutterWidth = this.getGutterWidth(minecraft, this.codeLines.size());
         int contentWidth = this.getContentWidth(minecraft, maxX);
 
         if (AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
-            GuiGraphicsExtractor.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), GUTTER_COLOR);
-            GuiGraphicsExtractor.vLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), GUTTER_LINE_COLOR);
+            guiGraphics.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), GUTTER_COLOR);
+            guiGraphics.verticalLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), GUTTER_LINE_COLOR);
         }
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
         context.enableScissor(1, 1, maxX - 1, blockHeight - 1);
         int y = 0;
@@ -248,7 +249,7 @@ public class MDCodeBlockComponent extends MDComponent {
             if (lineInfo.highlight()) {
                 int highlightColor = 0x29657585;
                 if (AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
-                    GuiGraphicsExtractor.fill(
+                    guiGraphics.fill(
                         PADDING + gutterWidth,
                         PADDING + y,
                         maxX,
@@ -256,7 +257,7 @@ public class MDCodeBlockComponent extends MDComponent {
                         highlightColor
                     );
                 } else {
-                    GuiGraphicsExtractor.fill(
+                    guiGraphics.fill(
                         PADDING,
                         PADDING + y,
                         maxX,
@@ -270,7 +271,7 @@ public class MDCodeBlockComponent extends MDComponent {
                 String lineStr = String.valueOf(lineNumber);
                 int lineNumX = PADDING + gutterWidth - minecraft.font.width(lineStr) - 1;
                 int lineNumY = PADDING + y;
-                GuiGraphicsExtractor.text(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
+                guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
             }
 
             if (split.isEmpty()) {
@@ -281,12 +282,12 @@ public class MDCodeBlockComponent extends MDComponent {
                     strX = PADDING + offsetX;
                 }
                 for (FormattedCharSequence sequence : split) {
-                    GuiGraphicsExtractor.text(
-                        minecraft.font,
+                    guiGraphics.anvillib$text(
+                        AnvilLibFont.getSelectFont(),
                         sequence,
                         strX,
                         PADDING + y,
-                        0x000000,
+                        0xFF000000,
                         false
                     );
                     y += minecraft.font.lineHeight;

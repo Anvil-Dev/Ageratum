@@ -85,12 +85,12 @@ public class MDHeaderComponent extends MDComponent {
         int maxY = context.maxY();
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
         float scale = this.getScale();
-        pose.scale(scale, scale, scale);
-        super.render(
+        pose.scale(scale, scale);
+        super.extractRenderState(
             context.child(
                 this.unscale(maxX),
                 this.unscale(maxY),
@@ -100,10 +100,10 @@ public class MDHeaderComponent extends MDComponent {
             )
         );
         int height = super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY));
-        pose.translate(0, height, 0);
+        pose.translate(0, height);
         if (this.level == 1) {
             int y = minecraft.font.lineHeight / 2;
-            GuiGraphicsExtractor.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
+            guiGraphics.horizontalLine(0, Math.max(0, maxX - 1), y, 0x88000000);
         }
         pose.popMatrix();
     }

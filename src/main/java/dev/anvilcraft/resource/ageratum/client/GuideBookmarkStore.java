@@ -30,7 +30,7 @@ public final class GuideBookmarkStore {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final int FILE_VERSION = 1;
-    private static final Path BOOKMARK_DIRECTORY = FMLLoader.getGamePath()
+    private static final Path BOOKMARK_DIRECTORY = FMLLoader.getCurrent().getGameDir()
         .resolve("config")
         .resolve(Ageratum.MOD_ID)
         .resolve("bookmarks");

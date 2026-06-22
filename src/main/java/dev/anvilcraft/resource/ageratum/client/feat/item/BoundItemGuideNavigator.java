@@ -26,7 +26,8 @@ import javax.annotation.Nullable;
 
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public final class BoundItemGuideNavigator {
-private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_STALE_MS;
+    private static final long HOLD_DURATION_MS = AgeratumConstants.ItemBinding.HOLD_DURATION_MS;
+    private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_STALE_MS;
 
     @Nullable
     private static Identifier hoveredDocumentLocation;
@@ -111,7 +112,7 @@ private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_S
             return;
         }
 
-        if (openedDuringCurrentHold || holdStartAtMs < 0L || now - holdStartAtMs < AgeratumClient.CONFIG.itemBindingHoldDurationMs) {
+        if (openedDuringCurrentHold || holdStartAtMs < 0L || now - holdStartAtMs < HOLD_DURATION_MS) {
             return;
         }
 
@@ -125,12 +126,11 @@ private static final long HOVER_STALE_MS = AgeratumConstants.ItemBinding.HOVER_S
             return 0;
         }
         long elapsed = Math.max(0L, now - holdStartAtMs);
-        return Math.min(100L, (double) elapsed / AgeratumClient.CONFIG.itemBindingHoldDurationMs);
+        return Math.min(100L, (double) elapsed / HOLD_DURATION_MS);
     }
 
     private static boolean isWDown(Minecraft minecraft) {
-        long window = minecraft.getWindow().getWindow();
-        return InputConstants.isKeyDown(window, AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue());
+        return InputConstants.isKeyDown(minecraft.getWindow(), AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue());
     }
 
     private static void resetHoldState() {

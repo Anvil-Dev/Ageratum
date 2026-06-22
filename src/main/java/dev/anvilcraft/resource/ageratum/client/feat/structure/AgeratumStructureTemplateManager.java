@@ -89,8 +89,7 @@ public final class AgeratumStructureTemplateManager {
 
         try {
             StructureTemplate template = new StructureTemplate();
-            HolderLookup.RegistryLookup<Block> blockLookup =
-                level.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
+            HolderLookup.RegistryLookup<Block> blockLookup = level.registryAccess().lookupOrThrow(Registries.BLOCK);
             template.load(blockLookup, nbt);
             templateCache.put(location, template);
             return Optional.of(template);
@@ -118,23 +117,17 @@ public final class AgeratumStructureTemplateManager {
     // 重载监听器
     // ──────────────────────────────────────────────────────────────────────────
 
-    private static final PreparableReloadListener RELOAD_LISTENER =
-        new SimplePreparableReloadListener<Map<Identifier, CompoundTag>>() {
-            @Override
-            protected Map<Identifier, CompoundTag> prepare(
-                ResourceManager manager,
-                ProfilerFiller profiler
-            ) {
-                String prefix = ASSET_FOLDER + "/";
-                int prefixLen = prefix.length();
-                int nbtSuffixLen = ".nbt".length();
+    private static final PreparableReloadListener RELOAD_LISTENER = new SimplePreparableReloadListener<Map<Identifier, CompoundTag>>() {
+        @Override
+        protected Map<Identifier, CompoundTag> prepare(ResourceManager manager, ProfilerFiller profiler) {
+            String prefix = ASSET_FOLDER + "/";
+            int prefixLen = prefix.length();
+            int nbtSuffixLen = ".nbt".length();
 
-                Map<Identifier, CompoundTag> result = new HashMap<>();
+            Map<Identifier, CompoundTag> result = new HashMap<>();
 
-                manager.listResources(
-                    ASSET_FOLDER,
-                    rl -> rl.getPath().startsWith(prefix) && rl.getPath().endsWith(".nbt")
-                ).forEach((rl, resource) -> {
+            manager.listResources(ASSET_FOLDER, rl -> rl.getPath().startsWith(prefix) && rl.getPath().endsWith(".nbt"))
+                .forEach((rl, resource) -> {
                     String rawPath = rl.getPath(); // e.g. "ageratum/village/house.nbt"
 
                     // 路径必须在 "ageratum/" 之后还有至少一个字符（加上 ".nbt" 后缀）
@@ -154,19 +147,15 @@ public final class AgeratumStructureTemplateManager {
                     }
                 });
 
-                return result;
-            }
+            return result;
+        }
 
-            @Override
-            protected void apply(
-                Map<Identifier, CompoundTag> data,
-                ResourceManager manager,
-                ProfilerFiller profiler
-            ) {
-                nbtCache = Collections.unmodifiableMap(data);
-                templateCache.clear();
-                LOGGER.info("Loaded {} structure template(s) from assets/{}/", data.size(), ASSET_FOLDER);
-            }
-        };
+        @Override
+        protected void apply(Map<Identifier, CompoundTag> data, ResourceManager manager, ProfilerFiller profiler) {
+            nbtCache = Collections.unmodifiableMap(data);
+            templateCache.clear();
+            LOGGER.info("Loaded {} structure template(s) from assets/{}/", data.size(), ASSET_FOLDER);
+        }
+    };
 }
 

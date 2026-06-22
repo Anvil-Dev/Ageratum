@@ -28,7 +28,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -87,9 +87,9 @@ public class AgeratumClient {
      * 注册客户端资源重载监听器。
      */
     @SubscribeEvent
-    public static void onReloadListenerRegister(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(GuideDocumentCache.reloadListener());
-        event.registerReloadListener(AgeratumStructureTemplateManager.reloadListener());
+    public static void onReloadListenerRegister(AddClientReloadListenersEvent event) {
+        event.addListener(Ageratum.location("document"), GuideDocumentCache.reloadListener());
+        event.addListener(Ageratum.location("structure"), AgeratumStructureTemplateManager.reloadListener());
     }
 
     /**
@@ -284,7 +284,7 @@ public class AgeratumClient {
     }
 
     public static Path getPreviewRootPath() {
-        return FMLLoader.getGamePath().resolve(AgeratumClient.CONFIG.previewPath).normalize();
+        return FMLLoader.getCurrent().getGameDir().resolve(AgeratumClient.CONFIG.previewPath).normalize();
     }
 
     public static Path resolvePreviewDocumentPath(Identifier location) {

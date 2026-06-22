@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -37,7 +38,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
-        GuiGraphicsExtractor GuiGraphicsExtractor = context.graphics();
+        GuiGraphicsExtractor guiGraphics = context.graphics();
         int y = 0;
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);
@@ -48,8 +49,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
                 return;
             }
 
-            this.renderDecoration(GuiGraphicsExtractor, minecraft, cachedItem, y, lineHeight, maxX);
-            this.drawContent(GuiGraphicsExtractor, minecraft, split, textX, y);
+            this.extractDecorationRenderState(guiGraphics, minecraft, cachedItem, y, lineHeight, maxX);
+            this.drawContent(guiGraphics, minecraft, split, textX, y);
             y += lineHeight;
             maxY -= lineHeight;
         }
@@ -103,8 +104,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
 
     protected abstract int getTextX(CachedItem<E> cachedItem);
 
-    protected abstract void renderDecoration(
-        GuiGraphicsExtractor GuiGraphicsExtractor,
+    protected abstract void extractDecorationRenderState(
+        GuiGraphicsExtractor guiGraphics,
         Minecraft minecraft,
         CachedItem<E> cachedItem,
         int y,
@@ -127,18 +128,18 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     private void drawContent(
-        GuiGraphicsExtractor GuiGraphicsExtractor,
+        GuiGraphicsExtractor guiGraphics,
         Minecraft minecraft,
         List<FormattedCharSequence> split,
         int textX,
         int y
     ) {
-        Matrix3x2fStack pose = GuiGraphicsExtractor.pose()();
+        Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
-        pose.translate(textX, y, 0);
+        pose.translate(textX, y);
         for (FormattedCharSequence sequence : split) {
-            GuiGraphicsExtractor.text(minecraft.font, sequence, 0, 0, 0x000000, false);
-            pose.translate(0, minecraft.font.lineHeight, 0);
+            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
+            pose.translate(0, minecraft.font.lineHeight);
         }
         pose.popMatrix();
     }

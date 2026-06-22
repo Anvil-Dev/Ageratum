@@ -1,7 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import com.mojang.logging.LogUtils;
-import dev.anvilcraft.resource.ageratum.client.command.AgeratumCommand;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -41,15 +40,7 @@ public final class GuideDocumentCache {
     private static volatile Map<NavigationTreeKey, NavigationTree> NAVIGATION_TREE_CACHE = Map.of();
     private static volatile Map<Identifier, List<ItemDocumentBinding>> ITEM_DOCUMENT_CACHE = Map.of();
 
-    
-
-    /**
-     * 检查文档缓存是否已完成首次加载。
-     */
-    public static boolean isCacheLoaded() {
-        return !PARSED_DOCUMENT_CACHE.isEmpty();
-    }
-private static final PreparableReloadListener RELOAD_LISTENER =
+    private static final PreparableReloadListener RELOAD_LISTENER =
         new SimplePreparableReloadListener<PreparedGuideData>() {
             @Override
             protected PreparedGuideData prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
@@ -59,39 +50,23 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                     location -> location.getPath().startsWith(GUIDE_ROOT + "/")
                                 && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
-                // 第一趟：读取文件、提取 front matter、建立物品绑定缓存
-                Map<Identifier, String> rawMarkdowns = new LinkedHashMap<>();
+                Map<Identifier, MDDocument> prepared = new HashMap<>();
+                Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
                 Map<Identifier, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
                 for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
                     Identifier location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        rawMarkdowns.put(location, markdown);
-                        Map<String, Object> frontMatter = MarkdownParser.extractFrontMatter(markdown).frontMatter();
-                        MDDocument tempDoc = new MDDocument(location, frontMatter, List.of());
-                        for (GuideItemBinding binding : tempDoc.getGuideItemBindings()) {
+                        MDDocument document = parser.parseDocument(location, markdown);
+                        prepared.put(location, document);
+                        registerNavigationNode(treeRoots, location, document);
+                        for (GuideItemBinding binding : document.getGuideItemBindings()) {
                             itemDocuments
                                 .computeIfAbsent(binding.itemId(), ignored -> new ArrayList<>())
                                 .add(new ItemDocumentBinding(location, binding));
                         }
                     } catch (IOException exception) {
                         throw new UncheckedIOException("Failed to preload guide: " + location, exception);
-                    } catch (RuntimeException exception) {
-                        LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
-                    }
-                }
-                // 提前应用物品绑定缓存，使第二趟 <ref> 解析时可用
-                ITEM_DOCUMENT_CACHE = Map.copyOf(freezeItemDocuments(itemDocuments));
-
-                // 第二趟：完整解析文档，<ref> 可查新的物品绑定缓存
-                Map<Identifier, MDDocument> prepared = new HashMap<>();
-                Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
-                for (Map.Entry<Identifier, String> entry : rawMarkdowns.entrySet()) {
-                    Identifier location = entry.getKey();
-                    try {
-                        MDDocument document = parser.parseDocument(location, entry.getValue());
-                        prepared.put(location, document);
-                        registerNavigationNode(treeRoots, location, document);
                     } catch (RuntimeException exception) {
                         LOGGER.warn("Skip invalid guide during preload: {}", location, exception);
                     }
@@ -108,7 +83,6 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                 PARSED_DOCUMENT_CACHE = Map.copyOf(prepared.documents());
                 NAVIGATION_TREE_CACHE = Map.copyOf(prepared.navigationTrees());
                 ITEM_DOCUMENT_CACHE = Map.copyOf(prepared.itemDocuments());
-                AgeratumCommand.warmSuggestionCache(PARSED_DOCUMENT_CACHE);
                 LOGGER.info("Preloaded {} guide markdown files", PARSED_DOCUMENT_CACHE.size());
             }
         };
@@ -157,7 +131,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
 
         NavigationTreeKey key = new NavigationTreeKey(location.getNamespace(), normalizeLanguageCode(languageCode));
         MutableDirectoryNode root = treeRoots.computeIfAbsent(key, ignored -> new MutableDirectoryNode(location.getNamespace(), ""));
-        root.insert(fileArgument, location, document.getTitle(fileArgument), document.getWeight(), document.getNavigationColor());
+        root.insert(fileArgument, location, document.getTitle(fileArgument));
     }
 
     private static Map<NavigationTreeKey, NavigationTree> freezeNavigationTrees(
@@ -302,16 +276,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
     ) {
     }
 
-    public record NavigationDocument(
-        String fileArgument,
-        String title,
-        Identifier location,
-        int weight,
-        @Nullable String color
-    ) {
-        public NavigationDocument(String fileArgument, String title, Identifier location) {
-            this(fileArgument, title, location, 0, null);
-        }
+    public record NavigationDocument(String fileArgument, String title, Identifier location) {
     }
 
     private static final class MutableDirectoryNode {
@@ -326,7 +291,8 @@ private static final PreparableReloadListener RELOAD_LISTENER =
             this.namespace = namespace;
             this.name = name;
         }
-        private void insert(String fileArgument, Identifier location, String title, int weight, @Nullable String color) {
+
+        private void insert(String fileArgument, Identifier location, String title) {
             String[] segments = fileArgument.split("/");
             MutableDirectoryNode current = this;
             for (int i = 0; i < segments.length - 1; i++) {
@@ -334,7 +300,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                 current = current.children.computeIfAbsent(segment, name -> new MutableDirectoryNode(this.namespace, name));
             }
             String fileName = segments[segments.length - 1];
-            NavigationDocument document = new NavigationDocument(fileArgument, title, location, weight, color);
+            NavigationDocument document = new NavigationDocument(fileArgument, title, location);
             if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(fileName)) {
                 current.indexDocument = document;
             } else {
@@ -350,10 +316,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
         private NavigationDirectory freezeAsDirectory(int level) {
             List<NavigationDocument> directoryDocuments = new ArrayList<>(this.documents);
 
-            directoryDocuments.sort(
-                Comparator.comparingInt(NavigationDocument::weight)
-                    .thenComparing(NavigationDocument::fileArgument)
-            );
+            directoryDocuments.sort(Comparator.comparing(NavigationDocument::fileArgument));
 
             if (level <= 1 && this.indexDocument != null) {
                 directoryDocuments.addFirst(this.indexDocument);

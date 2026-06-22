@@ -1,4 +1,9 @@
-@NullMarked
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+@FieldsAreNonnullByDefault
 package dev.anvilcraft.resource.ageratum.mixin;
 
-import org.jspecify.annotations.NullMarked;
+import com.mojang.logging.annotations.FieldsAreNonnullByDefault;
+import com.mojang.logging.annotations.MethodsReturnNonnullByDefault;
+
+import javax.annotation.ParametersAreNonnullByDefault;
