@@ -2,8 +2,8 @@ import shutil
 import os
 import re
 
-GuideME_path = r"D:\usualUsing\ProgramAndScript\PY\study\guidebook"
-Ageratum_path = r"D:\usualUsing\ProgramAndScript\Java\AnvilCraft\AnvilCraft\run\ageratum_preview"
+GuideME_path = r"D:\usualUsing\ProgramAndScript\Java\AnvilCraft-PigsPlus\src\main\resources\assets\anvilcraft_guideme"
+Ageratum_path = r"D:\usualUsing\ProgramAndScript\Java\AnvilCraft-PigsPlus\src\main\resources\assets\anvilcraft\zh_cn"
 
 # 删除 Ageratum_path 下的所有内容
 if os.path.exists(Ageratum_path):
@@ -60,26 +60,10 @@ for root, dirs, files in os.walk(Ageratum_path):
             new_content = re.sub(r'<ItemImage\s+id="([^"]*)"\s+scale="[^"]*" />', r'<item id="\1"/>', new_content)
             # 将 <Row>*</Row> 替换为 <row>*</row>（支持跨行内容）
             new_content = re.sub(r'<Row>(.*?)</Row>', r'<row halign="center">\1</row>', new_content, flags=re.DOTALL)
-            # 将 <ItemLink id="{A}:{B}" /> 替换为 (<translate key="item.{A}.{B}"/>)[对应文件相对路径]
-            def replace_item_link(m, current_dir=os.path.relpath(root, Ageratum_path)):
-                namespace = m.group(1)
-                item_name = m.group(2)
-                full_id = f"{namespace}:{item_name}"
-                # 含 "block" 的物品使用 block 键前缀，否则使用 item 键前缀（因为游戏内方块和物品的翻译键不同）
-                if 'block' in item_name:
-                    translated = f'<translate key="block.{namespace}.{item_name}"/>'
-                else:
-                    translated = f'<translate key="item.{namespace}.{item_name}"/>'
-                if full_id in item_id_to_file:
-                    target_path = item_id_to_file[full_id]
-                    # 计算从当前文件目录到目标文件的相对路径
-                    if current_dir == '.':
-                        rel = target_path
-                    else:
-                        rel = os.path.relpath(target_path, current_dir).replace('\\', '/')
-                    return f'[{translated}]({rel})'
-                return translated
-            new_content = re.sub(r'<ItemLink\s+id="([^:]*):([^"]*)"\s*/>', replace_item_link, new_content)
+            # 将 <ItemLink id="{A}" /> 替换为 <ref item="{A}"/>
+            new_content = re.sub(r'<ItemLink\s+id="([^"]*)"\s*/>', r'<ref item="\1"/>', new_content)
+            new_content = re.sub(r'<ItemLink\s+id="([^"]*)"\s* />', r'<ref item="\1"/>', new_content)
+            new_content = re.sub(r'<ItemLink\s+id="([^"]*)">\s*</ItemLink>', r'<ref item="\1"/>', new_content)
             # 将 <Colour firstColor="{A}" lastColor="{B}">{C}</Colour> 替换为 <gradient start="#{A}" end="#{B}">{C}</gradient>
             new_content = re.sub(r'<Colour\s+firstColor="([^"]*)"\s+lastColor="([^"]*)">(.*?)</Colour>', r'<gradient start="#\1" end="#\2">\3</gradient>', new_content, flags=re.DOTALL)
             # 将 <ImportStructure src="***" /> 替换为 <structure id="***"/>
