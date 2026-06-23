@@ -4,7 +4,7 @@
 
 <img src=".idea/icon.png" style="width: 128px; height: 128px" alt="Ageratum Logo">
 
-![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/built-with/java21_vector.svg)
+![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/built-with/java25_vector.svg)
 ![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/neoforge_vector.svg)
 
 ![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/unsupported/fabric_vector.svg)
@@ -182,9 +182,7 @@
 Ageratum.openGuide(ResourceLocation location);
 
 // 服务端通知客户端打开（网络发包）
-Ageratum.
-
-openGuide(ResourceLocation location);
+Ageratum.openGuide(ResourceLocation location);
 ```
 
 ## 项目结构
@@ -268,9 +266,7 @@ public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionCompo
     );
 
 // 在你的模组构造函数中
-EXT_COMPONENT_FACTORIES.
-
-register(modEventBus);
+EXT_COMPONENT_FACTORIES.register(modEventBus);
 ```
 
 #### 注册自定义行内样式解析器

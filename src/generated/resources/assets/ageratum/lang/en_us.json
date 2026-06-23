@@ -5,6 +5,8 @@
   "ageratum.configuration.bread_crumbs_has_label.tooltip": "Do breadcrumbs record jumps from sidebar tabs",
   "ageratum.configuration.enable_preview": "Enable Preview",
   "ageratum.configuration.enable_preview.tooltip": "Whether to enable preview mode (enabling it will allow real-time previews of changes to documents in the specified path)",
+  "ageratum.configuration.item_binding_hold_duration_ms": "Item Binding Hold Duration Ms",
+  "ageratum.configuration.item_binding_hold_duration_ms.tooltip": "Hold duration (milliseconds) for W-key item binding navigation, default 750ms",
   "ageratum.configuration.preview_path": "Preview Path",
   "ageratum.configuration.preview_path.tooltip": "Preview mode path",
   "ageratum.configuration.scale": "Scale",

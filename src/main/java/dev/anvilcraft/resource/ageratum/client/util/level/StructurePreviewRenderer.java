@@ -103,6 +103,7 @@ public final class StructurePreviewRenderer {
             y0 + pipH,
             pipScale,
             Minecraft.getInstance().options.ambientOcclusion().get(),
+            false,
             pose3D,
             new Matrix3x2f(),
             scissor
