@@ -151,7 +151,8 @@ If multiple documents are bound to the same item, the first one is opened accord
 
 1. Client's current language version
 2. English (`en_us`) version
-3. First in the list (by path lexicographical order)
+3. Within the same language, the binding with more component constraints is preferred (including nested fields and array elements)
+4. If specificity is equal, the first document by path lexicographical order
 
 ---
 

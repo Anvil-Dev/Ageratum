@@ -177,28 +177,38 @@ public final class GuideDocumentCache {
         List<ItemDocumentBinding> bindings = ITEM_DOCUMENT_CACHE.get(itemId);
         if (bindings == null || bindings.isEmpty()) return Optional.empty();
 
-        List<Identifier> matchedLocations = new ArrayList<>();
+        Map<Identifier, Integer> matchedLocations = new HashMap<>();
         for (ItemDocumentBinding binding : bindings) {
-            if (!binding.binding().matches(stack) || matchedLocations.contains(binding.location())) continue;
-            matchedLocations.add(binding.location());
+            int specificity = binding.binding().matchSpecificity(stack);
+            if (specificity < 0) continue;
+            matchedLocations.merge(binding.location(), specificity, Math::max);
         }
         if (matchedLocations.isEmpty()) return Optional.empty();
         return selectPreferredLocation(matchedLocations, languageCode);
     }
 
-    private static Optional<Identifier> selectPreferredLocation(List<Identifier> locations, @Nullable String languageCode) {
+    private static Optional<Identifier> selectPreferredLocation(
+        Map<Identifier, Integer> locations,
+        @Nullable String languageCode
+    ) {
         String preferredLanguage = normalizeLanguageCode(languageCode);
-        if (!preferredLanguage.isEmpty()) {
-            for (Identifier location : locations) {
-                if (preferredLanguage.equals(extractLanguageCode(location))) return Optional.of(location);
-            }
+        List<Map.Entry<Identifier, Integer>> candidates = locations.entrySet().stream()
+            .filter(entry -> preferredLanguage.equals(extractLanguageCode(entry.getKey())))
+            .toList();
+        if (candidates.isEmpty() && !GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(preferredLanguage)) {
+            candidates = locations.entrySet().stream()
+                .filter(entry -> GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(extractLanguageCode(entry.getKey())))
+                .toList();
         }
-        if (!GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(preferredLanguage)) {
-            for (Identifier location : locations) {
-                if (GuideDocumentLoader.DEFAULT_LANGUAGE_CODE.equals(extractLanguageCode(location))) return Optional.of(location);
-            }
+        if (candidates.isEmpty()) {
+            candidates = List.copyOf(locations.entrySet());
         }
-        return Optional.of(locations.getFirst());
+        return candidates.stream()
+            .min(Comparator
+                .<Map.Entry<Identifier, Integer>>comparingInt(Map.Entry::getValue)
+                .reversed()
+                .thenComparing(entry -> entry.getKey().toString()))
+            .map(Map.Entry::getKey);
     }
 
     private static String extractLanguageCode(Identifier location) {

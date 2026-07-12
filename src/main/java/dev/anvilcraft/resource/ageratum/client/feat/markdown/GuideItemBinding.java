@@ -79,20 +79,27 @@ public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents
     }
 
     public boolean matches(ItemStack stack) {
+        return this.matchSpecificity(stack) >= 0;
+    }
+
+    /**
+     * Returns the number of component constraints matched by this binding, or {@code -1} when it does not match.
+     */
+    int matchSpecificity(ItemStack stack) {
         if (stack.isEmpty() || !this.itemId.equals(BuiltInRegistries.ITEM.getKey(stack.getItem()))) {
-            return false;
+            return -1;
         }
         if (this.rawComponents == null) {
-            return true;
+            return 0;
         }
 
         JsonObject requiredComponents = this.parseRequiredComponentsAsJsonObject();
         JsonObject actualComponents = encodeStackComponentsToJsonObject(stack);
         if (requiredComponents == null || actualComponents == null) {
-            return false;
+            return -1;
         }
 
-        return isJsonSubset(requiredComponents, actualComponents);
+        return isJsonSubset(requiredComponents, actualComponents) ? componentSpecificity(requiredComponents) : -1;
     }
 
     /**
@@ -324,6 +331,26 @@ public record GuideItemBinding(Identifier itemId, @Nullable String rawComponents
         }
 
         return required.equals(actual);
+    }
+
+    private static int componentSpecificity(JsonElement element) {
+        return switch (element) {
+            case JsonObject object -> {
+                int specificity = 0;
+                for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
+                    specificity += 1 + componentSpecificity(entry.getValue());
+                }
+                yield specificity;
+            }
+            case JsonArray array -> {
+                int specificity = 0;
+                for (JsonElement child : array) {
+                    specificity += componentSpecificity(child);
+                }
+                yield specificity;
+            }
+            default -> 1;
+        };
     }
 
     private static @Nullable String normalizeComponents(String rawComponents) {
