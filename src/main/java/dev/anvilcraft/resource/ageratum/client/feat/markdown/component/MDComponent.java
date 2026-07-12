@@ -3,7 +3,6 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -59,7 +58,6 @@ public abstract class MDComponent {
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
-    private static final int BROKEN_LINK_COLOR = AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
@@ -406,29 +404,11 @@ public abstract class MDComponent {
      * 为链接文本构造带点击事件的样式。
      */
     private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
-        int color = resolveLinkColor(target);
-        Style style = parentStyle.withUnderlined(true).withColor(color);
+        Style style = parentStyle.withUnderlined(true).withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR);
         if (target == null || target.isBlank()) {
             return style;
         }
         return style.withClickEvent(new ClickEvent.OpenUrl(URI.create(target)));
-    }
-
-    /**
-     * 解析链接颜色：若为内部文档链接且目标不存在，返回断链红色。
-     */
-    private static int resolveLinkColor(@Nullable String target) {
-        if (target == null || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:")) {
-            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
-        }
-        Identifier docLocation = Identifier.tryParse(target);
-        if (docLocation == null) {
-            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
-        }
-        if (GuideDocumentCache.getParsedDocument(docLocation).isEmpty()) {
-            return BROKEN_LINK_COLOR;
-        }
-        return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
     }
 
     /**

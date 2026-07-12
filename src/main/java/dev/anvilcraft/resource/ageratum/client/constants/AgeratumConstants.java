@@ -250,8 +250,11 @@ public interface AgeratumConstants {
             /**
              * 链接颜色（蓝色）
              */
-            int LINK_COLOR = 0xFF66CCFF;
-            int BROKEN_LINK_COLOR = 0xFFFF5555;
+            int LINK_COLOR = 0x66CCFF;
+            /**
+             * 断链颜色（红色），用于标记指向不存在文档的引用/链接。
+             */
+            int BROKEN_LINK_COLOR = 0xFF5555;
             /**
              * 标签活跃状态文本颜色（棕色）
              */
