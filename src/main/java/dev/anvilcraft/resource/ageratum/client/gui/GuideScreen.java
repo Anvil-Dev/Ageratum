@@ -2270,7 +2270,7 @@ public class GuideScreen extends Screen {
             }
             pose.pushMatrix();
             component.extractRenderState(rootContext.child(
-                this.getContentWidth() - 2,
+                this.getContentWidth(),
                 Integer.MAX_VALUE,
                 translatedMouseX,
                 translatedMouseY,

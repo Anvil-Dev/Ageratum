@@ -22,7 +22,6 @@ import net.minecraft.util.FormattedCharSink;
 import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.joml.Matrix3x2fStack;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -111,10 +110,11 @@ public abstract class MDComponent {
         GuiGraphicsExtractor guiGraphics = context.graphics();
         FormattedText textToRender = this.getEffectiveText();
         List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
-        Matrix3x2fStack pose = guiGraphics.pose();
+        int y = 0;
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
+            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, y, 0xFF000000, false);
+            y += minecraft.font.lineHeight;
             maxY -= minecraft.font.lineHeight;
         }
     }
