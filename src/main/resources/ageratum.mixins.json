@@ -4,6 +4,7 @@
   "package": "dev.anvilcraft.resource.ageratum.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "LecternBlockMixin",
     "accessor.SmithingTransformRecipeAccessor",
     "accessor.SmithingTrimRecipeAccessor"
   ],
