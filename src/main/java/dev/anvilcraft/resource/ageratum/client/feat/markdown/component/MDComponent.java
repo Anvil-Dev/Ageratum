@@ -2,7 +2,6 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParser;
-import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
@@ -52,7 +51,6 @@ public abstract class MDComponent {
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
     private static final int CODE_SPAN_COLOR = 0x7a4f2f;
-    private static final int BROKEN_LINK_COLOR = AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
@@ -62,13 +60,14 @@ public abstract class MDComponent {
     @SuppressWarnings("JavadocDeclaration")
     protected final FormattedText text;
 
-    
+
     /**
      * 渲染时实际使用的文本，若不为 null 则覆盖 {@link #text}。
      * 用于 post-process 后的文本替换（如断链红色标记）。
      */
     private @Nullable FormattedText effectiveText;
-/**
+
+    /**
      * 使用原始文本创建组件，文本会按默认规则进行 Markdown 内联解析。
      */
     public MDComponent(String text) {
@@ -106,9 +105,11 @@ public abstract class MDComponent {
         GuiGraphics guiGraphics = context.graphics();
         FormattedText textToRender = this.getEffectiveText();
         List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
+        int line = 0;
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
+            guiGraphics.drawString(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
+            line++;
             maxY -= minecraft.font.lineHeight;
         }
     }
@@ -418,29 +419,11 @@ public abstract class MDComponent {
      * 为链接文本构造带点击事件的样式。
      */
     private static Style createLinkStyle(Style parentStyle, @Nullable String target) {
-        int color = resolveLinkColor(target);
-        Style style = parentStyle.withUnderlined(true).withColor(color);
+        Style style = parentStyle.withUnderlined(true).withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR);
         if (target == null || target.isBlank()) {
             return style;
         }
         return style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, target));
-    }
-
-    /**
-     * 解析链接颜色：若为内部文档链接且目标不存在，返回断链红色。
-     */
-    private static int resolveLinkColor(@Nullable String target) {
-        if (target == null || target.startsWith("http://") || target.startsWith("https://") || target.startsWith("mailto:")) {
-            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
-        }
-        ResourceLocation docLocation = ResourceLocation.tryParse(target);
-        if (docLocation == null || !GuideDocumentCache.isCacheLoaded()) {
-            return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
-        }
-        if (GuideDocumentCache.getParsedDocument(docLocation).isEmpty()) {
-            return BROKEN_LINK_COLOR;
-        }
-        return AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR;
     }
 
     /**
