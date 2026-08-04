@@ -16,6 +16,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderC
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.network.ShareGuidePayload;
 import lombok.Getter;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -509,15 +510,26 @@ public class GuideScreen extends Screen {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
 
+        // Ctrl/Alt/Shift 加速内容区翻滚（3倍速度）
+        double acceleratedScrollY = scrollY;
+        if (Screen.hasControlDown() || Screen.hasAltDown() || Screen.hasShiftDown()) {
+            acceleratedScrollY *= 3.0;
+        }
         if (this.minecraft != null) {
             ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
-            if (hit != null && hit.component().mouseScrolled(this.minecraft, hit.mouseX(), hit.mouseY(), scrollY, this.getContentWidth())) {
+            if (hit != null && hit.component().mouseScrolled(
+                this.minecraft,
+                hit.mouseX(),
+                hit.mouseY(),
+                acceleratedScrollY,
+                this.getContentWidth()
+            )) {
                 return true;
             }
         }
 
         // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
-        this.scrollBy((float) -scrollY * SCROLL_STEP);
+        this.scrollBy((float) -acceleratedScrollY * SCROLL_STEP);
         return true;
     }
 
@@ -2429,13 +2441,15 @@ public class GuideScreen extends Screen {
         List<Component> lines = new ArrayList<>();
         // 第一行：完整名称
         lines.add(Component.literal(entry.title.getString()));
+        // 滚动加速提示
+        lines.add(Component.literal("按住alt/shift/ctrl加速滑动").withStyle(ChatFormatting.GRAY));
         // 父标签且拥有子标签时，显示折叠提示
         if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
             boolean collapsed = this.collapsedLabelGroups.contains(entryIndexInFull);
             if (entry.clickable && entry.location != null) {
-                lines.add(Component.literal(collapsed ? "左键 展开并打开" : "左键 收起并打开"));
+                lines.add(Component.literal(collapsed ? "左键 展开并打开" : "左键 收起并打开").withStyle(ChatFormatting.GRAY));
             } else {
-                lines.add(Component.literal(collapsed ? "左键 展开" : "左键 收起"));
+                lines.add(Component.literal(collapsed ? "左键 展开" : "左键 收起").withStyle(ChatFormatting.GRAY));
             }
         }
         guiGraphics.renderTooltip(
@@ -2628,7 +2642,6 @@ public class GuideScreen extends Screen {
         for (int i = groupIndex + 1; i < this.labelEntries.size(); i++) {
             LabelEntry entry = this.labelEntries.get(i);
             return entry.level != 1; // 遇到下一个 level==1，说明没有子标签
-// 找到 level==2
         }
         return false;
     }
