@@ -137,7 +137,7 @@ public class AgeratumCommand {
         Component message = Component.literal(itemId.toString())
             .withStyle(style -> style.withColor(0xFF66CCFF)
                 .withUnderlined(true)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, refString))
+                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, itemId.toString()))
                 .withHoverEvent(new HoverEvent(
                     HoverEvent.Action.SHOW_TEXT,
                     Component.translatable("commands.ageratum.item.id_copy_hint")
