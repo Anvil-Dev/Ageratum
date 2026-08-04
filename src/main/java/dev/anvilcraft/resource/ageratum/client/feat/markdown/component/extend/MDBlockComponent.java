@@ -104,21 +104,17 @@ GuiGraphics graphics = context.graphics();
     }
 
     /**
-     * 渲染方块物品 tooltip，并检查文档绑定添加 W 键提示。
+     * 渲染方块物品 tooltip，并检查文档绑定；W 键提示由 tooltip 事件统一注入。
      */
     private void renderBlockItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
-            Minecraft minecraft = context.minecraft();
-            String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-            GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode).ifPresentOrElse(
-                doc -> {
-                    this.hoveredDocLink = doc;
-                    context.addTooltip(Component.translatable(
-                        "tooltip.ageratum.bind_item_hold",
-                        Component.keybind("key.ageratum.more_info")
-                    ));
-                },
+            // W 键提示由 BoundItemGuideNavigator 通过 RenderTooltipEvent 注入，这里只记录跳转目标。
+            GuideDocumentCache.getFirstDocumentByItemStack(
+                stack,
+                AgeratumClient.getClientLanguageCode(context.minecraft())
+            ).ifPresentOrElse(
+                doc -> this.hoveredDocLink = doc,
                 () -> this.hoveredDocLink = null
             );
         }
