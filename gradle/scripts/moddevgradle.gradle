@@ -46,3 +46,9 @@ neoForge {
         }
     }
 }
+
+tasks.configureEach {
+    if (name in ['runClient', 'runServer', 'runGameTestServer', 'runData']) {
+        notCompatibleWithConfigurationCache("IntelliJ debugger injects non-cacheable actions into Minecraft run tasks")
+    }
+}
