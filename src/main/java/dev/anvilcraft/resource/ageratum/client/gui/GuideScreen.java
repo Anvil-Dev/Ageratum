@@ -2448,44 +2448,29 @@ public class GuideScreen extends Screen {
     /**
      * 查找需要固定在顶部的父标签索引。
      *
-     * <p>当当前页面是 level==2 的子标签，且其父标签已滚出可视范围时，
-     * 返回父标签在 labelEntries 中的索引；否则返回 -1。</p>
+     * <p>第 1 行固定为“首个可见标签”所属的大章；当首行已经滚到章节标题时，
+     * 沿用上一行所属大章，避免滚动一格后顶部大章提前切换。</p>
      */
     private int findPinnedParentIndex() {
-        String currentFile = this.getCurrentFileArgument();
-        int activeIndex = -1;
-        for (int i = 0; i < this.labelEntries.size(); i++) {
-            LabelEntry entry = this.labelEntries.get(i);
-            if (entry.fileArgument != null && entry.fileArgument.equals(currentFile)) {
-                activeIndex = i;
-                break;
-            }
-        }
-        if (activeIndex < 0) {
+        if (this.visibleLabelIndices.isEmpty()) {
             return -1;
         }
-        LabelEntry activeEntry = this.labelEntries.get(activeIndex);
-        if (activeEntry.level != 2) {
+        int firstVisibleIndex = this.visibleLabelIndices.get(
+            Mth.clamp(this.labelScrollRows, 0, this.visibleLabelIndices.size() - 1)
+        );
+        LabelEntry firstVisibleEntry = this.labelEntries.get(firstVisibleIndex);
+        if (firstVisibleEntry.level == 2) {
+            return this.findParentGroupIndex(firstVisibleIndex);
+        }
+        if (this.labelScrollRows <= 0) {
             return -1;
         }
-        int parentIndex = -1;
-        for (int i = activeIndex - 1; i >= 0; i--) {
-            if (this.labelEntries.get(i).level == 1) {
-                parentIndex = i;
-                break;
-            }
+        int previousVisibleIndex = this.visibleLabelIndices.get(this.labelScrollRows - 1);
+        LabelEntry previousVisibleEntry = this.labelEntries.get(previousVisibleIndex);
+        if (previousVisibleEntry.level == 2) {
+            return this.findParentGroupIndex(previousVisibleIndex);
         }
-        if (parentIndex < 0) {
-            return -1;
-        }
-        if (this.visibleLabelIndices.contains(parentIndex)) {
-            int visiblePos = this.visibleLabelIndices.indexOf(parentIndex);
-            if (visiblePos >= this.labelScrollRows
-                && visiblePos < this.labelScrollRows + this.getLabelVisibleRows()) {
-                return -1;
-            }
-        }
-        return parentIndex;
+        return previousVisibleEntry.level == 1 ? previousVisibleIndex : -1;
     }
 
     /**
