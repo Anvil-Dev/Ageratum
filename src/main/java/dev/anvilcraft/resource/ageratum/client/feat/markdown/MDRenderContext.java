@@ -70,7 +70,11 @@ public record MDRenderContext(
     }
 
     public void addTooltip(Component text) {
-        this.tooltips.add(new Tooltip(List.of(text), Optional.empty(), ItemStack.EMPTY));
+        this.addTooltip(List.of(text));
+    }
+
+    public void addTooltip(List<Component> lines) {
+        this.tooltips.add(new Tooltip(lines, Optional.empty(), ItemStack.EMPTY));
     }
 
     public record Tooltip(
