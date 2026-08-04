@@ -62,14 +62,26 @@ public record MDRenderContext(
     }
 
     public void addTooltip(ItemStack stack) {
-        this.tooltips.add(new Tooltip(Screen.getTooltipFromItem(Minecraft.getInstance(), stack), stack.getTooltipImage()));
+        this.tooltips.add(new Tooltip(
+            Screen.getTooltipFromItem(Minecraft.getInstance(), stack),
+            stack.getTooltipImage(),
+            stack
+        ));
     }
 
     public void addTooltip(Component text) {
-        this.tooltips.add(new Tooltip(List.of(text), Optional.empty()));
+        this.addTooltip(List.of(text));
     }
 
-    public record Tooltip(List<Component> tooltipLines, Optional<TooltipComponent> visualTooltipComponent) {
+    public void addTooltip(List<Component> lines) {
+        this.tooltips.add(new Tooltip(lines, Optional.empty(), ItemStack.EMPTY));
+    }
+
+    public record Tooltip(
+        List<Component> tooltipLines,
+        Optional<TooltipComponent> visualTooltipComponent,
+        ItemStack stack
+    ) {
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
@@ -90,14 +102,29 @@ public record MDRenderContext(
 
     public void renderTooltip() {
         for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
-            this.graphics()
-                .renderTooltip(
-                    this.minecraft().font,
-                    tooltip.tooltipLines(),
-                    tooltip.visualTooltipComponent(),
-                    Math.round(this.mouseX()),
-                    Math.round(this.mouseY())
-                );
+            ItemStack stack = tooltip.stack();
+            int mouseX = Math.round(this.mouseX());
+            int mouseY = Math.round(this.mouseY());
+            if (stack.isEmpty()) {
+                this.graphics()
+                    .renderTooltip(
+                        this.minecraft().font,
+                        tooltip.tooltipLines(),
+                        tooltip.visualTooltipComponent(),
+                        mouseX,
+                        mouseY
+                    );
+            } else {
+                this.graphics()
+                    .renderTooltip(
+                        this.minecraft().font,
+                        tooltip.tooltipLines(),
+                        tooltip.visualTooltipComponent(),
+                        stack,
+                        mouseX,
+                        mouseY
+                    );
+            }
         }
     }
 

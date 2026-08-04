@@ -31,5 +31,7 @@
   "key.categories.ageratum": "Ageratum",
   "system.ageratum.share.button": "[CLICK TO OPEN]",
   "system.ageratum.share.tip": "Player %s has shared a guide with you:",
-  "tooltip.ageratum.bind_item_hold": "Hold %s to get more info"
+  "tooltip.ageratum.bind_item_hold": "Hold %s to get more info",
+  "tooltip.ageratum.structure_projection.layer_shortcut": "Press %s / %s to adjust projection layers",
+  "tooltip.ageratum.structure_projection.remove_shortcut": "Press %s to close projection"
 }

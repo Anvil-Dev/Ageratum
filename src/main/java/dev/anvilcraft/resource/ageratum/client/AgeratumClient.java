@@ -172,17 +172,37 @@ public class AgeratumClient {
     }
 
     /**
+     * 从侧边栏打开文档，保留当前标签栏滚动和折叠状态。
+     */
+    public static boolean openGuideOnClientPreservingLabelState(ResourceLocation location, List<ResourceLocation> breadCrumbs) {
+        return openGuideOnClientInternal(location, null, breadCrumbs, true);
+    }
+
+    /**
      * 客户端本地打开文档，可选指定锚点；若不存在则返回 false。
      *
      * @param location 文档资源位置
      * @param anchor   目标锚点（可为 null）
      */
     public static boolean openGuideOnClient(ResourceLocation location, @Nullable String anchor, List<ResourceLocation> breadCrumbs) {
+        return openGuideOnClientInternal(location, anchor, breadCrumbs, false);
+    }
+
+    private static boolean openGuideOnClientInternal(
+        ResourceLocation location,
+        @Nullable String anchor,
+        List<ResourceLocation> breadCrumbs,
+        boolean preserveLabelState
+    ) {
         if (isPreviewLocation(location)) {
-            return openPreviewGuideOnClient(location, anchor, breadCrumbs);
+            return openPreviewGuideOnClient(location, anchor, breadCrumbs, preserveLabelState);
         }
 
         Minecraft minecraft = Minecraft.getInstance();
+        GuideScreen currentGuideScreen = null;
+        if (minecraft.screen instanceof GuideScreen guideScreen) {
+            currentGuideScreen = guideScreen;
+        }
         ResourceManager resourceManager = minecraft.getResourceManager();
         if (!GuideDocumentLoader.exists(resourceManager, location)) {
             return false;
@@ -190,7 +210,7 @@ public class AgeratumClient {
 
         int inheritedLabelScrollRows = 0;
         double inheritedLabelScrollRemainder = 0.0d;
-        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+        if (currentGuideScreen != null) {
             inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
             inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
         }
@@ -201,6 +221,9 @@ public class AgeratumClient {
             GuideScreen screen = new GuideScreen(location, cachedDocument.get(), breadCrumbs, false);
             screen.setAnchor(anchor);
             screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
+            if (preserveLabelState && currentGuideScreen != null) {
+                screen.setLabelStatePreserved(currentGuideScreen);
+            }
             minecraft.setScreen(screen);
             return true;
         }
@@ -213,6 +236,8 @@ public class AgeratumClient {
             minecraft,
             inheritedLabelScrollRows,
             inheritedLabelScrollRemainder,
+            currentGuideScreen,
+            preserveLabelState,
             content,
             false
         );
@@ -221,9 +246,14 @@ public class AgeratumClient {
     private static boolean openPreviewGuideOnClient(
         ResourceLocation location,
         @Nullable String anchor,
-        List<ResourceLocation> breadCrumbs
+        List<ResourceLocation> breadCrumbs,
+        boolean preserveLabelState
     ) {
         Minecraft minecraft = Minecraft.getInstance();
+        GuideScreen currentGuideScreen = null;
+        if (minecraft.screen instanceof GuideScreen guideScreen) {
+            currentGuideScreen = guideScreen;
+        }
         Path previewFile = resolvePreviewDocumentPath(location);
         if (!Files.isRegularFile(previewFile)) {
             return false;
@@ -231,7 +261,7 @@ public class AgeratumClient {
 
         int inheritedLabelScrollRows = 0;
         double inheritedLabelScrollRemainder = 0.0d;
-        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+        if (currentGuideScreen != null) {
             inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
             inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
         }
@@ -251,6 +281,8 @@ public class AgeratumClient {
             minecraft,
             inheritedLabelScrollRows,
             inheritedLabelScrollRemainder,
+            currentGuideScreen,
+            preserveLabelState,
             content,
             true
         );
@@ -263,6 +295,8 @@ public class AgeratumClient {
         Minecraft minecraft,
         int inheritedLabelScrollRows,
         double inheritedLabelScrollRemainder,
+        @Nullable GuideScreen currentGuideScreen,
+        boolean preserveLabelState,
         String content,
         boolean preview
     ) {
@@ -270,6 +304,9 @@ public class AgeratumClient {
         GuideScreen screen = new GuideScreen(location, parsedDocument, breadCrumbs, preview);
         screen.setAnchor(anchor);
         screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
+        if (preserveLabelState && currentGuideScreen != null) {
+            screen.setLabelStatePreserved(currentGuideScreen);
+        }
         minecraft.setScreen(screen);
         return true;
     }

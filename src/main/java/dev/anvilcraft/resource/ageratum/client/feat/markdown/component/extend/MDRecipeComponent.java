@@ -13,7 +13,6 @@ import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
@@ -78,22 +77,18 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     }
 
     /**
-     * 渲染配方物品并检查文档绑定，若存在则记录到 {@link #hoveredDocLink}
-     * 并在 tooltip 中显示 W 键跳转提示。
+     * 渲染配方物品并检查文档绑定，若存在则记录到 {@link #hoveredDocLink}。
+     * W 键提示由 tooltip 事件在渲染物品 tooltip 时统一注入。
      */
     protected void renderRecipeItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
         if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
             context.addTooltip(stack);
-            Minecraft minecraft = context.minecraft();
-            String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
-            GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode).ifPresentOrElse(
-                doc -> {
-                    this.hoveredDocLink = doc;
-                    context.addTooltip(Component.translatable(
-                        "tooltip.ageratum.bind_item_hold",
-                        Component.keybind("key.ageratum.more_info")
-                    ));
-                },
+            // W 键提示由 BoundItemGuideNavigator 通过 RenderTooltipEvent 注入，这里只记录跳转目标。
+            GuideDocumentCache.getFirstDocumentByItemStack(
+                stack,
+                AgeratumClient.getClientLanguageCode(context.minecraft())
+            ).ifPresentOrElse(
+                doc -> this.hoveredDocLink = doc,
                 () -> this.hoveredDocLink = null
             );
         }
