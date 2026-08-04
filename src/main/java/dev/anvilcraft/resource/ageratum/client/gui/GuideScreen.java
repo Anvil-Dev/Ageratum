@@ -1642,14 +1642,12 @@ public class GuideScreen extends Screen {
     }
 
     private boolean handleLabelEntryClick(LabelEntry entry, int entryIndexInFull) {
-        // Shift+左键 → 切换父标签折叠状态
-        if (Screen.hasShiftDown() && entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
+        // 左键点击大章时切换展开/收起，并继续打开其 index 内容
+        if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
             this.toggleLabelGroup(entryIndexInFull);
-            return true;
         }
-        // 普通左键 → 跳转页面
         if (!entry.clickable || entry.location == null) {
-            return false;
+            return entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull);
         }
         List<ResourceLocation> breadCrumbs = this.breadCrumbs;
         if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
@@ -2375,7 +2373,7 @@ public class GuideScreen extends Screen {
     /**
      * 渲染侧边标签的 tooltip。
      *
-     * <p>对父标签显示完整名称和 Shift+左键 折叠/展开提示。</p>
+     * <p>对父标签显示完整名称和左键折叠/展开提示。</p>
      */
     private void renderLabelTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int pinnedParentIndex = this.findPinnedParentIndex();
@@ -2434,7 +2432,11 @@ public class GuideScreen extends Screen {
         // 父标签且拥有子标签时，显示折叠提示
         if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
             boolean collapsed = this.collapsedLabelGroups.contains(entryIndexInFull);
-            lines.add(Component.literal(collapsed ? "Shift+左键 展开" : "Shift+左键 收起"));
+            if (entry.clickable && entry.location != null) {
+                lines.add(Component.literal(collapsed ? "左键 展开并打开" : "左键 收起并打开"));
+            } else {
+                lines.add(Component.literal(collapsed ? "左键 展开" : "左键 收起"));
+            }
         }
         guiGraphics.renderTooltip(
             this.font,
@@ -2455,17 +2457,16 @@ public class GuideScreen extends Screen {
         if (this.visibleLabelIndices.isEmpty()) {
             return -1;
         }
-        int firstVisibleIndex = this.visibleLabelIndices.get(
-            Mth.clamp(this.labelScrollRows, 0, this.visibleLabelIndices.size() - 1)
-        );
+        int clampedScrollRows = Mth.clamp(this.labelScrollRows, 0, this.visibleLabelIndices.size() - 1);
+        int firstVisibleIndex = this.visibleLabelIndices.get(clampedScrollRows);
         LabelEntry firstVisibleEntry = this.labelEntries.get(firstVisibleIndex);
         if (firstVisibleEntry.level == 2) {
             return this.findParentGroupIndex(firstVisibleIndex);
         }
-        if (this.labelScrollRows <= 0) {
+        if (clampedScrollRows <= 0) {
             return -1;
         }
-        int previousVisibleIndex = this.visibleLabelIndices.get(this.labelScrollRows - 1);
+        int previousVisibleIndex = this.visibleLabelIndices.get(clampedScrollRows - 1);
         LabelEntry previousVisibleEntry = this.labelEntries.get(previousVisibleIndex);
         if (previousVisibleEntry.level == 2) {
             return this.findParentGroupIndex(previousVisibleIndex);
@@ -2626,10 +2627,8 @@ public class GuideScreen extends Screen {
         }
         for (int i = groupIndex + 1; i < this.labelEntries.size(); i++) {
             LabelEntry entry = this.labelEntries.get(i);
-            if (entry.level == 1) {
-                return false; // 遇到下一个 level==1，说明没有子标签
-            }
-            return true; // 找到 level==2
+            return entry.level != 1; // 遇到下一个 level==1，说明没有子标签
+// 找到 level==2
         }
         return false;
     }
