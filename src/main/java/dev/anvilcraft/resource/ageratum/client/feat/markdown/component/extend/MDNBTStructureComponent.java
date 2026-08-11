@@ -1,4 +1,5 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
+import net.minecraft.network.chat.Component;
 
 import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.lib.v2.font.AnvilLibFont;
@@ -163,6 +164,19 @@ public final class MDNBTStructureComponent extends MDComponent {
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
             32
         );
+        if (isHover) {
+            context.addTooltip(List.of(
+                Component.translatable(
+                    "tooltip.ageratum.structure_projection.layer_shortcut",
+                    Component.keybind("key.ageratum.structure_projection.layer_up"),
+                    Component.keybind("key.ageratum.structure_projection.layer_down")
+                ),
+                Component.translatable(
+                    "tooltip.ageratum.structure_projection.remove_shortcut",
+                    Component.keybind("key.ageratum.structure_projection.remove")
+                )
+            ));
+        }
     }
 
     @Override

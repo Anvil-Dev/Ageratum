@@ -1,6 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import dev.anvilcraft.lib.v2.font.AnvilLibFont;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -26,6 +28,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -43,6 +46,7 @@ public class MDBlockComponent extends MDImageComponent {
     private final boolean showText;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
     private @Nullable BlockState blockState;
+    private @Nullable Identifier hoveredDocLink;
     private @Nullable SandboxRenderLevel sandboxRenderLevel;
 
     public MDBlockComponent(Identifier blockLoc, Map<String, String> stateProps, boolean showText) {
@@ -94,7 +98,7 @@ public class MDBlockComponent extends MDImageComponent {
 
         ItemStack tooltipStack = state.getBlock().asItem().getDefaultInstance();
         if (!tooltipStack.isEmpty()) {
-            this.extractTooltipRenderState(context, tooltipStack, 8, 8, mouseX, mouseY);
+            this.renderBlockItem(context, tooltipStack, 8, 8, mouseX, mouseY);
         }
 
         if (this.showText) {
@@ -103,6 +107,42 @@ public class MDBlockComponent extends MDImageComponent {
             graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
+
+    /**
+     * 渲染方块物品 tooltip，并检查文档绑定；W 键提示由 tooltip 事件统一注入。
+     */
+    private void renderBlockItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+            // W 键提示由 BoundItemGuideNavigator 通过 RenderTooltipEvent 注入，这里只记录跳转目标。
+            GuideDocumentCache.getFirstDocumentByItemStack(
+                stack,
+                AgeratumClient.getClientLanguageCode(context.minecraft())
+            ).ifPresentOrElse(
+                doc -> this.hoveredDocLink = doc,
+                () -> this.hoveredDocLink = null
+            );
+        }
+    }
+
+    @Override
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        if (this.hoveredDocLink != null
+            && keyCode == dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue()) {
+            AgeratumClient.openGuideOnClient(this.hoveredDocLink, List.of());
+            return true;
+        }
+        return false;
+    }
+
 
     protected @Nullable BlockState getBlockState() {
         if (this.blockState != null) return this.blockState;

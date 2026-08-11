@@ -17,6 +17,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderC
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.network.ShareGuidePayload;
 import lombok.Getter;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -178,6 +179,14 @@ public class GuideScreen extends Screen {
      */
     protected final Set<Integer> collapsedLabelGroups = new HashSet<>();
     /**
+     * 从侧边栏打开页面时，是否保留当前标签栏的滚动与折叠状态。
+     */
+    protected boolean preserveLabelState;
+    /**
+     * 从侧边栏打开页面时继承的父标签折叠状态。
+     */
+    protected Set<Integer> inheritedCollapsedLabelGroups = Set.of();
+    /**
      * 当前可见标签在 labelEntries 中的索引列表（受折叠状态影响）。
      */
     protected List<Integer> visibleLabelIndices = List.of();
@@ -321,6 +330,14 @@ public class GuideScreen extends Screen {
     }
 
     /**
+     * 保留来源界面的侧边标签栏状态，用于侧边栏点击跳转。
+     */
+    public void setLabelStatePreserved(GuideScreen currentGuideScreen) {
+        this.preserveLabelState = true;
+        this.inheritedCollapsedLabelGroups = Set.copyOf(currentGuideScreen.collapsedLabelGroups);
+    }
+
+    /**
      * 界面初始化（每次打开或窗口大小改变时调用）。
      *
      * <p>重新计算 {@link #leftPos} 与 {@link #topPos} 使界面居中，
@@ -369,7 +386,7 @@ public class GuideScreen extends Screen {
         this.ensureBookmarksLoaded();
         // 防止窗口缩小后滚动量超出边界
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
         this.refreshBookmarkScrollState();
     }
 
@@ -494,13 +511,26 @@ public class GuideScreen extends Screen {
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
 
-        ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
-        if (hit != null && hit.component().mouseScrolled(this.minecraft, hit.mouseX(), hit.mouseY(), scrollY, this.getContentWidth())) {
-            return true;
+        // Ctrl/Alt/Shift 加速内容区翻滚（3倍速度）
+        double acceleratedScrollY = scrollY;
+        if (hasControlDown() || hasAltDown() || hasShiftDown()) {
+            acceleratedScrollY *= 3.0;
+        }
+        if (this.minecraft != null) {
+            ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
+            if (hit != null && hit.component().mouseScrolled(
+                this.minecraft,
+                hit.mouseX(),
+                hit.mouseY(),
+                acceleratedScrollY,
+                this.getContentWidth()
+            )) {
+                return true;
+            }
         }
 
         // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
-        this.scrollBy((float) -scrollY * SCROLL_STEP);
+        this.scrollBy((float) -acceleratedScrollY * SCROLL_STEP);
         return true;
     }
 
@@ -830,7 +860,7 @@ public class GuideScreen extends Screen {
         // ── 检查是否需要固定父标签 ──
         int pinnedParentIndex = this.findPinnedParentIndex();
         int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
-        int start = this.labelScrollRows;
+        int start = this.getLabelViewportStart(pinnedRowCount);
         int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows() - pinnedRowCount);
         String currentFile = this.getCurrentFileArgument();
         Matrix3x2fStack pose = guiGraphics.pose();
@@ -1093,7 +1123,7 @@ public class GuideScreen extends Screen {
                 argb
             );
         }
-        int rowsToBottom = this.maxLabelScrollRows - this.labelScrollRows;
+        int rowsToBottom = this.getMaxLabelScrollRows() - this.labelScrollRows;
         if (rowsToBottom > 0) {
             float alpha = this.computeArrowAlpha(rowsToBottom);
             int argb = (int) (alpha * 255) << 18 & 0xFFFFFF;
@@ -1333,13 +1363,13 @@ public class GuideScreen extends Screen {
     /**
      * 渲染侧边标签的 tooltip。
      *
-     * <p>对父标签显示完整名称和 Shift+左键 折叠/展开提示。</p>
+     * <p>对父标签显示完整名称和左键折叠/展开提示。</p>
      */
     private void extractLabelTooltipRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
-        int start = this.labelScrollRows;
-        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows());
         int pinnedParentIndex = this.findPinnedParentIndex();
         int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
+        int start = this.getLabelViewportStart(pinnedRowCount);
+        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows() - pinnedRowCount);
 
         // 先检查固定父标签
         if (pinnedParentIndex >= 0) {
@@ -1388,10 +1418,16 @@ public class GuideScreen extends Screen {
         List<Component> lines = new ArrayList<>();
         // 第一行：完整名称
         lines.add(Component.literal(entry.title.getString()));
+        // 滚动加速提示
+        lines.add(Component.literal("按住alt/shift/ctrl加速滑动").withStyle(ChatFormatting.GRAY));
         // 父标签且拥有子标签时，显示折叠提示
         if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
             boolean collapsed = this.collapsedLabelGroups.contains(entryIndexInFull);
-            lines.add(Component.literal(collapsed ? "Shift+左键 展开" : "Shift+左键 收起"));
+            if (entry.clickable && entry.location != null) {
+                lines.add(Component.literal(collapsed ? "左键 展开并打开" : "左键 收起并打开").withStyle(ChatFormatting.GRAY));
+            } else {
+                lines.add(Component.literal(collapsed ? "左键 展开" : "左键 收起").withStyle(ChatFormatting.GRAY));
+            }
         }
         List<ClientTooltipComponent> tooltipComponents = new ArrayList<>();
         for (Component line : lines) {
@@ -1552,7 +1588,7 @@ public class GuideScreen extends Screen {
     }
 
     private void scrollLabelsBy(int deltaRows) {
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows + deltaRows, 0, this.maxLabelScrollRows);
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows + deltaRows, 0, this.getMaxLabelScrollRows());
     }
 
     private void rebuildLabelEntries(ResourceManager resourceManager) {
@@ -1598,11 +1634,18 @@ public class GuideScreen extends Screen {
         }
 
         this.labelEntries = List.copyOf(finalEntries);
-        // 默认折叠所有父标签组
-        this.collapseAllLabelGroups();
+        if (this.preserveLabelState) {
+            this.applyLabelGroupState(this.inheritedCollapsedLabelGroups);
+        } else {
+            // 默认折叠所有父标签组
+            this.collapseAllLabelGroups();
+        }
         this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
-        this.scrollLabelToCurrentDocument();
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
+        if (!this.preserveLabelState) {
+            this.scrollLabelToCurrentDocument();
+        }
+        this.maxLabelScrollRows = this.getMaxLabelScrollRows();
     }
 
     private void rebuildPreviewLabelEntries() {
@@ -1643,11 +1686,18 @@ public class GuideScreen extends Screen {
         }
 
         this.labelEntries = List.copyOf(finalEntries);
-        // 默认折叠所有父标签组
-        this.collapseAllLabelGroups();
+        if (this.preserveLabelState) {
+            this.applyLabelGroupState(this.inheritedCollapsedLabelGroups);
+        } else {
+            // 默认折叠所有父标签组
+            this.collapseAllLabelGroups();
+        }
         this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
-        this.scrollLabelToCurrentDocument();
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
+        if (!this.preserveLabelState) {
+            this.scrollLabelToCurrentDocument();
+        }
+        this.maxLabelScrollRows = this.getMaxLabelScrollRows();
     }
 
     private void insertPreviewDocument(PreviewDirectoryNode root, Path previewRoot, Path absolutePath) {
@@ -1795,35 +1845,52 @@ public class GuideScreen extends Screen {
         }
     }
 
+    private boolean handleLabelEntryClick(LabelEntry entry, int entryIndexInFull) {
+        // 左键点击大章时切换展开/收起，并继续打开其 index 内容
+        if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
+            this.toggleLabelGroup(entryIndexInFull);
+        }
+        if (!entry.clickable || entry.location == null) {
+            return entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull);
+        }
+        List<Identifier> breadCrumbs = this.breadCrumbs;
+        if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
+            breadCrumbs = new ArrayList<>(this.breadCrumbs);
+            breadCrumbs.add(this.documentLocation);
+            breadCrumbs = List.copyOf(breadCrumbs);
+        }
+        return AgeratumClient.openGuideOnClientPreservingLabelState(entry.location, breadCrumbs);
+    }
+
     private boolean tryOpenLabelAt(double mouseX, double mouseY) {
         int relMouseX = (int) Math.floor(mouseX - this.leftPos);
         if (relMouseX >= this.getContentStartX()) return false;
         int relMouseY = (int) Math.floor(mouseY - this.topPos);
-        int start = this.labelScrollRows;
-        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows());
+        int pinnedParentIndex = this.findPinnedParentIndex();
+        int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
+        int start = this.getLabelViewportStart(pinnedRowCount);
+        int end = Math.min(this.getVisibleLabelCount(), start + this.getLabelVisibleRows() - pinnedRowCount);
+
+        // 先检查固定父标签，它占用第 0 行
+        if (pinnedParentIndex >= 0) {
+            int originX = this.getLabelBaseX();
+            int originY = this.getLabelStartY();
+            if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
+                return this.handleLabelEntryClick(this.labelEntries.get(pinnedParentIndex), pinnedParentIndex);
+            }
+        }
+
         for (int index = start; index < end; index++) {
-            int row = index - start;
+            int row = (index - start) + pinnedRowCount;
             int entryIndexInFull = this.visibleLabelIndices.get(index);
+            if (entryIndexInFull == pinnedParentIndex) {
+                continue;
+            }
             LabelEntry entry = this.labelEntries.get(entryIndexInFull);
             int originX = this.getLabelBaseX() + (entry.level == 2 ? LABEL_LEVEL2_INDENT : 0);
             int originY = this.getLabelStartY() + row * this.getLabelRowOffset();
             if (this.mouseInRange(originX, originY, this.labelWidth, this.labelHeight, relMouseX, relMouseY)) {
-                // Shift+左键 → 切换父标签折叠状态
-                if (hasShiftDown() && entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
-                    this.toggleLabelGroup(entryIndexInFull);
-                    return true;
-                }
-                // 普通左键 → 跳转页面
-                if (!entry.clickable || entry.location == null) {
-                    return false;
-                }
-                List<Identifier> breadCrumbs = this.breadCrumbs;
-                if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
-                    breadCrumbs = new ArrayList<>(this.breadCrumbs);
-                    breadCrumbs.add(this.documentLocation);
-                    breadCrumbs = List.copyOf(breadCrumbs);
-                }
-                return AgeratumClient.openGuideOnClient(entry.location, breadCrumbs);
+                return this.handleLabelEntryClick(entry, entryIndexInFull);
             }
         }
         return false;
@@ -1854,7 +1921,39 @@ public class GuideScreen extends Screen {
         // 滚动使当前标签可见（尽量放在可视区域中间偏上位置）
         int visibleRows = this.getLabelVisibleRows();
         int targetScroll = Math.max(0, visibleIndex - visibleRows / 3);
-        this.labelScrollRows = Mth.clamp(targetScroll, 0, this.maxLabelScrollRows);
+        this.labelScrollRows = Mth.clamp(targetScroll, 0, this.getMaxLabelScrollRows());
+        this.ensureCurrentDocumentVisible();
+    }
+
+    /**
+     * 在当前文档仍可见时，将侧边栏滚动位置微调到当前标签可见。
+     *
+     * <p>仅在展开/收拢导致可见列表长度或位置变化时调整，不改变用户手动滚动后的位置。</p>
+     */
+    private void ensureCurrentDocumentVisible() {
+        int fullIndex = this.findCurrentDocumentLabelIndex();
+        if (fullIndex < 0) {
+            return;
+        }
+        int visibleIndex = this.visibleLabelIndices.indexOf(fullIndex);
+        if (visibleIndex < 0) {
+            return;
+        }
+        for (int attempt = 0; attempt < 3; attempt++) {
+            int oldScroll = this.labelScrollRows;
+            int maxScroll = this.getMaxLabelScrollRows();
+            this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, maxScroll);
+            int pinnedRowCount = this.findPinnedParentIndex() >= 0 ? 1 : 0;
+            int regularRows = Math.max(1, this.getLabelVisibleRows() - pinnedRowCount);
+            if (visibleIndex < this.labelScrollRows) {
+                this.labelScrollRows = Mth.clamp(visibleIndex, 0, maxScroll);
+            } else if (visibleIndex >= this.labelScrollRows + regularRows) {
+                this.labelScrollRows = Mth.clamp(visibleIndex - (regularRows - 1), 0, maxScroll);
+            }
+            if (this.labelScrollRows == oldScroll) {
+                break;
+            }
+        }
     }
 
     /**
@@ -2330,6 +2429,34 @@ public class GuideScreen extends Screen {
         return this.labelHeight + this.getLabelRowSpacing();
     }
 
+    /**
+     * 计算侧边标签实际渲染时的起始可见索引。
+     *
+     * <p>固定父标签会占用一行，因此需要额外考虑该行对可视容量的影响，
+     * 否则“固定父标签 + 普通滚动”会在末尾丢掉最后一个标签。</p>
+     */
+    private int getLabelViewportStart(int pinnedRowCount) {
+        if (pinnedRowCount <= 0) {
+            return this.labelScrollRows;
+        }
+        int visibleRows = this.getLabelVisibleRows();
+        int regularRows = Math.max(1, visibleRows - pinnedRowCount);
+        int maxStart = Math.max(0, this.getVisibleLabelCount() - regularRows);
+        return Mth.clamp(this.labelScrollRows, 0, maxStart);
+    }
+
+    /**
+     * 计算侧边标签可滚动范围，固定父标签存在时允许多滚动一行。
+     */
+    private int getMaxLabelScrollRows() {
+        int base = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
+        if (this.findPinnedParentIndex() < 0) {
+            return base;
+        }
+        int regularRows = Math.max(1, this.getLabelVisibleRows() - 1);
+        return Math.max(base, Math.max(0, this.getVisibleLabelCount() - regularRows));
+    }
+
     public int getContentWidth() {
         return this.imageWidth - 2 * this.getContentStartX();
     }
@@ -2497,6 +2624,19 @@ public class GuideScreen extends Screen {
     }
 
     /**
+     * 根据来源界面继承的折叠状态重建父标签组。
+     */
+    private void applyLabelGroupState(Set<Integer> inheritedState) {
+        this.collapsedLabelGroups.clear();
+        for (int i = 0; i < this.labelEntries.size(); i++) {
+            if (this.labelEntries.get(i).level == 1 && inheritedState.contains(i)) {
+                this.collapsedLabelGroups.add(i);
+            }
+        }
+        this.rebuildVisibleLabelIndices();
+    }
+
+    /**
      * 切换指定父标签组的折叠状态。
      */
     private void toggleLabelGroup(int groupIndex) {
@@ -2507,9 +2647,9 @@ public class GuideScreen extends Screen {
         }
         this.rebuildVisibleLabelIndices();
         // 折叠/展开后重新约束滚动范围
-        int visibleRows = this.getLabelVisibleRows();
-        this.maxLabelScrollRows = Math.max(0, this.visibleLabelIndices.size() - visibleRows);
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
+        this.ensureCurrentDocumentVisible();
+        this.maxLabelScrollRows = this.getMaxLabelScrollRows();
     }
 
     /**
@@ -2549,10 +2689,7 @@ public class GuideScreen extends Screen {
         }
         for (int i = groupIndex + 1; i < this.labelEntries.size(); i++) {
             LabelEntry entry = this.labelEntries.get(i);
-            if (entry.level == 1) {
-                return false; // 遇到下一个 level==1，说明没有子标签
-            }
-            return true; // 找到 level==2
+            return entry.level != 1; // 遇到下一个 level==1，说明没有子标签
         }
         return false;
     }
