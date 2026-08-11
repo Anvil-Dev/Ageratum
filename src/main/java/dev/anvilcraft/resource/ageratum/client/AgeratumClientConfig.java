@@ -36,5 +36,5 @@ public class AgeratumClientConfig {
 
     @Comment("The scaling ratio of the interface")
     @BoundedDiscrete(min = 1, max = 4)
-    public int scale = 1;
+    public int scale = 2;
 }

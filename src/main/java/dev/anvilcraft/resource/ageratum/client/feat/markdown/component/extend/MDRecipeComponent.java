@@ -1,6 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -12,6 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -42,6 +45,11 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     private final int height;
 
     /**
+     * 当前鼠标悬停的配方物品绑定的文档位置，用于配方内 W 键跳转。
+     */
+    protected @Nullable Identifier hoveredDocLink;
+
+    /**
      * 创建配方组件。
      */
     public MDRecipeComponent(Identifier imageLocation, int width, int height, boolean enableAlignCenter) {
@@ -63,6 +71,43 @@ public abstract class MDRecipeComponent extends MDImageComponent {
      */
     protected void extractRecipeRenderState(MDRenderContext context, float mouseX, float mouseY) {
     }
+
+    /**
+     * 渲染配方物品并检查文档绑定，若存在则记录到 {@link #hoveredDocLink}。
+     * W 键提示由 tooltip 事件在渲染物品 tooltip 时统一注入。
+     */
+    protected void renderRecipeItem(MDRenderContext context, ItemStack stack, int startX, int startY, float mouseX, float mouseY) {
+        if (this.isHoverItem(startX, startY, mouseX, mouseY)) {
+            context.addTooltip(stack);
+            // W 键提示由 BoundItemGuideNavigator 通过 RenderTooltipEvent 注入，这里只记录跳转目标。
+            GuideDocumentCache.getFirstDocumentByItemStack(
+                stack,
+                AgeratumClient.getClientLanguageCode(context.minecraft())
+            ).ifPresentOrElse(
+                doc -> this.hoveredDocLink = doc,
+                () -> this.hoveredDocLink = null
+            );
+        }
+    }
+
+    @Override
+    public boolean keyPressed(
+        Minecraft minecraft,
+        double mouseX,
+        double mouseY,
+        int keyCode,
+        int scanCode,
+        int modifiers,
+        int maxX
+    ) {
+        if (this.hoveredDocLink != null
+            && keyCode == dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue()) {
+            AgeratumClient.openGuideOnClient(this.hoveredDocLink, java.util.List.of());
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * 解析 {@code recipe} 扩展标签。

@@ -4,13 +4,10 @@ import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -65,14 +62,26 @@ public record MDRenderContext(
     }
 
     public void addTooltip(ItemStack stack) {
-        this.tooltips.add(new Tooltip(Screen.getTooltipFromItem(Minecraft.getInstance(), stack), stack.getTooltipImage()));
+        this.tooltips.add(new Tooltip(
+            Screen.getTooltipFromItem(Minecraft.getInstance(), stack),
+            stack.getTooltipImage(),
+            stack
+        ));
     }
 
     public void addTooltip(Component text) {
-        this.tooltips.add(new Tooltip(List.of(text), Optional.empty()));
+        this.addTooltip(List.of(text));
     }
 
-    public record Tooltip(List<Component> tooltipLines, Optional<TooltipComponent> visualTooltipComponent) {
+    public void addTooltip(List<Component> lines) {
+        this.tooltips.add(new Tooltip(lines, Optional.empty(), ItemStack.EMPTY));
+    }
+
+    public record Tooltip(
+        List<Component> tooltipLines,
+        Optional<TooltipComponent> visualTooltipComponent,
+        ItemStack stack
+    ) {
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
@@ -89,17 +98,29 @@ public record MDRenderContext(
 
     public void extractTooltipRenderState() {
         for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
-            List<ClientTooltipComponent> list = new ArrayList<>();
-            tooltip.tooltipLines().forEach(component -> list.add(ClientTooltipComponent.create(component.getVisualOrderText())));
-            tooltip.visualTooltipComponent().ifPresent(component -> list.add(ClientTooltipComponent.create(component)));
-            this.graphics().tooltip(
-                this.minecraft().font,
-                list,
-                Math.round(this.mouseX()),
-                Math.round(this.mouseY()),
-                DefaultTooltipPositioner.INSTANCE,
-                null
-            );
+            ItemStack stack = tooltip.stack();
+            int mouseX = Math.round(this.mouseX());
+            int mouseY = Math.round(this.mouseY());
+            if (stack.isEmpty()) {
+                this.graphics()
+                    .setTooltipForNextFrame(
+                        this.minecraft().font,
+                        tooltip.tooltipLines(),
+                        tooltip.visualTooltipComponent(),
+                        mouseX,
+                        mouseY
+                    );
+            } else {
+                this.graphics()
+                    .setTooltipForNextFrame(
+                        this.minecraft().font,
+                        tooltip.tooltipLines(),
+                        tooltip.visualTooltipComponent(),
+                        stack,
+                        mouseX,
+                        mouseY
+                    );
+            }
         }
     }
 
