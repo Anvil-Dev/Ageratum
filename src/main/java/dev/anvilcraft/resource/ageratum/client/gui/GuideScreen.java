@@ -1624,30 +1624,40 @@ public class GuideScreen extends Screen {
 
         Path guideRoot = state.resourceRoot();
 
-        // 语言回退：当前语言 → en_us → 无语言目录
-        List<Path> languageDirs = new ArrayList<>();
-        Path currentLangDir = guideRoot.resolve("ageratum").resolve(this.currentLanguageCode);
+        // 语言回退：仅选择单一语言目录（当前语言 → en_us → 无语言目录），避免中英条目混排
+        Path languageDir = null;
+        String resolvedLanguageCode = this.currentLanguageCode;
+        Path currentLangDir = guideRoot.resolve("ageratum").resolve(resolvedLanguageCode);
         if (Files.isDirectory(currentLangDir)) {
-            languageDirs.add(currentLangDir);
-        }
-        Path enUsDir = guideRoot.resolve("ageratum").resolve("en_us");
-        if (!this.currentLanguageCode.equals("en_us") && Files.isDirectory(enUsDir)) {
-            languageDirs.add(enUsDir);
-        }
-        if (languageDirs.isEmpty()) {
-            Path plainDir = guideRoot.resolve("ageratum");
-            if (Files.isDirectory(plainDir)) {
-                languageDirs.add(plainDir);
+            languageDir = currentLangDir;
+        } else {
+            Path enUsDir = guideRoot.resolve("ageratum").resolve("en_us");
+            if (Files.isDirectory(enUsDir)) {
+                languageDir = enUsDir;
+                resolvedLanguageCode = "en_us";
+            } else {
+                Path plainDir = guideRoot.resolve("ageratum");
+                if (Files.isDirectory(plainDir)) {
+                    languageDir = plainDir;
+                    resolvedLanguageCode = "";
+                }
             }
         }
 
+        final Path resolvedLanguageDir = languageDir;
+        final String resolvedLanguageCodeFinal = resolvedLanguageCode;
         GitHubLabelNode root = new GitHubLabelNode("");
-        for (Path languageDir : languageDirs) {
-            try (java.util.stream.Stream<Path> paths = Files.walk(languageDir)) {
+        if (resolvedLanguageDir != null) {
+            try (java.util.stream.Stream<Path> paths = Files.walk(resolvedLanguageDir)) {
                 paths.filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT)
                         .endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION))
-                    .forEach(path -> this.insertGitHubLabelDocument(root, languageDir, path));
+                    .forEach(path -> this.insertGitHubLabelDocument(
+                        root,
+                        resolvedLanguageDir,
+                        resolvedLanguageCodeFinal,
+                        path
+                    ));
             } catch (Exception ignored) {
             }
         }
@@ -1671,7 +1681,7 @@ public class GuideScreen extends Screen {
         this.scrollLabelToCurrentDocument();
     }
 
-    private void insertGitHubLabelDocument(GitHubLabelNode root, Path languageDir, Path absolutePath) {
+    private void insertGitHubLabelDocument(GitHubLabelNode root, Path languageDir, String languageCode, Path absolutePath) {
         Path relativePath = languageDir.relativize(absolutePath);
         String normalizedPath = relativePath.toString().replace('\\', '/');
         if (normalizedPath.length() <= AgeratumConstants.Guide.MARKDOWN_EXTENSION.length()
@@ -1692,9 +1702,13 @@ public class GuideScreen extends Screen {
             String segment = segments[i];
             current = current.children.computeIfAbsent(segment, GitHubLabelNode::new);
         }
+        String locationFileArgument = "ageratum/"
+                                      + (languageCode.isBlank() ? "" : languageCode + "/")
+                                      + fileArgument
+                                      + AgeratumConstants.Guide.MARKDOWN_EXTENSION;
         Identifier location = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubGuideSource.toDisplayLocation(
             this.githubUri(),
-            "ageratum/" + this.currentLanguageCode + "/" + fileArgument + AgeratumConstants.Guide.MARKDOWN_EXTENSION
+            locationFileArgument
         );
         GitHubLabelDocument document = new GitHubLabelDocument(
             fileArgument,
