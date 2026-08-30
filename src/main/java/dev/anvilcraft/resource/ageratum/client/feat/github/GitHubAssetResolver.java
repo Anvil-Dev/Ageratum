@@ -80,15 +80,28 @@ public final class GitHubAssetResolver {
         if (colon > 0) {
             String namespace = target.substring(0, colon);
             String path = target.substring(colon + 1);
+            // MC 资源路径惯例：<ns>:ageratum/file.png → textures/ageratum/file.png
             Path direct = resolveWithinRoot(resourceRoot, "", path);
             if (direct != null && Files.isRegularFile(direct)) {
                 return direct;
+            }
+            Path texturesPrefixed = resolveWithinRoot(resourceRoot, "", "textures/" + path);
+            if (texturesPrefixed != null && Files.isRegularFile(texturesPrefixed)) {
+                return texturesPrefixed;
             }
             // 命名空间匹配当前资源根时，也允许相对于当前文档目录
             if (namespace.equals(resourceRoot.getFileName().toString())) {
                 Path relativeToDoc = resolveWithinRoot(resourceRoot, currentDocumentDirectory(sourceLocation), path);
                 if (relativeToDoc != null && Files.isRegularFile(relativeToDoc)) {
                     return relativeToDoc;
+                }
+                Path relativeToDocTextures = resolveWithinRoot(
+                    resourceRoot,
+                    currentDocumentDirectory(sourceLocation),
+                    "textures/" + path
+                );
+                if (relativeToDocTextures != null && Files.isRegularFile(relativeToDocTextures)) {
+                    return relativeToDocTextures;
                 }
             }
             return null;
@@ -102,6 +115,19 @@ public final class GitHubAssetResolver {
         Path relativeToRoot = resolveWithinRoot(resourceRoot, "", target);
         if (relativeToRoot != null && Files.isRegularFile(relativeToRoot)) {
             return relativeToRoot;
+        }
+        // MC 资源路径惯例：相对路径缺省 textures/ 前缀时补全尝试
+        Path relativeToDocTextures = resolveWithinRoot(
+            resourceRoot,
+            currentDocumentDirectory(sourceLocation),
+            "textures/" + target
+        );
+        if (relativeToDocTextures != null && Files.isRegularFile(relativeToDocTextures)) {
+            return relativeToDocTextures;
+        }
+        Path relativeToRootTextures = resolveWithinRoot(resourceRoot, "", "textures/" + target);
+        if (relativeToRootTextures != null && Files.isRegularFile(relativeToRootTextures)) {
+            return relativeToRootTextures;
         }
         return null;
     }
