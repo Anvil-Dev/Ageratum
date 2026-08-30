@@ -83,6 +83,9 @@ public class MDImageComponent extends MDComponent {
             file = file.substring(1);
         }
         try {
+            if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(sourceLocation)) {
+                return GitHubImageComponent.of(sourceLocation, file);
+            }
             Identifier imageLocation = Identifier.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
             return new MDImageComponent(imageLocation);
         } catch (RuntimeException exception) {
@@ -96,6 +99,10 @@ public class MDImageComponent extends MDComponent {
             return null;
         }
         try {
+            // GitHub 源：把原始目标交给解析器做相对/命名空间解析（display path 不可用作目录）
+            if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(sourceLocation)) {
+                return GitHubImageComponent.of(sourceLocation, matcher.group(1));
+            }
             String path = getParsedPath(sourceLocation, matcher.group(1));
             return new MDImageComponent(sourceLocation.withPath(path));
         } catch (RuntimeException exception) {

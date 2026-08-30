@@ -85,6 +85,26 @@
 - 默认从 `en_us` 读取，缺失文档自动回退到英文版本
 - 完全支持多字节文字（中文、日文等）
 
+### GitHub 远程指南
+
+手册物品的 `ageratum:doc` 组件支持指向 GitHub 仓库的远程文档，首次使用时自动下载并缓存到
+`caches/ageratum/repos/<user>-<repo>/`，无需将文档打包进资源包。
+
+**语法：**
+
+```
+github:user/repo#path:assets/advanced_clover&commit=798f631
+```
+
+- `path`：可选，指定仓库内的资源包命名空间根目录（如 `assets/advanced_clover`），文档位于
+  `<根>/ageratum/index.md` 或 `<根>/ageratum/<语言代码>/index.md`；省略时使用仓库根目录
+- `commit`：可选，指定 commit SHA；省略时使用默认分支最新 commit
+- 文档中的图片、结构等资源支持相对路径（相对当前文档目录）或 `命名空间:路径`（命名空间为资源根目录名）形式
+- 加载过程中手册显示「加载中，请稍后...」，全部下载失败时显示红色「加载失败...」
+- 通过 GitHub 远程方式加载的手册**不注册**“按住 W 寻思”行为
+
+下载使用 GitHub API 并携带 OAuth Client ID，`api.github.com` 失败时自动回退到内置代理。
+
 ### 扩展语法
 
 两种块级扩展语法允许自定义组件：

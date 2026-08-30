@@ -23,8 +23,12 @@ public class GuideBookItem extends Item {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.SUCCESS;
         Identifier defaultLoc = Ageratum.location(AgeratumConstants.Guide.INDEX_FILE);
-        Doc doc = player.getItemInHand(hand).getOrDefault(AgeratumDataComponents.DOC.get(), new Doc(defaultLoc));
-        Ageratum.openGuide(serverPlayer, doc.id());
+        Doc doc = player.getItemInHand(hand).getOrDefault(AgeratumDataComponents.DOC.get(), Doc.of(defaultLoc));
+        if (doc.isGitHub()) {
+            Ageratum.openGitHubGuide(serverPlayer, doc.value());
+        } else {
+            Ageratum.openGuide(serverPlayer, doc.id());
+        }
         level.playSound(null, player, SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);
         return InteractionResult.SUCCESS_SERVER;
     }

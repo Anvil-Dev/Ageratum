@@ -493,7 +493,7 @@ public interface AgeratumConstants {
         /**
          * 网络协议版本。
          */
-        String PROTOCOL_VERSION = "1";
+        String PROTOCOL_VERSION = "2";
     }
 
     interface Image {

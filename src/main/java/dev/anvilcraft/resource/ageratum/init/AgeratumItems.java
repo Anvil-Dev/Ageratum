@@ -20,7 +20,7 @@ public class AgeratumItems {
             .stacksTo(1)
             .component(
                 AgeratumDataComponents.DOC.get(),
-                new Doc(Ageratum.location(AgeratumConstants.Guide.INDEX_FILE))
+                Doc.of(Ageratum.location(AgeratumConstants.Guide.INDEX_FILE))
             )
         )
         .register();

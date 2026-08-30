@@ -577,10 +577,18 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     /**
-     * 按优先级打开结构输入流：先尝试 preview 工作区，再尝试资源管理器，
-     * 最后回退到 classpath 路径。
+     * 按优先级打开结构输入流：先尝试 GitHub 仓库本地文件，再尝试 preview 工作区，
+     * 然后尝试资源管理器，最后回退到 classpath 路径。
      */
     private static @Nullable InputStream openStructureStream(StructureTarget target) throws IOException {
+        if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(target.location())) {
+            for (Path candidate : target.githubCandidatePaths()) {
+                if (Files.isRegularFile(candidate)) {
+                    return Files.newInputStream(candidate);
+                }
+            }
+        }
+
         if (AgeratumClient.isPreviewLocation(target.location())) {
             for (String candidate : target.previewCandidatePaths()) {
                 Path previewPath = AgeratumClient.resolvePreviewAssetPath(candidate);
@@ -661,7 +669,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         return currentFile.substring(0, slash);
     }
 
-    public record StructureTarget(Identifier location, String displayPath, List<String> previewCandidatePaths) {
+    public record StructureTarget(Identifier location, String displayPath, List<String> previewCandidatePaths, List<Path> githubCandidatePaths) {
         /**
          * 基于 markdown 源文档位置解析显式或相对的结构引用。
          */
@@ -672,7 +680,10 @@ public final class MDNBTStructureComponent extends MDComponent {
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
                                             ? expandStructureExtensions(RelativePathResolver.resolveWithinBase("", location.getPath()))
                                             : List.of();
-                return new StructureTarget(location, trimmed, previewPaths);
+                List<Path> githubPaths = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(sourceLocation)
+                                         ? resolveGitHubCandidates(sourceLocation, trimmed)
+                                         : List.of();
+                return new StructureTarget(location, trimmed, previewPaths, githubPaths);
             }
 
             String resolvedPath = RelativePathResolver.resolveWithinBase(getCurrentDirectoryPath(sourceLocation), trimmed);
@@ -680,7 +691,29 @@ public final class MDNBTStructureComponent extends MDComponent {
             List<String> previewPaths = AgeratumClient.isPreviewLocation(sourceLocation)
                                         ? expandStructureExtensions(resolvedPath)
                                         : List.of();
-            return new StructureTarget(location, trimmed, previewPaths);
+            List<Path> githubPaths = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(sourceLocation)
+                                     ? resolveGitHubCandidates(sourceLocation, resolvedPath)
+                                     : List.of();
+            return new StructureTarget(location, trimmed, previewPaths, githubPaths);
+        }
+
+        private static List<Path> resolveGitHubCandidates(Identifier sourceLocation, String target) {
+            var state = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.getActiveState(sourceLocation);
+            if (state == null) {
+                return List.of();
+            }
+            List<Path> candidates = new java.util.ArrayList<>();
+            for (String candidate : expandStructureExtensions(target)) {
+                Path resolved = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.resolve(
+                    state,
+                    sourceLocation,
+                    candidate
+                );
+                if (resolved != null) {
+                    candidates.add(resolved);
+                }
+            }
+            return List.copyOf(candidates);
         }
     }
 }

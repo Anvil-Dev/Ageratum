@@ -58,8 +58,15 @@ public class LecternBlockMixin {
         ItemStack book = be.getBook();
         if (!(book.getItem() instanceof GuideBookItem)) return;
         if (!level.isClientSide()) {
-            Doc doc = book.getOrDefault(AgeratumDataComponents.DOC.get(), new Doc(Ageratum.location(AgeratumConstants.Guide.INDEX_FILE)));
-            Ageratum.openGuide((ServerPlayer) player, doc.id());
+            Doc doc = book.getOrDefault(
+                AgeratumDataComponents.DOC.get(),
+                Doc.of(Ageratum.location(AgeratumConstants.Guide.INDEX_FILE))
+            );
+            if (doc.isGitHub()) {
+                Ageratum.openGitHubGuide((ServerPlayer) player, doc.value());
+            } else {
+                Ageratum.openGuide((ServerPlayer) player, doc.id());
+            }
         }
         player.awardStat(Stats.INTERACT_WITH_LECTERN);
         ci.cancel();

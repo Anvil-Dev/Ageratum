@@ -59,4 +59,16 @@ public class Ageratum {
     public static void openGuide(ServerPlayer player, Identifier location) {
         AgeratumNetwork.sendOpenGuide(player, location);
     }
+
+    /**
+     * 打开 GitHub 远程指南。
+     *
+     * <p>服务端调用：将原始 URI 字符串转发给客户端，由客户端执行下载与展示。</p>
+     *
+     * @param player 目标玩家
+     * @param uri    GitHub 指南 URI（如 {@code github:user/repo#path:assets/xxx&commit=sha}）
+     */
+    public static void openGitHubGuide(ServerPlayer player, String uri) {
+        AgeratumNetwork.sendGitHubOpenGuide(player, uri);
+    }
 }

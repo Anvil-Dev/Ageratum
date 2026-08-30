@@ -11,6 +11,8 @@ public class AgeratumLangHandler {
         provider.add("system.ageratum.share.tip", "Player %s has shared a guide with you:");
         provider.add("system.ageratum.share.button", "[CLICK TO OPEN]");
         provider.add("tooltip.ageratum.bind_item_hold", "Hold %s to get more info");
+        provider.add("gui.ageratum.github.loading", "Loading, wait please...");
+        provider.add("gui.ageratum.github.load_failed", "Load failed...");
         provider.add("key.ageratum.more_info", "Get More Info");
         provider.add("key.ageratum.structure_projection.layer_up", "Increase Projection Layers");
         provider.add("key.ageratum.structure_projection.layer_down", "Decrease Projection Layers");

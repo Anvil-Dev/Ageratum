@@ -6,6 +6,7 @@ import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
+import dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -53,6 +54,12 @@ public final class BoundItemGuideNavigator {
         String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
         Optional<Identifier> targetDocument = GuideDocumentCache.getFirstDocumentByItemStack(stack, languageCode);
         if (targetDocument.isEmpty()) {
+            hoveredDocumentLocation = null;
+            return;
+        }
+
+        // GitHub 远程指南不注册"按住 W 寻思"行为
+        if (GitHubAssetResolver.isGitHubLocation(targetDocument.get())) {
             hoveredDocumentLocation = null;
             return;
         }

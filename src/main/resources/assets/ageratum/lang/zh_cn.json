@@ -26,5 +26,7 @@
   "key.category.ageratum.key": "藿香",
   "system.ageratum.share.button": "[点击打开]",
   "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南：",
+  "gui.ageratum.github.loading": "加载中，请稍后...",
+  "gui.ageratum.github.load_failed": "加载失败...",
   "tooltip.ageratum.bind_item_hold": "按住 %s 寻思"
 }

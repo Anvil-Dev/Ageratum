@@ -85,6 +85,31 @@ rendering, i18n localization, and an extensible custom syntax/component system.
 - Default fallback to `en_us` if localized version missing
 - Full support for multi-byte characters (Chinese, Japanese, etc.)
 
+### GitHub Remote Guides
+
+The `ageratum:doc` component of guidebook items supports pointing to documents hosted in a GitHub
+repository. On first use the repo is downloaded and cached under
+`caches/ageratum/repos/<user>-<repo>/`, no resource pack packaging required.
+
+**Syntax:**
+
+```
+github:user/repo#path:assets/advanced_clover&commit=798f631
+```
+
+- `path` (optional): resource-pack namespace root inside the repo (e.g. `assets/advanced_clover`);
+  documents live under `<root>/ageratum/index.md` or `<root>/ageratum/<language_code>/index.md`;
+  when omitted the repo root is used
+- `commit` (optional): commit SHA; when omitted the latest commit of the default branch is used
+- Assets (images, structures, ...) referenced from documents support relative paths (relative to the
+  current document directory) or `namespace:path` form (namespace = resource root directory name)
+- While loading, the guide shows "Loading, wait please..."; when every download attempt fails it
+  shows a red "Load failed..."
+- Guides loaded via GitHub remote mode do **not** register the "hold W" binding behavior
+
+Downloads use the GitHub API with an OAuth Client ID, falling back to built-in proxies when
+`api.github.com` fails.
+
 ### Extension Syntax
 
 Two block-level extension syntaxes for custom components:

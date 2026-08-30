@@ -1560,6 +1560,10 @@ public class GuideScreen extends Screen {
             this.rebuildPreviewLabelEntries();
             return;
         }
+        if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(this.documentLocation)) {
+            this.rebuildGitHubLabelEntries();
+            return;
+        }
 
         Optional<GuideDocumentCache.NavigationTree> cachedTree = GuideDocumentCache.getNavigationTree(
             this.documentLocation.getNamespace(),
@@ -1603,6 +1607,136 @@ public class GuideScreen extends Screen {
         this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
         this.scrollLabelToCurrentDocument();
+    }
+
+    /**
+     * 为 GitHub 远程指南构建侧边导航：扫描本地仓库 {@code ageratum/<lang>/} 下的文档。
+     */
+    private void rebuildGitHubLabelEntries() {
+        var state = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.getActiveState(this.documentLocation);
+        if (state == null) {
+            this.labelEntries = List.of();
+            this.visibleLabelIndices = List.of();
+            this.maxLabelScrollRows = 0;
+            this.labelScrollRows = 0;
+            return;
+        }
+
+        Path guideRoot = state.resourceRoot();
+
+        // 语言回退：当前语言 → en_us → 无语言目录
+        List<Path> languageDirs = new ArrayList<>();
+        Path currentLangDir = guideRoot.resolve("ageratum").resolve(this.currentLanguageCode);
+        if (Files.isDirectory(currentLangDir)) {
+            languageDirs.add(currentLangDir);
+        }
+        Path enUsDir = guideRoot.resolve("ageratum").resolve("en_us");
+        if (!this.currentLanguageCode.equals("en_us") && Files.isDirectory(enUsDir)) {
+            languageDirs.add(enUsDir);
+        }
+        if (languageDirs.isEmpty()) {
+            Path plainDir = guideRoot.resolve("ageratum");
+            if (Files.isDirectory(plainDir)) {
+                languageDirs.add(plainDir);
+            }
+        }
+
+        GitHubLabelNode root = new GitHubLabelNode("");
+        for (Path languageDir : languageDirs) {
+            try (java.util.stream.Stream<Path> paths = Files.walk(languageDir)) {
+                paths.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT)
+                        .endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION))
+                    .forEach(path -> this.insertGitHubLabelDocument(root, languageDir, path));
+            } catch (Exception ignored) {
+            }
+        }
+
+        List<LabelEntry> finalEntries = new ArrayList<>();
+        root.documents.sort(Comparator.comparing(GitHubLabelDocument::fileArgument));
+        if (root.indexDocument != null) {
+            root.documents.addFirst(root.indexDocument);
+        }
+        for (GitHubLabelDocument rootDocument : root.documents) {
+            finalEntries.add(this.toGitHubLabel(rootDocument, 1));
+        }
+        for (GitHubLabelNode childDirectory : root.children.values()) {
+            this.appendGitHubDirectoryLabels(finalEntries, childDirectory);
+        }
+
+        this.labelEntries = List.copyOf(finalEntries);
+        this.collapseAllLabelGroups();
+        this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.scrollLabelToCurrentDocument();
+    }
+
+    private void insertGitHubLabelDocument(GitHubLabelNode root, Path languageDir, Path absolutePath) {
+        Path relativePath = languageDir.relativize(absolutePath);
+        String normalizedPath = relativePath.toString().replace('\\', '/');
+        if (normalizedPath.length() <= AgeratumConstants.Guide.MARKDOWN_EXTENSION.length()
+            || !normalizedPath.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+            return;
+        }
+        String fileArgument = normalizedPath.substring(
+            0,
+            normalizedPath.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length()
+        );
+        if (fileArgument.isBlank()) {
+            return;
+        }
+
+        String[] segments = fileArgument.split("/");
+        GitHubLabelNode current = root;
+        for (int i = 0; i < segments.length - 1; i++) {
+            String segment = segments[i];
+            current = current.children.computeIfAbsent(segment, GitHubLabelNode::new);
+        }
+        Identifier location = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubGuideSource.toDisplayLocation(
+            this.githubUri(),
+            "ageratum/" + this.currentLanguageCode + "/" + fileArgument + AgeratumConstants.Guide.MARKDOWN_EXTENSION
+        );
+        GitHubLabelDocument document = new GitHubLabelDocument(
+            fileArgument,
+            this.resolveGitHubLabelTitle(absolutePath, fileArgument, location),
+            location
+        );
+        String fileName = segments[segments.length - 1];
+        if (AgeratumConstants.Guide.INDEX_FILE.equalsIgnoreCase(fileName)) {
+            current.indexDocument = document;
+        } else {
+            current.documents.add(document);
+        }
+    }
+
+    private String resolveGitHubLabelTitle(Path absolutePath, String fileArgument, Identifier location) {
+        try {
+            String markdown = Files.readString(absolutePath, StandardCharsets.UTF_8);
+            return this.parser.parseDocument(location, markdown).getTitle(fileArgument);
+        } catch (Exception ignored) {
+            return this.previewTitleFor(fileArgument);
+        }
+    }
+
+    private void appendGitHubDirectoryLabels(List<LabelEntry> target, GitHubLabelNode directory) {
+        if (directory.indexDocument != null) {
+            target.add(this.toGitHubLabel(directory.indexDocument, 1));
+        } else {
+            target.add(new LabelEntry(null, null, 1, Component.literal(this.previewDirectoryTitle(directory.name)), false));
+        }
+        directory.documents.sort(Comparator.comparing(GitHubLabelDocument::fileArgument));
+        for (GitHubLabelDocument document : directory.documents) {
+            target.add(this.toGitHubLabel(document, 2));
+        }
+        for (GitHubLabelNode childDirectory : directory.children.values()) {
+            if (childDirectory.indexDocument != null) {
+                target.add(this.toGitHubLabel(childDirectory.indexDocument, 2));
+            }
+        }
+    }
+
+    private LabelEntry toGitHubLabel(GitHubLabelDocument document, int level) {
+        return new LabelEntry(document.fileArgument, document.location, level, Component.literal(document.title), true);
     }
 
     private void rebuildPreviewLabelEntries() {
@@ -1823,6 +1957,10 @@ public class GuideScreen extends Screen {
                     breadCrumbs.add(this.documentLocation);
                     breadCrumbs = List.copyOf(breadCrumbs);
                 }
+                // GitHub 远程指南标签：从本地仓库文件打开
+                if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(entry.location)) {
+                    return this.openGitHubLabel(entry.location, breadCrumbs);
+                }
                 return AgeratumClient.openGuideOnClient(entry.location, breadCrumbs);
             }
         }
@@ -1938,6 +2076,23 @@ public class GuideScreen extends Screen {
             }
             return path;
         }
+        if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(this.documentLocation)) {
+            // 格式：<user>/<repo>/<root>/ageratum/<lang>/<file>.md → 返回 <file>（相对 ageratum/<lang>）
+            String path = this.documentLocation.getPath();
+            int ageratumIndex = path.indexOf("/ageratum/");
+            if (ageratumIndex < 0) {
+                return "";
+            }
+            String relative = path.substring(ageratumIndex + "/ageratum/".length());
+            int languageSlash = relative.indexOf('/');
+            if (languageSlash >= 0) {
+                relative = relative.substring(languageSlash + 1);
+            }
+            if (relative.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
+                relative = relative.substring(0, relative.length() - AgeratumConstants.Guide.MARKDOWN_EXTENSION.length());
+            }
+            return relative;
+        }
         String normalizedLanguage = this.currentLanguageCode.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         String expectedPrefix = AgeratumConstants.Guide.ROOT_FOLDER + "/" + normalizedLanguage + "/";
         String path = this.documentLocation.getPath();
@@ -1967,6 +2122,12 @@ public class GuideScreen extends Screen {
         if (target.isEmpty()) {
             return anchor != null && this.tryScrollToAnchor(anchor);
         }
+
+        // GitHub 远程指南：解析为本地仓库文件
+        if (dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.isGitHubLocation(this.documentLocation)) {
+            return this.tryOpenGitHubLinkedGuide(target, anchor);
+        }
+
         String lowerTarget = target.toLowerCase(Locale.ROOT);
         //noinspection HttpUrlsUsage
         if (lowerTarget.startsWith("http://") || lowerTarget.startsWith("https://") || lowerTarget.startsWith("mailto:")) {
@@ -2015,6 +2176,120 @@ public class GuideScreen extends Screen {
             resolved.get(),
             anchor,
             resolved.get().equals(this.documentLocation) ? this.breadCrumbs : List.copyOf(breadCrumbs)
+        );
+    }
+
+    /**
+     * 打开 GitHub 远程指南中的链接目标（相对路径或 {@code namespace:path}）。
+     *
+     * <p>若目标指向 {@code .md} 文档则读取并打开；否则尝试作为资源解析，
+     * 解析失败返回 {@code false}。</p>
+     */
+    private boolean tryOpenGitHubLinkedGuide(String target, @Nullable String anchor) {
+        var state = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.getActiveState(this.documentLocation);
+        if (state == null) {
+            return false;
+        }
+
+        // 1) 先按文档解析：目标可能是相对文档路径（含/不含 .md 后缀）
+        Path documentFile = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.resolveDocument(
+            state,
+            this.documentLocation,
+            target
+        );
+        if (documentFile != null) {
+            return this.openGitHubDocument(state, documentFile, target, anchor);
+        }
+
+        // 2) 按资源解析（图片等）：存在则返回 true（不打开新页面）
+        Path assetFile = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.resolve(
+            state,
+            this.documentLocation,
+            target
+        );
+        return assetFile != null;
+    }
+
+    private boolean openGitHubDocument(
+        dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.RepoState state,
+        Path documentFile,
+        String target,
+        @Nullable String anchor
+    ) {
+        try {
+            String markdown = java.nio.file.Files.readString(documentFile, StandardCharsets.UTF_8);
+            // 目标文档位置：github:<user>/<repo>/<root>/<relative to resourceRoot>（小写化展示）
+            String relativeToRoot;
+            try {
+                relativeToRoot = state.resourceRoot().relativize(documentFile).toString().replace('\\', '/');
+            } catch (Exception exception) {
+                relativeToRoot = target;
+            }
+            Identifier targetLocation = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubGuideSource.toDisplayLocation(
+                this.githubUri(),
+                relativeToRoot
+            );
+            dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.registerActiveState(targetLocation, state);
+            MDDocument parsed = new MarkdownParser().parseDocument(targetLocation, markdown);
+            List<Identifier> breadCrumbs = new ArrayList<>(this.breadCrumbs);
+            breadCrumbs.add(this.documentLocation);
+            GuideScreen screen = new GuideScreen(targetLocation, parsed, List.copyOf(breadCrumbs), false);
+            screen.setAnchor(anchor);
+            this.minecraft.setScreen(screen);
+            return true;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    /**
+     * 打开 GitHub 远程指南的侧边标签目标文档。
+     */
+    private boolean openGitHubLabel(Identifier targetLocation, List<Identifier> breadCrumbs) {
+        var state = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.getActiveState(this.documentLocation);
+        if (state == null) {
+            return false;
+        }
+        String path = targetLocation.getPath();
+        int ageratumIndex = path.indexOf("/ageratum/");
+        if (ageratumIndex >= 0) {
+            path = path.substring(ageratumIndex + "/ageratum/".length());
+        }
+        // path 形如 <lang>/<file>.md：去掉语言前缀，交给 resolveDocument 做语言回退
+        String fileArgument = path;
+        int languageSlash = path.indexOf('/');
+        if (languageSlash >= 0) {
+            fileArgument = path.substring(languageSlash + 1);
+        }
+        Path documentFile = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver.resolveDocument(
+            state,
+            targetLocation,
+            fileArgument
+        );
+        if (documentFile == null) {
+            return false;
+        }
+        return this.openGitHubDocument(state, documentFile, fileArgument, null);
+    }
+
+    /**
+     * 从活动状态重建当前 github 源文档的 URI。
+     */
+    @Nullable
+    private dev.anvilcraft.resource.ageratum.client.feat.github.GitHubDocUri githubUri() {
+        var state = dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache.getActiveState(this.documentLocation);
+        if (state == null) {
+            return null;
+        }
+        String rootRelative = state.resourceRoot().equals(state.root())
+                              ? ""
+                              : dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache
+                                  .relativizeRoot(state);
+        return new dev.anvilcraft.resource.ageratum.client.feat.github.GitHubDocUri(
+            state.user(),
+            state.repo(),
+            rootRelative,
+            state.commit()
         );
     }
 
@@ -2457,6 +2732,20 @@ public class GuideScreen extends Screen {
     }
 
     private record PreviewDocument(String fileArgument, String title, Identifier location) {
+    }
+
+    private static final class GitHubLabelNode {
+        private final String name;
+        private final java.util.TreeMap<String, GitHubLabelNode> children = new java.util.TreeMap<>();
+        private final List<GitHubLabelDocument> documents = new ArrayList<>();
+        private @Nullable GitHubLabelDocument indexDocument;
+
+        private GitHubLabelNode(String name) {
+            this.name = name;
+        }
+    }
+
+    private record GitHubLabelDocument(String fileArgument, String title, Identifier location) {
     }
 
     /**

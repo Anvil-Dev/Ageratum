@@ -166,10 +166,9 @@ public class MDLatexComponent extends MDImageComponent {
 
     private static Path getCacheDir() {
         return FMLLoader.getCurrent().getGameDir()
-            .resolve("config")
+            .resolve("caches")
             .resolve(AgeratumConstants.Guide.ROOT_FOLDER)
-            .resolve("cache")
-            .resolve("latex");
+            .resolve("images");
     }
 
     private static String sha1Hex(String text) {
