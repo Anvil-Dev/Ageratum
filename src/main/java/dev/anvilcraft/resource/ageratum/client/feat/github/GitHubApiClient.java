@@ -55,11 +55,19 @@ public final class GitHubApiClient {
     /**
      * JSON API host 列表（解析默认分支、最新 commit 等）：直连优先，随后为社区代理前缀。
      *
-     * <p>实测（2026-08）：社区代理对 JSON API 端点大多返回 403 / HTML 挑战页 / 404，
-     * 仅直连 {@code api.github.com} 稳定可用；保留其余条目作为尽力而为的回退。</p>
+     * <p>实测（2026-08-31）：以下代理对 JSON API 返回 200 且 JSON 可解析、commit SHA 正确：</p>
+     * <ul>
+     *   <li>{@code github.chenc.dev}</li>
+     *   <li>{@code github.tbap.top}</li>
+     *   <li>{@code github.nswrz.cn}</li>
+     * </ul>
+     * <p>其余社区代理对 JSON API 大多返回 403 / HTML 挑战页 / 404，仅作尽力而为回退。</p>
      */
     public static final List<String> API_HOSTS = List.of(
         "https://api.github.com",
+        "https://github.chenc.dev/https://api.github.com",
+        "https://github.tbap.top/https://api.github.com",
+        "https://github.nswrz.cn/https://api.github.com",
         "https://ghfast.top/https://api.github.com",
         "https://gh-proxy.com/https://api.github.com",
         "https://ghproxy.net/https://api.github.com",
@@ -74,12 +82,54 @@ public final class GitHubApiClient {
     /**
      * zip 下载 host 列表：直连优先，随后为社区代理前缀。
      *
-     * <p>实测（2026-08）：{@code gh-proxy.com} 对 zipball 返回 200 且内容为合法 zip
-     * （PK 魔数正确），可作直连失败时的回退。</p>
+     * <p>实测（2026-08-31）：以下代理返回 200 且完整 zip 校验通过（约 10.5MB、PK 魔数正确）：</p>
+     * <ul>
+     *   <li>{@code github.chenc.dev}、{@code github.tbap.top}、{@code github.nswrz.cn}（JSON+zip 均可用）</li>
+     *   <li>{@code gh.felicity.ac.cn}、{@code jiashu.1win.eu.org}、{@code gh.jjj.gv.uy}、
+     *       {@code gh.sixyin.com}、{@code ghp.keleyaa.com}、{@code githubdog.com}、
+     *       {@code 777.z321.cc.cd}、{@code g.z321.cc.cd}、{@code js.jiangss.shop}、
+     *       {@code xsadwsd.kdns.fr}、{@code ghproxy.felicity.land}、{@code gh.qfmc0721.cc.cd}、
+     *       {@code gh.dpik.top}、{@code github.tbap.top}、{@code ghfile.geekertao.top}、
+     *       {@code github.dpik.top}、{@code git.yylx.win}、{@code ghm.078465.xyz}、
+     *       {@code gh.927223.xyz}、{@code cdn.akaere.online}、{@code tvv.tw}、
+     *       {@code gh.noki.icu}、{@code gh.07150721.xyz}、{@code github.nswrz.cn}（仅 zip 可用）</li>
+     * </ul>
      */
     public static final List<String> ZIP_HOSTS = List.of(
         "https://api.github.com",
-        "https://gh-proxy.com/https://api.github.com"
+        "https://github.chenc.dev/https://api.github.com",
+        "https://github.tbap.top/https://api.github.com",
+        "https://github.nswrz.cn/https://api.github.com",
+        "https://gh.felicity.ac.cn/https://api.github.com",
+        "https://jiashu.1win.eu.org/https://api.github.com",
+        "https://gh.jjj.gv.uy/https://api.github.com",
+        "https://gh.sixyin.com/https://api.github.com",
+        "https://ghp.keleyaa.com/https://api.github.com",
+        "https://githubdog.com/https://api.github.com",
+        "https://777.z321.cc.cd/https://api.github.com",
+        "https://g.z321.cc.cd/https://api.github.com",
+        "https://js.jiangss.shop/https://api.github.com",
+        "https://xsadwsd.kdns.fr/https://api.github.com",
+        "https://ghproxy.felicity.land/https://api.github.com",
+        "https://gh.qfmc0721.cc.cd/https://api.github.com",
+        "https://gh.dpik.top/https://api.github.com",
+        "https://ghfile.geekertao.top/https://api.github.com",
+        "https://github.dpik.top/https://api.github.com",
+        "https://git.yylx.win/https://api.github.com",
+        "https://ghm.078465.xyz/https://api.github.com",
+        "https://gh.927223.xyz/https://api.github.com",
+        "https://cdn.akaere.online/https://api.github.com",
+        "https://tvv.tw/https://api.github.com",
+        "https://gh.noki.icu/https://api.github.com",
+        "https://gh.07150721.xyz/https://api.github.com",
+        "https://gh-proxy.com/https://api.github.com",
+        "https://ghproxy.net/https://api.github.com",
+        "https://ghproxy.cc/https://api.github.com",
+        "https://mirror.ghproxy.com/https://api.github.com",
+        "https://github.moeyy.xyz/https://api.github.com",
+        "https://gitproxy.click/https://api.github.com",
+        "https://gh.ddlc.top/https://api.github.com",
+        "https://ghps.cc/https://api.github.com"
     );
 
     private GitHubApiClient() {
