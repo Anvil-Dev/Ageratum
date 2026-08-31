@@ -93,6 +93,9 @@ public final class GitHubGuideSource {
         GitHubRepoCache.registerActiveState(indexLocation, state);
         GuideScreen screen = new GuideScreen(indexLocation, document, List.of(), false);
         minecraft.setScreen(screen);
+
+        // 静默检查更新：缺省 commit 时后台解析最新版本，下次打开生效（不打断当前阅读）
+        GitHubRepoCache.refreshInBackground(uri);
     }
 
     /**

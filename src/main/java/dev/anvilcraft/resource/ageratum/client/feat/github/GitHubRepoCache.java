@@ -86,6 +86,13 @@ public final class GitHubRepoCache {
      * （{@code state.root()} 为仓库根目录，{@code state.commit()} 为实际使用的 commit），
      * {@code null} 表示所有尝试均失败。</p>
      *
+     * <p>行为：</p>
+     * <ul>
+     *   <li>已生效缓存（commit 匹配）或待切换缓存（pending 完整）→ 立即返回，不发起网络请求；</li>
+     *   <li>未缓存且 URI 显式指定 commit → 下载该 commit 后返回；</li>
+     *   <li>未缓存且 URI 缺省 commit → 解析最新 commit 并下载后返回。</li>
+     * </ul>
+     *
      * @param uri 已解析的 GitHub 指南 URI
      */
     public static CompletableFuture<RepoState> ensureDownloaded(GitHubDocUri uri) {
@@ -99,10 +106,39 @@ public final class GitHubRepoCache {
         });
     }
 
+    /**
+     * 静默检查更新：缺省 commit 时在后台解析最新 commit，与当前生效缓存不同则下载到
+     * 待切换目录，不打扰当前展示；下次 {@link #ensureDownloaded} 时自动切换生效。
+     *
+     * @param uri 已解析的 GitHub 指南 URI（缺省 commit）
+     */
+    public static void refreshInBackground(GitHubDocUri uri) {
+        if (uri.commit() != null) {
+            return; // 显式 commit 无需静默更新
+        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                refreshQuietly(uri);
+            } catch (Exception exception) {
+                LOGGER.debug("Silent refresh failed for {}/{}", uri.user(), uri.repo(), exception);
+            }
+        });
+    }
+
     // ── 主流程 ──────────────────────────────────────────────────────────
 
     @Nullable
     private static RepoState downloadAndExtract(GitHubDocUri uri) {
+        Path repoDir = cacheRoot().resolve(sanitizeDirName(uri.user()) + "-" + sanitizeDirName(uri.repo()));
+
+        // 1) 待切换缓存：上次静默下载完成，直接切换生效
+        if (activatePendingIfReady(repoDir, uri)) {
+            RepoState state = buildState(uri, repoDir);
+            if (state != null) {
+                return state;
+            }
+        }
+
         String targetCommit = uri.commit();
         if (targetCommit == null) {
             targetCommit = GitHubApiClient.resolveLatestCommit(uri.user(), uri.repo());
@@ -112,16 +148,9 @@ public final class GitHubRepoCache {
             }
         }
 
-        Path repoDir = cacheRoot().resolve(sanitizeDirName(uri.user()) + "-" + sanitizeDirName(uri.repo()));
         String cachedCommit = readCommitMarker(repoDir);
         if (targetCommit.equals(cachedCommit) && isNonEmptyDirectory(repoDir)) {
-            return new RepoState(
-                uri.user(),
-                uri.repo(),
-                repoDir,
-                resolveResourceRoot(repoDir, uri.resourceRoot()),
-                targetCommit
-            );
+            return buildState(uri, repoDir);
         }
 
         if (!extractZipForCommit(uri.user(), uri.repo(), targetCommit, repoDir)) {
@@ -130,13 +159,121 @@ public final class GitHubRepoCache {
 
         writeCommitMarker(repoDir, targetCommit);
         LOGGER.info("GitHub repo {}/{}@{} cached at {}", uri.user(), uri.repo(), targetCommit, repoDir);
+        return buildState(uri, repoDir);
+    }
+
+    /**
+     * 静默更新：解析最新 commit，与当前生效缓存不同则下载到 pending 目录。
+     */
+    private static void refreshQuietly(GitHubDocUri uri) {
+        Path repoDir = cacheRoot().resolve(sanitizeDirName(uri.user()) + "-" + sanitizeDirName(uri.repo()));
+        String latestCommit = GitHubApiClient.resolveLatestCommit(uri.user(), uri.repo());
+        if (latestCommit == null) {
+            return;
+        }
+        String cachedCommit = readCommitMarker(repoDir);
+        if (latestCommit.equals(cachedCommit) && isNonEmptyDirectory(repoDir)) {
+            return; // 已是最新，无需更新
+        }
+        // 已在下载中（pending 标记指向同一 commit）则跳过
+        if (latestCommit.equals(readPendingCommitMarker(repoDir)) && isNonEmptyDirectory(pendingDir(repoDir))) {
+            return;
+        }
+        if (extractZipForCommit(uri.user(), uri.repo(), latestCommit, pendingDir(repoDir))) {
+            writePendingCommitMarker(repoDir, latestCommit);
+            LOGGER.info("Silent refresh ready for {}/{}@{} (applies on next open)", uri.user(), uri.repo(), latestCommit);
+        }
+    }
+
+    /**
+     * 若 pending 目录完整且与目标 commit 匹配，则切换为生效缓存。
+     */
+    private static boolean activatePendingIfReady(Path repoDir, GitHubDocUri uri) {
+        String targetCommit = uri.commit();
+        if (targetCommit == null) {
+            // 缺省 commit：pending 存在且完整即可切换
+            String pendingCommit = readPendingCommitMarker(repoDir);
+            if (pendingCommit == null || !isNonEmptyDirectory(pendingDir(repoDir))) {
+                return false;
+            }
+            targetCommit = pendingCommit;
+        } else {
+            // 显式 commit：pending 必须匹配该 commit
+            String pendingCommit = readPendingCommitMarker(repoDir);
+            if (!targetCommit.equals(pendingCommit) || !isNonEmptyDirectory(pendingDir(repoDir))) {
+                return false;
+            }
+        }
+
+        deleteRecursively(repoDir);
+        try {
+            Files.move(pendingDir(repoDir), repoDir, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException atomicFailure) {
+            LOGGER.debug("Atomic pending activation failed, fallback to plain move", atomicFailure);
+            try {
+                Files.move(pendingDir(repoDir), repoDir);
+            } catch (IOException exception) {
+                LOGGER.warn("Failed to activate pending repo for {}", repoDir, exception);
+                return false;
+            }
+        }
+        writeCommitMarker(repoDir, targetCommit);
+        deletePendingMarker(repoDir);
+        LOGGER.info("Activated pending GitHub repo {}/{}@{}", uri.user(), uri.repo(), targetCommit);
+        return true;
+    }
+
+    @Nullable
+    private static RepoState buildState(GitHubDocUri uri, Path repoDir) {
+        String commit = readCommitMarker(repoDir);
+        if (commit == null || !isNonEmptyDirectory(repoDir)) {
+            return null;
+        }
         return new RepoState(
             uri.user(),
             uri.repo(),
             repoDir,
             resolveResourceRoot(repoDir, uri.resourceRoot()),
-            targetCommit
+            commit
         );
+    }
+
+    // ── pending 目录与标记 ──────────────────────────────────────────────
+
+    private static Path pendingDir(Path repoDir) {
+        return repoDir.resolveSibling(repoDir.getFileName() + ".pending");
+    }
+
+    private static final String PENDING_COMMIT_MARKER = ".commit.pending";
+
+    @Nullable
+    private static String readPendingCommitMarker(Path repoDir) {
+        Path marker = pendingDir(repoDir).resolve(PENDING_COMMIT_MARKER);
+        if (!Files.isRegularFile(marker)) {
+            return null;
+        }
+        try {
+            String content = Files.readString(marker, StandardCharsets.UTF_8).trim();
+            return content.isEmpty() ? null : content;
+        } catch (IOException exception) {
+            return null;
+        }
+    }
+
+    private static void writePendingCommitMarker(Path repoDir, String commit) {
+        try {
+            Files.writeString(pendingDir(repoDir).resolve(PENDING_COMMIT_MARKER), commit, StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            LOGGER.warn("Failed to write pending commit marker for {}", repoDir, exception);
+        }
+    }
+
+    private static void deletePendingMarker(Path repoDir) {
+        try {
+            Files.deleteIfExists(pendingDir(repoDir).resolve(PENDING_COMMIT_MARKER));
+        } catch (IOException exception) {
+            LOGGER.debug("Failed to delete pending marker for {}", repoDir, exception);
+        }
     }
 
     /**
@@ -158,9 +295,18 @@ public final class GitHubRepoCache {
     }
 
     /**
-     * 下载并解压指定 commit 的 zip 包；成功返回 {@code true}。
+     * 下载并解压指定 commit 的 zip 包到目标目录。
+     *
+     * <p>目标目录既可以是正式缓存目录（{@code <dir>}），也可以是待切换目录
+     * （{@code <dir>.pending}）；下载解压完成后以原子方式替换目标目录。</p>
+     *
+     * @param user     仓库所有者
+     * @param repo     仓库名
+     * @param commit   commit SHA
+     * @param targetDir 目标目录（下载内容最终落点）
+     * @return 成功返回 {@code true}
      */
-    private static boolean extractZipForCommit(String user, String repo, String commit, Path repoDir) {
+    private static boolean extractZipForCommit(String user, String repo, String commit, Path targetDir) {
         try {
             Files.createDirectories(cacheRoot());
         } catch (IOException exception) {
@@ -168,7 +314,7 @@ public final class GitHubRepoCache {
             return false;
         }
 
-        Path zipFile = cacheRoot().resolve(repoDir.getFileName() + ".zip");
+        Path zipFile = cacheRoot().resolve(targetDir.getFileName() + ".zip");
         try {
             Files.deleteIfExists(zipFile);
         } catch (IOException exception) {
@@ -180,7 +326,7 @@ public final class GitHubRepoCache {
         }
 
         // 先解压到临时目录，成功后再原子替换目标目录
-        Path tempDir = repoDir.resolveSibling(repoDir.getFileName() + ".tmp");
+        Path tempDir = targetDir.resolveSibling(targetDir.getFileName() + ".tmp");
         deleteRecursively(tempDir);
         try {
             Files.createDirectories(tempDir);
@@ -204,13 +350,13 @@ public final class GitHubRepoCache {
             return false;
         }
 
-        deleteRecursively(repoDir);
+        deleteRecursively(targetDir);
         try {
-            Files.move(tempDir, repoDir, StandardCopyOption.ATOMIC_MOVE);
+            Files.move(tempDir, targetDir, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException atomicFailure) {
             LOGGER.debug("Atomic move failed, fallback to plain move", atomicFailure);
             try {
-                Files.move(tempDir, repoDir);
+                Files.move(tempDir, targetDir);
             } catch (IOException exception) {
                 LOGGER.warn("Failed to move extracted repo into place", exception);
                 deleteRecursively(tempDir);

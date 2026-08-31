@@ -53,7 +53,10 @@ public final class GitHubApiClient {
     private static final String USER_AGENT = "Ageratum-Mod/1.0";
 
     /**
-     * API host 列表：直连优先，随后为社区代理前缀。
+     * JSON API host 列表（解析默认分支、最新 commit 等）：直连优先，随后为社区代理前缀。
+     *
+     * <p>实测（2026-08）：社区代理对 JSON API 端点大多返回 403 / HTML 挑战页 / 404，
+     * 仅直连 {@code api.github.com} 稳定可用；保留其余条目作为尽力而为的回退。</p>
      */
     public static final List<String> API_HOSTS = List.of(
         "https://api.github.com",
@@ -68,6 +71,17 @@ public final class GitHubApiClient {
         "https://ghps.cc/https://api.github.com"
     );
 
+    /**
+     * zip 下载 host 列表：直连优先，随后为社区代理前缀。
+     *
+     * <p>实测（2026-08）：{@code gh-proxy.com} 对 zipball 返回 200 且内容为合法 zip
+     * （PK 魔数正确），可作直连失败时的回退。</p>
+     */
+    public static final List<String> ZIP_HOSTS = List.of(
+        "https://api.github.com",
+        "https://gh-proxy.com/https://api.github.com"
+    );
+
     private GitHubApiClient() {
     }
 
@@ -80,11 +94,11 @@ public final class GitHubApiClient {
      */
     @Nullable
     public static String resolveLatestCommit(String user, String repo) {
-        String defaultBranch = tryHosts(host -> fetchDefaultBranch(host, user, repo));
+        String defaultBranch = tryHosts(API_HOSTS, host -> fetchDefaultBranch(host, user, repo));
         if (defaultBranch == null) {
             return null;
         }
-        return tryHosts(host -> fetchBranchHeadCommit(host, user, repo, defaultBranch));
+        return tryHosts(API_HOSTS, host -> fetchBranchHeadCommit(host, user, repo, defaultBranch));
     }
 
     /**
@@ -99,7 +113,7 @@ public final class GitHubApiClient {
      * @return 下载成功返回 {@code true}，全部 host 失败返回 {@code false}
      */
     public static boolean downloadZipball(Path destFile, String user, String repo, String commit) {
-        return tryHosts(host -> fetchZipball(host, destFile, user, repo, commit));
+        return tryHosts(ZIP_HOSTS, host -> fetchZipball(host, destFile, user, repo, commit));
     }
 
     // ── 单 host 实现 ────────────────────────────────────────────────────
@@ -233,11 +247,11 @@ public final class GitHubApiClient {
     // ── host fallback ───────────────────────────────────────────────────
 
     /**
-     * 依次尝试每个 API host，返回第一个成功的调用结果。
+     * 依次尝试每个 host，返回第一个成功的调用结果。
      */
     @Nullable
-    private static <T> T tryHosts(Function<String, T> action) {
-        for (String host : API_HOSTS) {
+    private static <T> T tryHosts(List<String> hosts, Function<String, T> action) {
+        for (String host : hosts) {
             try {
                 T result = action.apply(host);
                 if (result != null) {
