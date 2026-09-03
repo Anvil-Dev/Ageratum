@@ -18,6 +18,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -54,7 +55,24 @@ public final class GitHubRepoCache {
      */
     private static final Map<net.minecraft.resources.Identifier, RepoState> ACTIVE_STATES = new ConcurrentHashMap<>();
 
+    /**
+     * 仓库目录 → 下载互斥锁（按仓库串行下载/解压/切换，避免并发互踩）。
+     */
+    private static final Map<String, ReentrantLock> REPO_LOCKS = new ConcurrentHashMap<>();
+
+    /**
+     * 正在后台静默刷新的仓库目录集合（去重，避免同一仓库并发刷新）。
+     */
+    private static final java.util.Set<String> REFRESH_IN_FLIGHT = ConcurrentHashMap.newKeySet();
+
     private GitHubRepoCache() {
+    }
+
+    /**
+     * 获取某个仓库目录对应的互斥锁（下载/切换时持有）。
+     */
+    private static ReentrantLock lockFor(Path repoDir) {
+        return REPO_LOCKS.computeIfAbsent(repoDir.toString(), key -> new ReentrantLock());
     }
 
     /**
@@ -80,6 +98,60 @@ public final class GitHubRepoCache {
     }
 
     /**
+     * 尝试直接使用本地已生效缓存（只读磁盘，不发起任何网络请求）。
+     *
+     * <p>适用场景：打开远程指南时应优先展示缓存内容，网络检查/下载放到后台。
+     * 若上次静默刷新已备好待切换缓存（pending 完整），则先纯本地切换生效；
+     * 缺省 commit 的 URI 只要有可用缓存即命中；显式指定 commit 的 URI 要求缓存
+     * commit 完全匹配，避免展示与用户指定不一致的内容。</p>
+     *
+     * @param uri 已解析的 GitHub 指南 URI
+     * @return 缓存可用的 {@link RepoState}；未命中返回 {@code null}
+     */
+    @Nullable
+    public static RepoState tryLoadCached(GitHubDocUri uri) {
+        Path repoDir = repoDir(uri);
+        ReentrantLock lock = lockFor(repoDir);
+
+        // 缓存打开运行在渲染线程，绝不能阻塞等待后台下载（可能长达数十秒）。
+        if (lock.tryLock()) {
+            try {
+                // 1) 待切换缓存就绪则切换（纯本地文件操作，无网络）
+                if (activatePendingIfReady(repoDir, uri)) {
+                    RepoState state = buildState(uri, repoDir);
+                    if (state != null) {
+                        return state;
+                    }
+                }
+                // 2) 生效缓存直接使用
+                return readCachedState(uri, repoDir);
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        // 后台正在下载/切换：不等待，尽力直接读当前生效缓存（读不到则走加载流程）。
+        return readCachedState(uri, repoDir);
+    }
+
+    /**
+     * 读取当前生效缓存（目录可能正被原子替换，只读不持锁，读到旧/新完整状态皆可）。
+     */
+    @Nullable
+    private static RepoState readCachedState(GitHubDocUri uri, Path repoDir) {
+        String cachedCommit = readCommitMarker(repoDir);
+        if (cachedCommit != null && isNonEmptyDirectory(repoDir)) {
+            if (uri.commit() == null || uri.commit().equals(cachedCommit)) {
+                RepoState cachedState = buildState(uri, repoDir);
+                if (cachedState != null) {
+                    return cachedState;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 确保指定 URI 对应的仓库 commit 已下载并解压。
      *
      * <p>返回的 future 完成时：{@code state != null} 表示成功
@@ -93,22 +165,33 @@ public final class GitHubRepoCache {
      *   <li>未缓存且 URI 缺省 commit → 解析最新 commit 并下载后返回。</li>
      * </ul>
      *
+     * <p>注意：存在匹配缓存（含缺省 commit 的已缓存仓库）时直接返回缓存，不发任何网络请求；
+     * 仅在无可用缓存时才解析最新 commit 并下载。需要在「打开」时优先展示缓存、不显示加载界面，
+     * 请先调用 {@link #tryLoadCached(uri)}；仅当返回 {@code null} 时才需要调用本方法。</p>
+     *
      * @param uri 已解析的 GitHub 指南 URI
      */
     public static CompletableFuture<RepoState> ensureDownloaded(GitHubDocUri uri) {
         return CompletableFuture.supplyAsync(() -> {
+            ReentrantLock lock = lockFor(repoDir(uri));
+            lock.lock();
             try {
                 return downloadAndExtract(uri);
             } catch (Exception exception) {
                 LOGGER.warn("Failed to prepare GitHub repo {}/{}", uri.user(), uri.repo(), exception);
                 return null;
+            } finally {
+                lock.unlock();
             }
         });
     }
 
     /**
      * 静默检查更新：缺省 commit 时在后台解析最新 commit，与当前生效缓存不同则下载到
-     * 待切换目录，不打扰当前展示；下次 {@link #ensureDownloaded} 时自动切换生效。
+     * 待切换目录，不打扰当前展示；下次 {@link #tryLoadCached} 时自动切换生效。
+     *
+     * <p>同一仓库的下载以 {@link #lockFor} 互斥，且同一时间只会有一个静默刷新在跑，
+     * 避免并发互踩与重复解析。</p>
      *
      * @param uri 已解析的 GitHub 指南 URI（缺省 commit）
      */
@@ -116,26 +199,53 @@ public final class GitHubRepoCache {
         if (uri.commit() != null) {
             return; // 显式 commit 无需静默更新
         }
+        Path repoDir = repoDir(uri);
+        if (!REFRESH_IN_FLIGHT.add(repoDir.toString())) {
+            return; // 已有同仓库刷新在跑，跳过本次
+        }
         CompletableFuture.runAsync(() -> {
+            ReentrantLock lock = lockFor(repoDir);
+            lock.lock();
             try {
                 refreshQuietly(uri);
             } catch (Exception exception) {
                 LOGGER.debug("Silent refresh failed for {}/{}", uri.user(), uri.repo(), exception);
+            } finally {
+                lock.unlock();
+                REFRESH_IN_FLIGHT.remove(repoDir.toString());
             }
         });
     }
 
     // ── 主流程 ──────────────────────────────────────────────────────────
 
+    /**
+     * 计算仓库缓存目录（{@code <user>-<repo>}）。
+     */
+    private static Path repoDir(GitHubDocUri uri) {
+        return cacheRoot().resolve(sanitizeDirName(uri.user()) + "-" + sanitizeDirName(uri.repo()));
+    }
+
     @Nullable
     private static RepoState downloadAndExtract(GitHubDocUri uri) {
-        Path repoDir = cacheRoot().resolve(sanitizeDirName(uri.user()) + "-" + sanitizeDirName(uri.repo()));
+        Path repoDir = repoDir(uri);
 
         // 1) 待切换缓存：上次静默下载完成，直接切换生效
         if (activatePendingIfReady(repoDir, uri)) {
             RepoState state = buildState(uri, repoDir);
             if (state != null) {
                 return state;
+            }
+        }
+
+        // 2) 已生效缓存且 commit 匹配 → 直接使用，不再网络请求
+        String cachedCommit = readCommitMarker(repoDir);
+        if (cachedCommit != null && isNonEmptyDirectory(repoDir)) {
+            if (uri.commit() == null || uri.commit().equals(cachedCommit)) {
+                RepoState cachedState = buildState(uri, repoDir);
+                if (cachedState != null) {
+                    return cachedState;
+                }
             }
         }
 
@@ -146,11 +256,6 @@ public final class GitHubRepoCache {
                 LOGGER.warn("Failed to resolve latest commit for {}/{}", uri.user(), uri.repo());
                 return null;
             }
-        }
-
-        String cachedCommit = readCommitMarker(repoDir);
-        if (targetCommit.equals(cachedCommit) && isNonEmptyDirectory(repoDir)) {
-            return buildState(uri, repoDir);
         }
 
         if (!extractZipForCommit(uri.user(), uri.repo(), targetCommit, repoDir)) {
@@ -164,9 +269,12 @@ public final class GitHubRepoCache {
 
     /**
      * 静默更新：解析最新 commit，与当前生效缓存不同则下载到 pending 目录。
+     *
+     * <p>调用方必须已持有 {@link #lockFor} 仓库锁。若锁被占用（如前台正在下载该仓库），
+     * 由最新一次解析结果负责，跳过本次刷新，避免与前台流程互踩。</p>
      */
     private static void refreshQuietly(GitHubDocUri uri) {
-        Path repoDir = cacheRoot().resolve(sanitizeDirName(uri.user()) + "-" + sanitizeDirName(uri.repo()));
+        Path repoDir = repoDir(uri);
         String latestCommit = GitHubApiClient.resolveLatestCommit(uri.user(), uri.repo());
         if (latestCommit == null) {
             return;

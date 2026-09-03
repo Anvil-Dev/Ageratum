@@ -17,9 +17,10 @@ import java.util.List;
 /**
  * GitHub 远程指南打开入口。
  *
- * <p>流程：显示加载界面 → 异步下载/解压仓库 → 解析 {@code ageratum/index.md}
- * 或 {@code ageratum/<语言>/index.md} → 打开 {@link GuideScreen}；
- * 全部失败时显示红色 {@code 加载失败...}。</p>
+ * <p>缓存优先：打开时若本地已有可用缓存（缺省 commit 或显式 commit 匹配），
+ * 立即展示缓存内容，不显示加载界面、不阻塞网络；随后在后台静默检查更新，
+ * 有新版本时下载到 pending 目录，下次打开自动生效。仅在无缓存可用时才显示
+ * 「加载中」过渡界面并现场下载；全部失败显示红色 {@code 加载失败...}。</p>
  */
 public final class GitHubGuideSource {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -45,6 +46,27 @@ public final class GitHubGuideSource {
      * 打开 GitHub 远程指南（已解析 URI）。
      */
     public static void open(GitHubDocUri uri) {
+        Minecraft minecraft = Minecraft.getInstance();
+
+        // 1) 缓存命中：立即打开，无需等待网络
+        GitHubRepoCache.RepoState cachedState = GitHubRepoCache.tryLoadCached(uri);
+        if (cachedState != null) {
+            if (openDocument(minecraft, uri, cachedState)) {
+                // 2) 打开后后台静默检查更新：下次打开生效（不打断当前阅读）
+                GitHubRepoCache.refreshInBackground(uri);
+                return;
+            }
+            // 缓存内容异常（文档缺失等），回退到现场下载
+            LOGGER.info("Cached GitHub guide {}/{} cannot be opened, fallback to download", uri.user(), uri.repo());
+        }
+
+        showLoadingAndFetch(uri);
+    }
+
+    /**
+     * 无可用缓存：显示「加载中」过渡界面，异步下载后打开；全部失败显示「加载失败」。
+     */
+    private static void showLoadingAndFetch(GitHubDocUri uri) {
         GitHubLoadingScreen loadingScreen = GitHubLoadingScreen.open();
         GitHubRepoCache.ensureDownloaded(uri).whenComplete((state, throwable) -> {
             Minecraft minecraft = Minecraft.getInstance();
@@ -54,10 +76,9 @@ public final class GitHubGuideSource {
                     loadingScreen.markFailed();
                     return;
                 }
-                try {
-                    openDocument(minecraft, uri, state);
-                } catch (Exception exception) {
-                    LOGGER.warn("Failed to open GitHub guide {}/{}", uri.user(), uri.repo(), exception);
+                boolean opened = openDocument(minecraft, uri, state);
+                if (!opened) {
+                    LOGGER.warn("Failed to open GitHub guide {}/{}", uri.user(), uri.repo());
                     loadingScreen.markFailed();
                 }
             });
@@ -66,8 +87,10 @@ public final class GitHubGuideSource {
 
     /**
      * 根据已就绪的仓库状态打开文档。
+     *
+     * @return 打开成功返回 {@code true}；文档缺失/读取失败返回 {@code false}
      */
-    private static void openDocument(Minecraft minecraft, GitHubDocUri uri, GitHubRepoCache.RepoState state) {
+    private static boolean openDocument(Minecraft minecraft, GitHubDocUri uri, GitHubRepoCache.RepoState state) {
         String languageCode = AgeratumClient.getClientLanguageCode(minecraft);
 
         // 文档位置：github:<user>/<repo>/<root>/ageratum/<lang>/index.md
@@ -76,8 +99,7 @@ public final class GitHubGuideSource {
         Path documentFile = GitHubAssetResolver.resolveDocument(state, indexLocation, "index");
         if (documentFile == null) {
             LOGGER.warn("No index document found for {}/{} under {}", uri.user(), uri.repo(), uri.resourceRoot());
-            loadingScreenMarkFailed(minecraft);
-            return;
+            return false;
         }
 
         String markdown;
@@ -85,17 +107,14 @@ public final class GitHubGuideSource {
             markdown = Files.readString(documentFile, StandardCharsets.UTF_8);
         } catch (Exception exception) {
             LOGGER.warn("Failed to read document {}", documentFile, exception);
-            loadingScreenMarkFailed(minecraft);
-            return;
+            return false;
         }
 
         MDDocument document = new MarkdownParser().parseDocument(indexLocation, markdown);
         GitHubRepoCache.registerActiveState(indexLocation, state);
         GuideScreen screen = new GuideScreen(indexLocation, document, List.of(), false);
         minecraft.setScreen(screen);
-
-        // 静默检查更新：缺省 commit 时后台解析最新版本，下次打开生效（不打断当前阅读）
-        GitHubRepoCache.refreshInBackground(uri);
+        return true;
     }
 
     /**
@@ -114,12 +133,6 @@ public final class GitHubGuideSource {
             path += "/" + fileArgument;
         }
         return Identifier.fromNamespaceAndPath(GitHubAssetResolver.GITHUB_NAMESPACE, path);
-    }
-
-    private static void loadingScreenMarkFailed(Minecraft minecraft) {
-        if (minecraft.screen instanceof GitHubLoadingScreen loadingScreen) {
-            loadingScreen.markFailed();
-        }
     }
 
     private static void showFailure() {
