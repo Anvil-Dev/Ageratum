@@ -55,8 +55,9 @@ public final class GitHubApiClient {
     /**
      * JSON API host 列表（解析默认分支、最新 commit 等）：直连优先，随后为社区代理前缀。
      *
-     * <p>实测（2026-08-31）：以下代理对 JSON API 返回 200 且 JSON 可解析、commit SHA 正确：</p>
+     * <p>实测（2026-09-03）：以下代理对 JSON API 返回 200 且 JSON 可解析、commit SHA 正确：</p>
      * <ul>
+     *   <li>{@code ghapi.anvilcraft.dev}（AnvilCraft 第一方镜像，JSON + zip 均可用）</li>
      *   <li>{@code github.chenc.dev}</li>
      *   <li>{@code github.tbap.top}</li>
      *   <li>{@code github.nswrz.cn}</li>
@@ -65,6 +66,7 @@ public final class GitHubApiClient {
      */
     public static final List<String> API_HOSTS = List.of(
         "https://api.github.com",
+        "https://ghapi.anvilcraft.dev",
         "https://github.chenc.dev/https://api.github.com",
         "https://github.tbap.top/https://api.github.com",
         "https://github.nswrz.cn/https://api.github.com",
@@ -82,8 +84,9 @@ public final class GitHubApiClient {
     /**
      * zip 下载 host 列表：直连优先，随后为社区代理前缀。
      *
-     * <p>实测（2026-08-31）：以下代理返回 200 且完整 zip 校验通过（约 10.5MB、PK 魔数正确）：</p>
+     * <p>实测（2026-09-03）：以下代理返回 200 且完整 zip 校验通过（约 10.5MB、PK 魔数正确）：</p>
      * <ul>
+     *   <li>{@code ghapi.anvilcraft.dev}（AnvilCraft 第一方镜像，JSON + zip 均可用）</li>
      *   <li>{@code github.chenc.dev}、{@code github.tbap.top}、{@code github.nswrz.cn}（JSON+zip 均可用）</li>
      *   <li>{@code gh.felicity.ac.cn}、{@code jiashu.1win.eu.org}、{@code gh.jjj.gv.uy}、
      *       {@code gh.sixyin.com}、{@code ghp.keleyaa.com}、{@code githubdog.com}、
@@ -97,6 +100,7 @@ public final class GitHubApiClient {
      */
     public static final List<String> ZIP_HOSTS = List.of(
         "https://api.github.com",
+        "https://ghapi.anvilcraft.dev",
         "https://github.chenc.dev/https://api.github.com",
         "https://github.tbap.top/https://api.github.com",
         "https://github.nswrz.cn/https://api.github.com",
