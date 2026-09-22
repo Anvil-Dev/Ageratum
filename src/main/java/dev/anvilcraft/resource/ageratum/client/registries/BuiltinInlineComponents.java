@@ -48,6 +48,23 @@ public final class BuiltinInlineComponents {
     );
 
     /**
+     * 按键组件：{@code <key id="key.example.action"/>}。
+     *
+     * <p>将按键映射 ID 渲染为客户端当前绑定的按键；玩家修改按键绑定后，
+     * 显示内容会自动更新。</p>
+     */
+    public static final DeferredHolder<MDInlineComponentFactory, MDInlineComponentFactory> KEY = AgeratumRegistries.INLINE_COMPONENT_FACTORIES.register(
+        "key", () -> context -> {
+            String keyId = context.params().get("id");
+            if (keyId == null || keyId.isBlank()) {
+                return Component.empty().withStyle(context.baseStyle());
+            }
+
+            return Component.keybind(keyId.trim()).withStyle(context.baseStyle());
+        }
+    );
+
+    /**
      * 物品引用行内组件：{@code <ref item="<item id>" component="<item component>"/>}。
      *
      * <p>以链接颜色和下划线样式显示物品的翻译名称；
