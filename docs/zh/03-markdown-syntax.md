@@ -280,6 +280,21 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 - 参数使用 `key="value"` 或 `key=value` 格式
 - 自闭合标签（`/>`）不含块内容
 
+### 自动目录组件
+
+使用 `directory` 扩展，可以在当前文档中生成基于全部 Markdown 标题的可跳转目录：
+
+```markdown
+<directory>
+
+<directory/>
+```
+
+- 组件所在位置固定渲染为 `## 目录`
+- 文档中的各级 `#` 标题会按标题级别缩进为可点击列表
+- 点击条目将跳转到当前文档中的对应标题
+- `<directory>` 与 `<directory/>` 两种写法等价
+
 ### 结构 NBT 组件
 
 使用 `structure` 扩展，可以在文档中渲染结构文件（`.nbt` / `.snbt`）的摘要、俯视方块预览与 NBT 树状视图：
@@ -315,6 +330,7 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 | `ageratum:recipe`    | `<recipe id="..."/>`                     | 配方渲染            |
 | `ageratum:structure` | `<structure id="..."/>`                  | 结构 NBT 摘要 + 树视图 |
 | `ageratum:latex`     | `<latex formula="..."/>` 或 `[latex:...]` | LaTeX 公式图片      |
+| `ageratum:directory` | `<directory>` 或 `<directory/>`           | 自动生成可跳转目录        |
 
 ### 配方组件
 

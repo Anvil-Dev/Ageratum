@@ -10,16 +10,22 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDListCom
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDQuoteComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTableComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDDirectoryComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import net.minecraft.core.Registry;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.text.Normalizer;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -101,7 +107,93 @@ public class MarkdownParser {
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         FrontMatterParseResult frontMatterParseResult = extractFrontMatter(normalized);
         List<MDComponent> components = this.parseComponents(sourceLocation, frontMatterParseResult.body());
+        components = expandDirectoryComponents(components);
         return new MDDocument(sourceLocation, frontMatterParseResult.frontMatter(), components);
+    }
+
+    /**
+     * Expands automatic directory placeholders after all headings have been parsed.
+     */
+    private static List<MDComponent> expandDirectoryComponents(List<MDComponent> components) {
+        if (components.stream().noneMatch(MDDirectoryComponent.class::isInstance)) {
+            return components;
+        }
+
+        List<HeadingEntry> headings = new ArrayList<>();
+        for (MDComponent component : components) {
+            if (!(component instanceof MDHeaderComponent header)) {
+                continue;
+            }
+            String title = header.getText().getString().trim();
+            if (title.isEmpty()) {
+                continue;
+            }
+            headings.add(new HeadingEntry(header.getLevel(), title));
+        }
+
+        List<MDComponent> expanded = new ArrayList<>(components.size() + headings.size() + 2);
+        for (MDComponent component : components) {
+            if (!(component instanceof MDDirectoryComponent)) {
+                expanded.add(component);
+                continue;
+            }
+
+            expanded.add(new MDHeaderComponent(2, "\u76ee\u5f55"));
+            if (headings.isEmpty()) {
+                continue;
+            }
+
+            List<MDListComponent.ListItem> items = new ArrayList<>(headings.size());
+            for (HeadingEntry heading : headings) {
+                int level = Math.max(0, heading.level() - 1);
+                items.add(MDListComponent.unordered(level, createDirectoryLink(heading.title())));
+            }
+            expanded.add(new MDListComponent(items));
+        }
+        return expanded;
+    }
+
+    /**
+     * Creates a formatted link for a directory entry.
+     */
+    private static FormattedText createDirectoryLink(String title) {
+        Style linkStyle = Style.EMPTY
+            .withUnderlined(true)
+            .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
+            .withClickEvent(new ClickEvent(
+                ClickEvent.Action.OPEN_URL,
+                "#" + createDirectoryAnchor(title)
+            ));
+        return MDComponent.textFormat(title, linkStyle);
+    }
+
+    /**
+     * Creates an anchor using the same normalization as {@code GuideScreen}.
+     */
+    private static String createDirectoryAnchor(String title) {
+        String normalized = Normalizer.normalize(title, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
+        StringBuilder anchor = new StringBuilder(normalized.length());
+        boolean previousWasSeparator = false;
+        for (int index = 0; index < normalized.length(); index++) {
+            char current = normalized.charAt(index);
+            if (Character.isLetterOrDigit(current)) {
+                anchor.append(current);
+                previousWasSeparator = false;
+                continue;
+            }
+            if (Character.isWhitespace(current) || current == '-' || current == '_') {
+                if (!previousWasSeparator && !anchor.isEmpty()) {
+                    anchor.append('-');
+                    previousWasSeparator = true;
+                }
+            }
+        }
+        int length = anchor.length();
+        while (length > 0 && anchor.charAt(length - 1) == '-') {
+            anchor.deleteCharAt(length - 1);
+            length--;
+        }
+        return anchor.toString();
     }
 
     private List<MDComponent> parseComponents(ResourceLocation sourceLocation, String markdownBody) {
@@ -734,7 +826,8 @@ public class MarkdownParser {
                 return null;
             }
             ResourceLocation id = parseExtensionId(tagMatcher.group(1));
-            if (id == null || !"/".equals(tagMatcher.group(3))) {
+            boolean selfClosing = "/".equals(tagMatcher.group(3));
+            if (id == null || (!selfClosing && !MDDirectoryComponent.ID.equals(id))) {
                 return null;
             }
             String rawParams = tagMatcher.group(2) == null ? "" : tagMatcher.group(2).trim();
@@ -988,6 +1081,9 @@ public class MarkdownParser {
             if (this.equals(holder)) return 0;
             return this.priority() >= holder.priority() ? 1 : -1;
         }
+    }
+
+    private record HeadingEntry(int level, String title) {
     }
 
     private record ParseYamlMapResult(Map<String, Object> map, int nextIndex) {

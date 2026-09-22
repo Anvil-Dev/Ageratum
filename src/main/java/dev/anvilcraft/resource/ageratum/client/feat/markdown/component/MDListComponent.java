@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Style;
 
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  * Markdown 列表组件。
@@ -50,8 +51,12 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
     }
 
     /**
-     * 创建有序列表项。
+     * Creates an unordered item with preformatted text.
      */
+    public static ListItem unordered(int level, FormattedText text) {
+        return new ListItem(ListKind.UNORDERED, Math.max(0, level), 0, false, null, text);
+    }
+
     public static ListItem ordered(int level, int index, String text) {
         return new ListItem(ListKind.ORDERED, Math.max(0, level), Math.max(1, index), false, text);
     }
@@ -109,7 +114,9 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
             if (item.kind() == ListKind.TASK && item.checked()) {
                 style = style.withStrikethrough(true);
             }
-            FormattedText formattedText = MDComponent.textFormat(item.text(), style);
+            FormattedText formattedText = item.formattedText() != null
+                ? item.formattedText()
+                : MDComponent.textFormat(item.text(), style);
             cachedItems.add(new CachedItem<>(item.level(), item, formattedText));
         }
 
@@ -146,7 +153,17 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
     /**
      * 单个列表项的数据结构。
      */
-    public record ListItem(ListKind kind, int level, int index, boolean checked, String text) {
+    public record ListItem(
+        ListKind kind,
+        int level,
+        int index,
+        boolean checked,
+        @Nullable String text,
+        @Nullable FormattedText formattedText
+    ) {
+        public ListItem(ListKind kind, int level, int index, boolean checked, String text) {
+            this(kind, level, index, checked, text, null);
+        }
     }
 }
 

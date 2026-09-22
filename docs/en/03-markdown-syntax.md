@@ -280,6 +280,22 @@ Block content here — supports Markdown syntax.
 - Parameters use `key="value"` or `key=value` format
 - Self-closing tags (`/>`) have no block content
 
+### Automatic Directory Component
+
+Use the `directory` extension to generate a clickable table of contents from all Markdown headings in the current
+document:
+
+```markdown
+<directory>
+
+<directory/>
+```
+
+- The component always renders `## 目录` at its position
+- All `#` headings are rendered as clickable list entries indented by heading level
+- Clicking an entry jumps to the corresponding heading in the current document
+- `<directory>` and `<directory/>` are equivalent
+
 ### Structure NBT Component
 
 Use the `structure` extension to render a summary, top-down block preview, and bounded NBT tree view for
@@ -317,6 +333,7 @@ structure files (`.nbt` / `.snbt`):
 | `ageratum:recipe`    | `<recipe id="..."/>`                      | Recipe rendering             |
 | `ageratum:structure` | `<structure id="..."/>`                   | Structure NBT summary + tree |
 | `ageratum:latex`     | `<latex formula="..."/>` or `[latex:...]` | LaTeX formula image          |
+| `ageratum:directory` | `<directory>` or `<directory/>`           | Automatic clickable directory |
 
 ### Recipe Component
 
