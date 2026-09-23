@@ -1,0 +1,30 @@
+sourceSets {
+    clientTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+neoForge {
+    mods {
+        ageratum_structure_test { sourceSet sourceSets.clientTest }
+    }
+    runs {
+        structureTest {
+            client()
+            gameDirectory = project.file('build/structure-test/run')
+            programArguments.addAll '--width', '800', '--height', '600'
+        }
+    }
+}
+
+def structureTestLog = layout.buildDirectory.file('structure-test/run/logs/latest.log')
+tasks.named('runStructureTest') {
+    notCompatibleWithConfigurationCache('Opt-in client regression checks the isolated game log')
+    doLast {
+        def log = structureTestLog.get().asFile.getText('UTF-8')
+        if (!log.contains('AGERATUM_STRUCTURE_TEST PASS') || log.contains('AGERATUM_STRUCTURE_TEST FAILED')) {
+            throw new GradleException('Structure regression failed; inspect the isolated client log')
+        }
+    }
+}

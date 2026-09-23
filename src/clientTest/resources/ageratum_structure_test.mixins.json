@@ -1,0 +1,6 @@
+{
+  "required": true,
+  "package": "dev.anvilcraft.resource.ageratum.test.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["HiddenWindowMixin"]
+}

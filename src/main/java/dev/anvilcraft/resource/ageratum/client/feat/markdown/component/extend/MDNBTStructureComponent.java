@@ -7,6 +7,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureExportClient;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
@@ -147,6 +148,10 @@ public final class MDNBTStructureComponent extends MDComponent {
         return isHover(maxX - 21, 5, 16, 16, mouseX, mouseY);
     }
 
+    private boolean isHoverExportButton(int maxX, float mouseX, float mouseY) {
+        return isHover(maxX - 21, 25, 16, 16, mouseX, mouseY);
+    }
+
     /**
      * 计算层数指示器区域中 [+] 按钮的 X 坐标。
      */
@@ -165,6 +170,18 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     private void renderButton(MDRenderContext context) {
         GuiGraphics graphics = context.graphics();
+        int exportX = context.maxX() - 21;
+        boolean exportHover = isHoverExportButton(context.maxX(), context.mouseX(), context.mouseY());
+        graphics.fill(exportX, 25, exportX + 16, 41, exportHover ? 0xBBAAAAAA : 0x88444444);
+        // Download arrow and tray, using pixel geometry so no external texture is required.
+        graphics.fill(exportX + 7, 28, exportX + 9, 34, 0xFFFFFFFF);
+        graphics.fill(exportX + 5, 32, exportX + 11, 34, 0xFFFFFFFF);
+        graphics.fill(exportX + 6, 34, exportX + 10, 35, 0xFFFFFFFF);
+        graphics.fill(exportX + 7, 35, exportX + 9, 36, 0xFFFFFFFF);
+        graphics.fill(exportX + 4, 37, exportX + 12, 39, 0xFFFFFFFF);
+        if (exportHover) {
+            context.addTooltip(Component.translatable("tooltip.ageratum.structure_export"));
+        }
         boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
         graphics.blit(
             BUTTON_PROJECTION_LOCATION,
@@ -241,6 +258,11 @@ public final class MDNBTStructureComponent extends MDComponent {
     public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
         if (button != 0 && button != 1) {
             return false;
+        }
+        if (button == 0 && this.structureTemplateCache != null
+            && this.isHoverExportButton(maxX, (float) mouseX, (float) mouseY)) {
+            StructureExportClient.export(this.target.location(), this.structureTemplateCache);
+            return true;
         }
         // 层数调节按钮
         if (button == 0 && this.previewLevel != null) {
@@ -414,7 +436,8 @@ public final class MDNBTStructureComponent extends MDComponent {
             template.load(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
-            this.contentHeight = (int) (AgeratumConstants.Structure.Render.CONTENT_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(size)));
+            this.contentHeight = Math.max(46,
+                (int) (AgeratumConstants.Structure.Render.CONTENT_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(size))));
             this.bottomHeight = (int) (AgeratumConstants.Structure.Render.BOTTOM_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
             this.structureTemplateCache = template;
             return StructureSandboxFactory.create(clientLevel, template, pos);

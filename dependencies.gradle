@@ -1,10 +1,23 @@
 dependencies {
     implementation libs.anvillib.config
     jarJar libs.anvillib.config
+    implementation libs.anvillib.renderer
+    jarJar libs.anvillib.renderer
     implementation(libs.jhighlight) { transitive = false }
     additionalRuntimeClasspath libs.jhighlight
     jarJar libs.jhighlight
     implementation(libs.jsoup) { transitive = false }
     additionalRuntimeClasspath libs.jsoup
     jarJar(libs.jsoup)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+sourceSets.test {
+    compileClasspath += sourceSets.main.compileClasspath
+    runtimeClasspath += sourceSets.main.runtimeClasspath
 }

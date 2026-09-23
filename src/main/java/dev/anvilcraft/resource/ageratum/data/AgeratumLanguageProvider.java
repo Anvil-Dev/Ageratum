@@ -24,6 +24,12 @@ public class AgeratumLanguageProvider extends LanguageProvider {
         this.add("tooltip.ageratum.bind_item_hold", "Hold %s to get more info");
         this.add("tooltip.ageratum.structure_projection.layer_shortcut", "Press %s / %s to adjust projection layers");
         this.add("tooltip.ageratum.structure_projection.remove_shortcut", "Press %s to close projection");
+        this.add("tooltip.ageratum.structure_export", "Export the full structure to the current server world's data/ageratum folder");
+        this.add("system.ageratum.structure_export.sending", "Sending structure export to the server...");
+        this.add("system.ageratum.structure_export.success", "Structure exported to the current world: %s");
+        this.add("system.ageratum.structure_export.failed", "Structure export failed. Check the game/server log.");
+        this.add("system.ageratum.structure_export.too_large", "Structure export exceeds the 8 MiB compressed size limit.");
+        this.add("system.ageratum.structure_export.busy", "Please wait two seconds between structure exports.");
         this.add("key.ageratum.more_info", "Get More Info");
         this.add("key.ageratum.structure_projection.layer_up", "Increase Projection Layers");
         this.add("key.ageratum.structure_projection.layer_down", "Decrease Projection Layers");

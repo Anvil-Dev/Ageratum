@@ -31,7 +31,13 @@
   "key.categories.ageratum": "Ageratum",
   "system.ageratum.share.button": "[CLICK TO OPEN]",
   "system.ageratum.share.tip": "Player %s has shared a guide with you:",
+  "system.ageratum.structure_export.busy": "Please wait two seconds between structure exports.",
+  "system.ageratum.structure_export.failed": "Structure export failed. Check the game/server log.",
+  "system.ageratum.structure_export.sending": "Sending structure export to the server...",
+  "system.ageratum.structure_export.success": "Structure exported to the current world: %s",
+  "system.ageratum.structure_export.too_large": "Structure export exceeds the 8 MiB compressed size limit.",
   "tooltip.ageratum.bind_item_hold": "Hold %s to get more info",
+  "tooltip.ageratum.structure_export": "Export the full structure to the current server world's data/ageratum folder",
   "tooltip.ageratum.structure_projection.layer_shortcut": "Press %s / %s to adjust projection layers",
   "tooltip.ageratum.structure_projection.remove_shortcut": "Press %s to close projection"
 }

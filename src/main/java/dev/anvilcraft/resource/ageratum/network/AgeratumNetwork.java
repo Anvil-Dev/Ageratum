@@ -33,6 +33,11 @@ public final class AgeratumNetwork {
             ClientPayloadHandler::handleOpenGuide
         );
         registrar.playToServer(
+            ExportStructurePayload.TYPE,
+            ExportStructurePayload.STREAM_CODEC,
+            StructureExportHandler::handle
+        );
+        registrar.playToServer(
             ShareGuidePayload.TYPE,
             ShareGuidePayload.STREAM_CODEC,
             ServerPayloadHandler::handleShareGuide
