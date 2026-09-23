@@ -210,11 +210,10 @@ public interface AgeratumConstants {
          * 纹理尺寸（原始像素）。
          */
         interface TextureSizes {
-            int GUIDE_IMAGE_SIZE = 512;
-            int GUIDE_IMAGE_WIDTH = 360;
+            int GUIDE_IMAGE_SIZE = 256;
+            int GUIDE_IMAGE_WIDTH = 256;
             int GUIDE_IMAGE_HEIGHT = 232;
-            int LABEL_IMAGE_SIZE = 64;
-            int LABEL_IMAGE_WIDTH = 60;
+            int LABEL_IMAGE_WIDTH = 128;
             int LABEL_IMAGE_HEIGHT = 16;
             int BUTTON_IMAGE_SIZE = 32;
             int BUTTON_IMAGE_WIDTH = 32;
@@ -294,9 +293,9 @@ public interface AgeratumConstants {
          */
         interface Positions {
             /**
-             * 标签基础 X 坐标偏移
+             * 标签基础 X 坐标偏移，书页外显示标签宽度的一半
              */
-            int LABEL_BASE_X = -30;
+            int LABEL_BASE_X = -TextureSizes.LABEL_IMAGE_WIDTH / 2;
             /**
              * 内容区域 X 坐标起始偏移（相对于背景左边界）
              */
@@ -322,9 +321,9 @@ public interface AgeratumConstants {
              */
             int LABEL_TEXT_MAX_WIDTH_PADDING = 6;
             /**
-             * 书签文本绘制基础偏移 X
+             * 书签文本右对齐位置，距标签右边缘 10 像素
              */
-            int BOOKMARK_TEXT_BASE_X = 50;
+            int BOOKMARK_TEXT_BASE_X = TextureSizes.LABEL_IMAGE_WIDTH - 10;
             /**
              * 背景图像下方额外绘制范围
              */

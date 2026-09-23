@@ -68,7 +68,6 @@ public class GuideScreen extends Screen {
     protected static final int GUIDE_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.GUIDE_IMAGE_HEIGHT;
     protected static final ResourceLocation LABEL_PRIMARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_PRIMARY;
     protected static final ResourceLocation LABEL_SECONDARY_LOCATION = AgeratumConstants.GuideScreenUI.Textures.LABEL_SECONDARY;
-    protected static final int LABEL_IMAGE_SIZE = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_SIZE;
     protected static final int LABEL_IMAGE_WIDTH = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_WIDTH;
     protected static final int LABEL_IMAGE_HEIGHT = AgeratumConstants.GuideScreenUI.TextureSizes.LABEL_IMAGE_HEIGHT;
     protected static final ResourceLocation BUTTON_DOWN_LOCATION = AgeratumConstants.GuideScreenUI.Textures.BUTTON_DOWN;
@@ -1197,8 +1196,8 @@ public class GuideScreen extends Screen {
                 0,
                 LABEL_IMAGE_WIDTH,
                 LABEL_IMAGE_HEIGHT,
-                LABEL_IMAGE_SIZE,
-                LABEL_IMAGE_SIZE
+                LABEL_IMAGE_WIDTH,
+                LABEL_IMAGE_HEIGHT
             );
             pose.popPose();
             int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
@@ -2355,8 +2354,8 @@ public class GuideScreen extends Screen {
             0,
             LABEL_IMAGE_WIDTH,
             LABEL_IMAGE_HEIGHT,
-            LABEL_IMAGE_SIZE,
-            LABEL_IMAGE_SIZE
+            LABEL_IMAGE_WIDTH,
+            LABEL_IMAGE_HEIGHT
         );
         pose.popPose();
         int textColor = isActive
