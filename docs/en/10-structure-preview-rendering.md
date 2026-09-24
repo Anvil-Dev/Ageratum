@@ -66,7 +66,24 @@ This order follows vanilla `LevelRenderer` behavior closely to reduce visual art
 
 ## Notes
 
+### World projections and structure exports
+
+- World projections use `ProjectionScene` / `ProjectionRenderer` from AnvilLib's `renderer` module, version `2.0.0+snapshot.534`.
+- Following the view, click-to-pin, Ctrl+scroll movement and layer controls are preserved. Meshes rebuild on layer changes or resource reload and are released when the projection closes or the world unloads.
+- An export button appears below the projection button in the upper-right corner of each manual structure preview. It exports the complete template, including all layers, block entity NBT and entities, regardless of the visible layers.
+- Single-player, LAN and multiplayer exports are written by the server to `data/ageratum` under the current world root. The directory is created automatically. Multiplayer files are stored on the server.
+- Exports use standard compressed `.nbt`, named `namespace_structure.nbt`. Existing files are preserved, with `_1`, `_2`, etc. using the first available suffix. NBT, SNBT and preview workspace structures are supported.
+- Exports have a two-second cooldown, an 8 MiB compressed transfer limit and a 64 MiB server NBT allocation quota. Chat messages report success or failure.
+
+### Preview implementation
+
 - The preview level is not a full gameplay world and should not host game logic ticks.
 - Lighting priming depends on `refreshLightingAround`; keep calling it when adding new placement paths.
 - If new render layers/post effects are introduced, re-check buffer flush ordering.
+
+## Verification
+
+- `./gradlew test`: checks NBT preservation, directory creation, filename collisions and path boundaries.
+- `./gradlew runStructureTest -PstructureTest`: runs an isolated hidden client under `build/structure-test` to verify projections, resource reload, cleanup and chunked exports. Test sources are excluded from release JARs.
+- Automated tests do not replace manual acceptance of the guide button layout, visual quality or remote multiplayer servers.
 

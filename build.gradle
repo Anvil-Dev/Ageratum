@@ -42,3 +42,7 @@ idea {
 lombok {
     version = "1.18.34"
 }
+
+if (providers.gradleProperty('structureTest').isPresent()) {
+    apply from: 'gradle/scripts/structure-test.gradle'
+}
