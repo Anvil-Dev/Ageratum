@@ -92,10 +92,10 @@ public final class StructureProjectionManager {
         return activeProjection != null;
     }
 
-    public static boolean handleMouseScroll(InputEvent.MouseScrollingEvent event) {
+    public static boolean handleMouseScroll(double scrollDeltaY) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
-        if (projection == null || event.getScrollDeltaY() == 0.0d || minecraft.player == null || minecraft.level == null) {
+        if (projection == null || scrollDeltaY == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
         if (minecraft.screen != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
@@ -105,7 +105,7 @@ public final class StructureProjectionManager {
             return false;
         }
 
-        projection.moveAlongView(minecraft.player.getViewVector(1.0f), event.getScrollDeltaY() > 0.0d ? 1 : -1);
+        projection.moveAlongView(minecraft.player.getViewVector(1.0f), scrollDeltaY > 0.0d ? 1 : -1);
         return true;
     }
 
@@ -115,7 +115,7 @@ public final class StructureProjectionManager {
      */
     @SubscribeEvent
     public static void onMouseScrolling(InputEvent.MouseScrollingEvent event) {
-        if (handleMouseScroll(event)) {
+        if (handleMouseScroll(event.getScrollDeltaY())) {
             event.setCanceled(true);
         }
     }
