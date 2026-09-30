@@ -1,0 +1,15 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+[[mods]]
+modId="ageratum_structure_test"
+version="1.0"
+displayName="Ageratum structure regression"
+[[dependencies.ageratum_structure_test]]
+modId="ageratum"
+type="required"
+versionRange="[0,)"
+ordering="AFTER"
+side="CLIENT"
+[[mixins]]
+config="ageratum_structure_test.mixins.json"

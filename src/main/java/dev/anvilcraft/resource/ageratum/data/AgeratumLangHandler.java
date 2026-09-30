@@ -17,6 +17,8 @@ public class AgeratumLangHandler {
         provider.add("key.ageratum.structure_projection.layer_up", "Increase Projection Layers");
         provider.add("key.ageratum.structure_projection.layer_down", "Decrease Projection Layers");
         provider.add("key.ageratum.structure_projection.remove", "Remove Structure Projection");
+        provider.add("tooltip.ageratum.structure_projection.layer_shortcut", "Press %s / %s to adjust projection layers");
+        provider.add("tooltip.ageratum.structure_projection.remove_shortcut", "Press %s to close projection");
         provider.add("key.category.ageratum.key", "Ageratum");
     }
 }

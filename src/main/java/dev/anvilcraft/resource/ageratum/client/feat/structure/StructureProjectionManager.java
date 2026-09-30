@@ -1,11 +1,12 @@
 package dev.anvilcraft.resource.ageratum.client.feat.structure;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.anvilcraft.lib.v2.rendering.projection.ProjectionScene;
+import dev.anvilcraft.lib.v2.rendering.projection.ProjectionRenderer;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
-import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
 import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
@@ -25,7 +26,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -60,6 +61,7 @@ public final class StructureProjectionManager {
             return false;
         }
 
+        clearProjection();
         activeProjection = ActiveProjection.create(previewLevel, origin, clientLevel.dimension(), Set.copyOf(moveControlItems));
         return true;
     }
@@ -80,11 +82,13 @@ public final class StructureProjectionManager {
             return false;
         }
 
+        clearProjection();
         activeProjection = ActiveProjection.createFloating(previewLevel, origin, clientLevel.dimension(), Set.copyOf(moveControlItems));
         return true;
     }
 
     public static void clearProjection() {
+        if (activeProjection != null) activeProjection.renderer.close();
         activeProjection = null;
     }
 
@@ -144,7 +148,7 @@ public final class StructureProjectionManager {
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) {
-            activeProjection = null;
+            clearProjection();
             return;
         }
 
@@ -153,7 +157,7 @@ public final class StructureProjectionManager {
             return;
         }
         if (projection.isNotInLevel(minecraft.level)) {
-            activeProjection = null;
+            clearProjection();
             return;
         }
         if (minecraft.screen != null) {
@@ -169,7 +173,7 @@ public final class StructureProjectionManager {
         }
 
         if (AgeratumKeyMappings.REMOVE_KEY.consumeClick()) {
-            activeProjection = null;
+            clearProjection();
             return;
         }
         while (AgeratumKeyMappings.LAYER_UP_KEY.consumeClick()) {
@@ -188,21 +192,24 @@ public final class StructureProjectionManager {
             return;
         }
         PoseStack poseStack = event.getPoseStack();
-        StructurePreviewRenderer.getInstance().renderWorldProjection(
-            projection.level,
-            poseStack,
-            minecraft.renderBuffers().bufferSource(),
-            minecraft.gameRenderer.getMainCamera().position(),
-            projection.origin,
-            projection.visibleMinY,
-            projection.visibleMinY + projection.visibleLayerCount,
-            PROJECTION_ALPHA
-        );
+        projection.ensureMesh();
+        Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
+        poseStack.pushPose();
+        try {
+            poseStack.translate(projection.origin.getX() - camera.x, projection.origin.getY() - camera.y,
+                projection.origin.getZ() - camera.z);
+            projection.renderer.render(poseStack, event.getLevelRenderState().cameraRenderState);
+        } finally {
+            poseStack.popPose();
+        }
     }
 
     private static final class ActiveProjection {
         private final SandboxRenderLevel level;
+        private final ProjectionRenderer renderer = new ProjectionRenderer();
+        private int bakedLayers = -1;
         private final ResourceKey<Level> dimension;
+        private final ClientLevel sourceLevel = Minecraft.getInstance().level;
         private final Set<Item> moveControlItems;
         private BlockPos origin;
         private final int visibleMinY;
@@ -256,7 +263,20 @@ public final class StructureProjectionManager {
         }
 
         private boolean isNotInLevel(Level level) {
-            return !Objects.equals(level.dimension(), this.dimension);
+            return level != this.sourceLevel || !Objects.equals(level.dimension(), this.dimension);
+        }
+
+        private void ensureMesh() {
+            if (this.renderer.isValid() && this.bakedLayers == this.visibleLayerCount) return;
+            var scene = new ProjectionScene(this.sourceLevel, BlockPos.ZERO);
+            int maxY = this.visibleMinY + this.visibleLayerCount;
+            this.level.getFilledBlocks().filter(pos -> pos.getY() >= this.visibleMinY && pos.getY() < maxY)
+                .forEach(pos -> scene.put(pos, this.level.getBlockState(pos), this.level.getBlockEntity(pos)));
+            for (var entity : this.level.getEntitiesForRendering()) {
+                if (entity.getBoundingBox().maxY > this.visibleMinY && entity.getBoundingBox().minY < maxY) scene.addEntity(entity);
+            }
+            this.renderer.rebuild(scene, Math.round(PROJECTION_ALPHA * 255));
+            this.bakedLayers = this.visibleLayerCount;
         }
 
         private boolean canMoveWith(ItemStack mainHandItem, ItemStack offhandItem) {

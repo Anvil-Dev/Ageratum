@@ -8,6 +8,7 @@ jhighlight = "1.1.1"
 jsoup = "1.18.3"
 
 [libraries]
+anvillib-rendering = { group = "dev.anvilcraft.lib", name = "anvillib-rendering-neoforge-26.1", version.ref = "anvillib" }
 anvillib-config = { group = "dev.anvilcraft.lib", name = "anvillib-config-neoforge-26.1", version.ref = "anvillib" }
 anvillib-registrum = { group = "dev.anvilcraft.lib", name = "anvillib-registrum-neoforge-26.1", version.ref = "anvillib" }
 anvillib-font = { group = "dev.anvilcraft.lib", name = "anvillib-font-neoforge-26.1", version.ref = "anvillib" }
@@ -15,7 +16,7 @@ jhighlight = { group = "org.codelibs", name = "jhighlight", version.ref = "jhigh
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
 [bundles]
-anvillib = ["anvillib-config", "anvillib-registrum", "anvillib-font"]
+anvillib = ["anvillib-config", "anvillib-registrum", "anvillib-font", "anvillib-rendering"]
 
 [plugins]
 modDevGradle = { id = "net.neoforged.moddev", version.ref = "modDevGradle" }
