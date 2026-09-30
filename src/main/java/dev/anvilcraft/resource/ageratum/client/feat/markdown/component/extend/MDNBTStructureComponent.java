@@ -1,13 +1,13 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.brigadier.StringReader;
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
@@ -29,12 +29,15 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.BlockHitResult;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.BufferedInputStream;
@@ -50,7 +53,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.Nullable;
 
 /**
  * NBT 结构文件渲染组件。
@@ -85,6 +87,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     private MDNBTStructureComponent(StructureTarget target) {
         super("[结构未加载]");
         this.target = target;
+        this.cameraRig.setZoom(2.0f);
     }
 
     /**
@@ -124,7 +127,6 @@ public final class MDNBTStructureComponent extends MDComponent {
         graphics.outline(0, 0, maxX, height, 0xAA000000);
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
-        this.cameraRig.setZoom(2.0f);
         StructurePreviewRenderer.getInstance().render(
             this.previewLevel,
             this.cameraRig,
@@ -134,7 +136,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             this.visibleMinY,
             this.visibleMinY + this.visibleLayerCount,
             this.panOffsetX,
-            this.panOffsetY,
+            this.panOffsetY + this.bottomHeight / 2.0f - height / 2.0f,
             context.scale()
         );
         this.renderLayerIndicator(context, graphics);
@@ -163,6 +165,13 @@ public final class MDNBTStructureComponent extends MDComponent {
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
             32
         );
+        if (isHover) {
+            context.addTooltip(Component.translatable("tooltip.ageratum.structure_projection.layer_shortcut",
+                Component.keybind("key.ageratum.structure_projection.layer_up"),
+                Component.keybind("key.ageratum.structure_projection.layer_down")));
+            context.addTooltip(Component.translatable("tooltip.ageratum.structure_projection.remove_shortcut",
+                Component.keybind("key.ageratum.structure_projection.remove")));
+        }
     }
 
     @Override
@@ -214,21 +223,38 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != 0 && button != 1) {
             return false;
         }
-        /* TODO
+        if (button == 0 && this.previewLevel != null) {
+            int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
+            String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
+            int labelWidth = minecraft.font.width(layerLabel);
+            int btnSize = minecraft.font.lineHeight + padding;
+            int btnGap = 2;
+            int btnUpX = 4 + padding + labelWidth + padding + btnGap;
+            int btnDownX = btnUpX + btnSize + btnGap;
+            if (isHover(btnUpX, 4, btnSize, btnSize, (float) mouseX, (float) mouseY)) {
+                this.ensureLayerPreviewInitialized();
+                this.visibleLayerCount = Math.min(this.totalLayerCount, this.visibleLayerCount + 1);
+                return true;
+            }
+            if (isHover(btnDownX, 4, btnSize, btnSize, (float) mouseX, (float) mouseY)) {
+                this.ensureLayerPreviewInitialized();
+                this.visibleLayerCount = Math.max(1, this.visibleLayerCount - 1);
+                return true;
+            }
+        }
         if (this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
-            if (this.structureTemplateCache != null && minecraft.cameraEntity != null) {
+            if (this.structureTemplateCache != null && minecraft.getCameraEntity() != null) {
                 BlockPos blockPos;
                 if (minecraft.hitResult instanceof BlockHitResult hitResult) {
                     blockPos = hitResult.getBlockPos().relative(hitResult.getDirection());
                 } else {
-                    blockPos = minecraft.cameraEntity.getOnPos().above();
+                    blockPos = minecraft.getCameraEntity().getOnPos().above();
                 }
-                StructureProjectionApi.show(this.structureTemplateCache, blockPos);
+                StructureProjectionApi.showFloating(this.structureTemplateCache, blockPos);
                 minecraft.setScreen(null);
             }
             return true;
         }
-         */
         this.dragButton = button;
         return true;
     }
@@ -294,22 +320,44 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
-        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
         int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
-        int x = 4;
-        int y = 4;
-        int width = context.minecraft().font.width(layerLabel) + padding * 2;
-        int height = context.minecraft().font.lineHeight + padding * 2;
+        String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
+        int fontHeight = context.minecraft().font.lineHeight;
+        int labelWidth = context.minecraft().font.width(layerLabel);
+        int btnSize = fontHeight + padding;
+        int btnGap = 2;
+        int totalWidth = padding + labelWidth + padding + btnGap + btnSize + btnGap + btnSize + padding;
+        int totalHeight = fontHeight + padding * 2;
+        int startX = 4;
+        int startY = 4;
 
-        graphics.fill(x, y, x + width, y + height, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
-        graphics.anvillib$text(
-            AnvilLibFont.getSelectFont(),
+        graphics.fill(startX, startY, startX + totalWidth, startY + totalHeight, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
+        graphics.text(
+            context.minecraft().font,
             layerLabel,
-            x + padding,
-            y + padding,
+            startX + padding,
+            startY + padding,
             AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_TEXT,
             false
         );
+
+        int btnUpX = startX + padding + labelWidth + padding + btnGap;
+        int btnDownX = btnUpX + btnSize + btnGap;
+        float mouseX = context.mouseX();
+        float mouseY = context.mouseY();
+        boolean hoverUp = isHover(btnUpX, startY, btnSize, btnSize, mouseX, mouseY);
+        boolean hoverDown = isHover(btnDownX, startY, btnSize, btnSize, mouseX, mouseY);
+
+        int btnBgUp = hoverUp ? 0x88AAAAAA : 0x88444444;
+        int btnBgDown = hoverDown ? 0x88AAAAAA : 0x88444444;
+        graphics.fill(btnUpX, startY, btnUpX + btnSize, startY + btnSize, btnBgUp);
+        graphics.fill(btnDownX, startY, btnDownX + btnSize, startY + btnSize, btnBgDown);
+        graphics.text(context.minecraft().font, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
+        graphics.text(context.minecraft().font, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
+
+        if (hoverUp || hoverDown) {
+            context.addTooltip(Component.literal("快捷键: PageUp/PageDown"));
+        }
     }
 
     private static float clamp(float value, float min, float max) {
@@ -342,7 +390,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             template.load(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
-            this.contentHeight = (int) (AgeratumConstants.Structure.Render.CONTENT_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(size)));
+            this.contentHeight = Math.max(46, (int) (AgeratumConstants.Structure.Render.CONTENT_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(size))));
             this.bottomHeight = (int) (AgeratumConstants.Structure.Render.BOTTOM_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
             this.structureTemplateCache = template;
             return StructureSandboxFactory.create(clientLevel, template, pos);

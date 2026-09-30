@@ -26,37 +26,44 @@ public class AlphaVertexConsumer implements VertexConsumer {
 
     @Override
     public VertexConsumer addVertex(float x, float y, float z) {
-        return this.delegate.addVertex(x, y, z);
+        this.delegate.addVertex(x, y, z);
+        return this;
     }
 
     @Override
     public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-        return this.delegate.setColor(red, green, blue, this.scaleAlpha(alpha));
+        this.delegate.setColor(red, green, blue, this.scaleAlpha(alpha));
+        return this;
     }
 
     @Override
     public VertexConsumer setUv(float u, float v) {
-        return this.delegate.setUv(u, v);
+        this.delegate.setUv(u, v);
+        return this;
     }
 
     @Override
     public VertexConsumer setUv1(int u, int v) {
-        return this.delegate.setUv1(u, v);
+        this.delegate.setUv1(u, v);
+        return this;
     }
 
     @Override
     public VertexConsumer setUv2(int u, int v) {
-        return this.delegate.setUv2(u, v);
+        this.delegate.setUv2(u, v);
+        return this;
     }
 
     @Override
     public VertexConsumer setNormal(float x, float y, float z) {
-        return this.delegate.setNormal(x, y, z);
+        this.delegate.setNormal(x, y, z);
+        return this;
     }
 
     @Override
     public VertexConsumer setLineWidth(float v) {
-        return this.delegate.setLineWidth(v);
+        this.delegate.setLineWidth(v);
+        return this;
     }
 
     @Override
@@ -80,34 +87,40 @@ public class AlphaVertexConsumer implements VertexConsumer {
 
     @Override
     public VertexConsumer setColor(float red, float green, float blue, float alpha) {
-        return this.delegate.setColor(red, green, blue, this.scaleAlpha(alpha));
+        this.delegate.setColor(red, green, blue, this.scaleAlpha(alpha));
+        return this;
     }
 
     @Override
     public VertexConsumer setColor(int color) {
         int alpha = this.scaleAlpha((color >>> 24) & 0xFF);
         int adjustedColor = (alpha << 24) | (color & 0x00FFFFFF);
-        return this.delegate.setColor(adjustedColor);
+        this.delegate.setColor(adjustedColor);
+        return this;
     }
 
     @Override
     public VertexConsumer setLight(int light) {
-        return this.delegate.setLight(light);
+        this.delegate.setLight(light);
+        return this;
     }
 
     @Override
     public VertexConsumer setOverlay(int overlay) {
-        return this.delegate.setOverlay(overlay);
+        this.delegate.setOverlay(overlay);
+        return this;
     }
 
     @Override
     public VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z) {
-        return this.delegate.addVertex(pose, x, y, z);
+        this.delegate.addVertex(pose, x, y, z);
+        return this;
     }
 
     @Override
     public VertexConsumer setNormal(PoseStack.Pose pose, float x, float y, float z) {
-        return this.delegate.setNormal(pose, x, y, z);
+        this.delegate.setNormal(pose, x, y, z);
+        return this;
     }
 }
 
