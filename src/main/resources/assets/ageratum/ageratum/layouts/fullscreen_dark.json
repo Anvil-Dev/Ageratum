@@ -1,0 +1,96 @@
+{
+  "name": "fullscreen_dark",
+  "extends": "ageratum:fullscreen",
+  "content": {
+    "background": {
+      "tint": "#FF353D4A"
+    }
+  },
+  "textures": {
+    "label_primary": {
+      "tint": "#FF454D5A"
+    },
+    "label_secondary": {
+      "tint": "#FF454D5A"
+    },
+    "label_bookmark": {
+      "tint": "#FF454D5A"
+    },
+    "button_close": {
+      "tint": "#FFC0CAD8"
+    },
+    "button_share": {
+      "tint": "#FFC0CAD8"
+    },
+    "button_return": {
+      "tint": "#FFC0CAD8"
+    },
+    "button_add": {
+      "tint": "#FFC0CAD8"
+    },
+    "button_up": {
+      "tint": "#FFC0CAD8"
+    },
+    "button_down": {
+      "tint": "#FFC0CAD8"
+    },
+    "components": {
+      "item_slot": {
+        "tint": "#FF606A78"
+      },
+      "recipe_crafting_table": {
+        "tint": "#FF606A78"
+      },
+      "recipe_furnace": {
+        "tint": "#FF606A78"
+      },
+      "recipe_smithing_table": {
+        "tint": "#FF606A78"
+      },
+      "recipe_stonecutter": {
+        "tint": "#FF606A78"
+      },
+      "structure_button_projection": {
+        "tint": "#FFC0CAD8"
+      }
+    }
+  },
+  "colors": {
+    "link": "#8AD4FF",
+    "broken_link": "#FF6E6E",
+    "content_text": "#E8E0D0",
+    "panel_text": "#B0A894",
+    "label_text_active": "#FFD75F",
+    "label_text_clickable": "#E8E0D0",
+    "label_text_disabled": "#A0A0A0",
+    "bookmark_text": "#E8E0D0",
+    "background_gradient_start": "#F0080808",
+    "background_gradient_end": "#F0080808",
+    "components": {
+      "code_block": {
+        "background": "#40202830",
+        "border": "#88555566",
+        "gutter_background": "#30202828",
+        "gutter_line": "#55444455",
+        "line_number": "#99AAAAAA",
+        "highlight_line": "#40657585",
+        "text": "#D8DEE9",
+        "syntax": {
+          "keyword": "#C792EA",
+          "type": "#FFCB6B",
+          "literal": "#F78C6C",
+          "comment": "#A0A0A0",
+          "operator": "#89DDFF",
+          "separator": "#B0BEC5"
+        }
+      }
+    }
+  },
+  "panels": {
+    "sidebar": {
+      "background": {
+        "tint": "#FF353D4A"
+      }
+    }
+  }
+}

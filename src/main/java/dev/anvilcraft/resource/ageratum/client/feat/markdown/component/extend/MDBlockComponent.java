@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -10,7 +10,6 @@ import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -72,7 +71,7 @@ public class MDBlockComponent extends MDImageComponent {
         if (state == null) return;
 
         GuiGraphicsExtractor graphics = context.graphics();
-        Font font = context.minecraft().font;
+        GuideFont font = GuideFont.get();
 
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
@@ -100,7 +99,7 @@ public class MDBlockComponent extends MDImageComponent {
         if (this.showText) {
             Component hoverName = state.getBlock().getName();
             int width = font.width(hoverName);
-            graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, 16 - width / 2, 32, 0x00000000, false);
+            GuideFont.get().draw(graphics, hoverName, 16 - width / 2, 32, 0x00000000, false);
         }
     }
 
@@ -139,13 +138,13 @@ public class MDBlockComponent extends MDImageComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        int textWidth = this.showText ? this.blockState != null ? minecraft.font.width(this.blockState.getBlock().getName()) : 0 : 0;
+        int textWidth = this.showText ? this.blockState != null ? GuideFont.get().width(this.blockState.getBlock().getName()) : 0 : 0;
         return Math.max(32, textWidth);
     }
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        int textHeight = this.showText ? GuideFont.get().lineHeight : 0;
         Size size = new Size(SLOT_SIZE, SLOT_SIZE + textHeight, 1.0f);
         return this.computeRenderSize(size, maxX, maxY).height();
     }

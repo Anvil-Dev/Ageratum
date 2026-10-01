@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -26,7 +27,7 @@ public class MDHorizontalRuleComponent extends MDComponent {
         Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         GuiGraphicsExtractor guiGraphics = context.graphics();
-        int y = minecraft.font.lineHeight / 2;
+        int y = GuideFont.get().lineHeight / 2;
         guiGraphics.horizontalLine(0, Math.max(0, maxX - 1), y, 0x88000000);
     }
 
@@ -35,7 +36,7 @@ public class MDHorizontalRuleComponent extends MDComponent {
      */
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        return minecraft.font.lineHeight;
+        return GuideFont.get().lineHeight;
     }
 }
 

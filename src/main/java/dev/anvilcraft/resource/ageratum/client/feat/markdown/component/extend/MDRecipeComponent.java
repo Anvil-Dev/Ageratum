@@ -50,10 +50,17 @@ public abstract class MDRecipeComponent extends MDImageComponent {
         this.height = height;
     }
 
+    /** Override with a namespaced key for third-party recipe skins. Logical slot coordinates stay fixed. */
+    protected String layoutTextureKey() {
+        String path = this.getImageLocation().getPath();
+        String name = path.substring(path.lastIndexOf('/') + 1).replace(".png", "");
+        return this.getImageLocation().getNamespace().equals("ageratum") ? "recipe_" + name : this.getImageLocation().getNamespace() + ":recipe_" + name;
+    }
+
     @Override
     protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphicsExtractor guiGraphics = context.graphics();
-        this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        context.layout().componentTexture(dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager.relativeId(this.layoutTextureKey(), "ageratum"), dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture.of(this.getImageLocation(), this.width, this.height, size.width(), size.height())).draw(guiGraphics, 0, 0, this.width, this.height, false);
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
         this.extractRecipeRenderState(context, mouseX, mouseY);
     }
@@ -94,7 +101,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     /**
      * 不同 {@link RecipeType} 到具体渲染组件的工厂接口。
      */
-    public interface RecipeComponentFactory<T extends Recipe<?>> {
+    public interface RecipeComponentFactory<T extends Recipe<?>> extends dev.anvilcraft.resource.ageratum.client.layout.LayoutResourceProvider {
         /**
          * 当前工厂支持的配方类型。
          */

@@ -1,0 +1,103 @@
+{
+  "name": "fullscreen",
+  "extends": "ageratum:light",
+  "dark_variant": "ageratum:fullscreen_dark",
+  "screen": {
+    "mode": "fullscreen",
+    "padding": {
+      "left": 12,
+      "top": 12,
+      "right": 12,
+      "bottom": 12
+    }
+  },
+  "panels": {
+    "chapters": null,
+    "tools": null,
+    "sidebar": {
+      "edge": "left",
+      "width": 170,
+      "spacing": 10,
+      "padding": {
+        "left": 8,
+        "right": 8,
+        "top": 10,
+        "bottom": 10
+      },
+      "sections": [
+        "tree",
+        "bookmarks",
+        "actions"
+      ],
+      "background": {
+        "location": "ageratum:gui/guide/guide",
+        "width": 256,
+        "height": 232,
+        "texture_size": 256,
+        "nine_slice": {
+          "border": 12
+        }
+      }
+    }
+  },
+  "tree": {
+    "height": "45%",
+    "indent_per_level": 14,
+    "hover_shift": 0,
+    "collapse_mode": "collapsed",
+    "pinned_parent": false
+  },
+  "bookmarks": {
+    "show_add_button": false
+  },
+  "actions": {
+    "height": "auto",
+    "align": "bottom",
+    "direction": "horizontal",
+    "spacing": 8,
+    "buttons": [
+      "add",
+      "return",
+      "share",
+      "close",
+      "dark"
+    ]
+  },
+  "content": {
+    "padding": {
+      "left": 24,
+      "top": 24,
+      "right": 24,
+      "bottom": 24
+    },
+    "rows_margin": 6,
+    "background": {
+      "nine_slice": {
+        "border": 12
+      }
+    }
+  },
+  "textures": {
+    "label_primary": {
+      "nine_slice": {
+        "left": 6,
+        "right": 6
+      }
+    },
+    "label_secondary": {
+      "nine_slice": {
+        "left": 6,
+        "right": 6
+      }
+    },
+    "label_bookmark": {
+      "nine_slice": {
+        "left": 6,
+        "right": 6
+      }
+    }
+  },
+  "interaction": {
+    "scroll_step": 24
+  }
+}
