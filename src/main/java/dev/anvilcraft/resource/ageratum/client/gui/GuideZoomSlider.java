@@ -10,9 +10,9 @@ import net.minecraft.resources.Identifier;
 
 /** A stable GUI-coordinate control, independent of the zoomed document's coordinate system. */
 public final class GuideZoomSlider {
-    private static final LayoutTexture TRACK = new LayoutTexture(Identifier.parse("ageratum:textures/gui/guide/scrollbar_track.png"),
+    private static final LayoutTexture TRACK = new LayoutTexture(Identifier.parse("ageratum:textures/gui/guide/light/scrollbar_track.png"),
         6, 6, 6, 6, 2, 2, 2, 2, -1);
-    private static final LayoutTexture THUMB = new LayoutTexture(TRACK.location().withPath("textures/gui/guide/scrollbar_thumb.png"),
+    private static final LayoutTexture THUMB = new LayoutTexture(TRACK.location().withPath("textures/gui/guide/light/scrollbar_thumb.png"),
         6, 6, 6, 6, 2, 2, 2, 2, 0xFFE8D3A8);
     private final LayoutScrollbar slider = new LayoutScrollbar();
     private Rect bounds = Rect.EMPTY;

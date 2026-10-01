@@ -232,7 +232,7 @@ _ 被转义
 
 ## 已实现：图片（独占一行，namespace:path）
 
-![](ageratum:gui/guide/guide.png)
+![](ageratum:gui/guide/light/guide.png)
 
 ---
 

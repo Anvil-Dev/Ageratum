@@ -2829,7 +2829,7 @@ public class GuideScreen extends Screen {
     }
 
     private void drawScrollbarPart(GuiGraphicsExtractor graphics, String name, LayoutGeometry.Rect bounds, float opacity) {
-        LayoutTexture fallback = new LayoutTexture(Identifier.parse("ageratum:textures/gui/guide/" + name + ".png"),
+        LayoutTexture fallback = new LayoutTexture(Identifier.parse("ageratum:textures/gui/guide/light/" + name + ".png"),
             6, 6, 6, 6, 2, 2, 2, 2, name.equals("scrollbar_thumb") ? 0xFF8B7355 : -1);
         this.layout.texture("textures." + name, fallback).draw(graphics,
             bounds.x(), bounds.y(), bounds.width(), bounds.height(), false, opacity);

@@ -110,7 +110,7 @@ public final class GuideLayout {
         boolean label = name.startsWith("label_");
         String resource = name.equals("button_return") ? "button_back" : name;
         return this.texture("textures." + name, LayoutTexture.of(
-            Identifier.parse("ageratum:textures/gui/guide/" + resource + ".png"),
+            Identifier.parse("ageratum:textures/gui/guide/light/" + resource + ".png"),
             label ? 128 : 32, 16, label ? 128 : 32, label ? 16 : 32));
     }
 

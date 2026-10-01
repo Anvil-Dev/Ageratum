@@ -3,36 +3,36 @@
   "extends": "ageratum:fullscreen",
   "content": {
     "background": {
-      "tint": "#FF353D4A"
+      "location": "ageratum:gui/guide/dark/guide"
     }
   },
   "textures": {
     "label_primary": {
-      "tint": "#FF454D5A"
+      "location": "ageratum:gui/guide/dark/label_primary"
     },
     "label_secondary": {
-      "tint": "#FF454D5A"
+      "location": "ageratum:gui/guide/dark/label_secondary"
     },
     "label_bookmark": {
-      "tint": "#FF454D5A"
+      "location": "ageratum:gui/guide/dark/label_bookmark"
     },
     "button_close": {
-      "tint": "#FFC0CAD8"
+      "location": "ageratum:gui/guide/dark/button_close"
     },
     "button_share": {
-      "tint": "#FFC0CAD8"
+      "location": "ageratum:gui/guide/dark/button_share"
     },
     "button_return": {
-      "tint": "#FFC0CAD8"
+      "location": "ageratum:gui/guide/dark/button_back"
     },
     "button_add": {
-      "tint": "#FFC0CAD8"
+      "location": "ageratum:gui/guide/dark/button_add"
     },
     "button_up": {
-      "tint": "#FFC0CAD8"
+      "location": "ageratum:gui/guide/dark/button_up"
     },
     "button_down": {
-      "tint": "#FFC0CAD8"
+      "location": "ageratum:gui/guide/dark/button_down"
     },
     "components": {
       "item_slot": {
@@ -51,8 +51,23 @@
         "tint": "#FF606A78"
       },
       "structure_button_projection": {
-        "tint": "#FFC0CAD8"
+        "location": "ageratum:gui/guide/dark/button_projection"
       }
+    },
+    "button_dark": {
+      "location": "ageratum:gui/guide/dark/button_dark"
+    },
+    "scrollbar_track": {
+      "location": "ageratum:gui/guide/dark/scrollbar_track"
+    },
+    "scrollbar_thumb": {
+      "location": "ageratum:gui/guide/dark/scrollbar_thumb"
+    },
+    "zoom_track": {
+      "location": "ageratum:gui/guide/dark/scrollbar_track"
+    },
+    "zoom_thumb": {
+      "location": "ageratum:gui/guide/dark/scrollbar_thumb"
     }
   },
   "colors": {
@@ -89,7 +104,7 @@
   "panels": {
     "sidebar": {
       "background": {
-        "tint": "#FF353D4A"
+        "location": "ageratum:gui/guide/dark/guide"
       }
     }
   }

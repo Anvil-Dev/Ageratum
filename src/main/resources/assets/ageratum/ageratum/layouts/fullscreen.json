@@ -30,7 +30,7 @@
         "actions"
       ],
       "background": {
-        "location": "ageratum:gui/guide/guide",
+        "location": "ageratum:gui/guide/light/guide",
         "width": 256,
         "height": 232,
         "texture_size": 256,

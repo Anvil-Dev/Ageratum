@@ -201,7 +201,7 @@ Images referenced in documents use `namespace:path` format, corresponding to `as
 
 ```markdown
 ![Description](mymod:gui/my_image.png)
-![Description](ageratum:gui/guide/guide.png)
+![Description](ageratum:gui/guide/light/guide.png)
 ```
 
 Images **must occupy their own line** in the document. Inline images (within a paragraph) are not currently supported.

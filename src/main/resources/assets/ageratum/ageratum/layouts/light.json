@@ -2,18 +2,18 @@
   "name": "light",
   "dark_variant": "ageratum:dark",
   "textures": {
-    "scrollbar_track": "ageratum:gui/guide/scrollbar_track",
-    "scrollbar_thumb": { "location": "ageratum:gui/guide/scrollbar_thumb", "tint": "#FF8B7355" },
-    "label_primary": "ageratum:gui/guide/label_primary",
-    "label_secondary": "ageratum:gui/guide/label_secondary",
-    "label_bookmark": "ageratum:gui/guide/label_bookmark",
-    "button_close": "ageratum:gui/guide/button_close",
-    "button_share": "ageratum:gui/guide/button_share",
-    "button_return": "ageratum:gui/guide/button_back",
-    "button_add": "ageratum:gui/guide/button_add",
-    "button_up": "ageratum:gui/guide/button_up",
-    "button_down": "ageratum:gui/guide/button_down",
-    "button_dark": "ageratum:gui/guide/button_dark"
+    "scrollbar_track": "ageratum:gui/guide/light/scrollbar_track",
+    "scrollbar_thumb": { "location": "ageratum:gui/guide/light/scrollbar_thumb", "tint": "#FF8B7355" },
+    "label_primary": "ageratum:gui/guide/light/label_primary",
+    "label_secondary": "ageratum:gui/guide/light/label_secondary",
+    "label_bookmark": "ageratum:gui/guide/light/label_bookmark",
+    "button_close": "ageratum:gui/guide/light/button_close",
+    "button_share": "ageratum:gui/guide/light/button_share",
+    "button_return": "ageratum:gui/guide/light/button_back",
+    "button_add": "ageratum:gui/guide/light/button_add",
+    "button_up": "ageratum:gui/guide/light/button_up",
+    "button_down": "ageratum:gui/guide/light/button_down",
+    "button_dark": "ageratum:gui/guide/light/button_dark"
   },
   "colors": {
     "components": {
