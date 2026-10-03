@@ -62,6 +62,7 @@ public final class StructureTest {
     private int checks;
 
     public StructureTest(IEventBus bus) {
+        if (Boolean.getBoolean("ageratum.layoutTest")) { new LayoutClientTest(bus); return; }
         bus.addListener((ModelEvent.BakingCompleted event) -> this.ready = true);
         NeoForge.EVENT_BUS.addListener(this::tick);
         NeoForge.EVENT_BUS.addListener(this::frame);
@@ -249,7 +250,7 @@ public final class StructureTest {
     private int layerUp(Minecraft mc) throws Exception {
         int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
         String label = "层数: " + field(this.component, "visibleLayerCount") + "/" + field(this.component, "totalLayerCount");
-        return 4 + padding + mc.font.width(label) + padding + 2;
+        return 4 + padding + dev.anvilcraft.resource.ageratum.client.gui.GuideFont.get().width(label) + padding + 2;
     }
     private void advance() { this.stage++; this.next = System.currentTimeMillis() + 1200; }
     private void capture(String name) {

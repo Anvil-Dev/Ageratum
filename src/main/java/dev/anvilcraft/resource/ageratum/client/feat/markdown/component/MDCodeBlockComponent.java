@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +49,7 @@ public class MDCodeBlockComponent extends MDComponent {
     private static final int CODE_TEXT_COLOR = 0x444444;
     private static final int BORDER_COLOR = 0x88333333;
     private static final int BACKGROUND_COLOR = 0x22AAAAAA;
-    private static final Style CODE_TEXT_STYLE = Style.EMPTY.withColor(CODE_TEXT_COLOR);
+    private static final Style CODE_TEXT_STYLE = Style.EMPTY.withColor(CODE_TEXT_COLOR).withInsertion("ageratum:syntax/plain");
     private final List<CodeLineInfo> codeLines;
     private static final String HIGHLIGHT_REGEX = "\\{(\\d+(-\\d+)?,?)+}";
     private static final Map<String, Integer> CODE_SPAN_COLOR = new HashMap<>();
@@ -182,7 +182,7 @@ public class MDCodeBlockComponent extends MDComponent {
                                     .withStyle(Style.EMPTY.withColor(CODE_SPAN_COLOR.getOrDefault(
                                         child.attr("class"),
                                         CODE_TEXT_COLOR
-                                    )))
+                                    )).withInsertion("ageratum:syntax/" + child.attr("class")))
                             );
                         }
                     }
@@ -221,14 +221,14 @@ public class MDCodeBlockComponent extends MDComponent {
         int maxY = context.maxY();
         GuiGraphicsExtractor guiGraphics = context.graphics();
         int blockHeight = this.getHeight(minecraft, maxX, maxY);
-        guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
-        guiGraphics.outline(0, 0, maxX, blockHeight, BORDER_COLOR);
+        guiGraphics.fill(0, 0, maxX, blockHeight, context.layout().color("colors.components.code_block.background", BACKGROUND_COLOR));
+        guiGraphics.outline(0, 0, maxX, blockHeight, context.layout().color("colors.components.code_block.border", BORDER_COLOR));
         int gutterWidth = this.getGutterWidth(minecraft, this.codeLines.size());
         int contentWidth = this.getContentWidth(minecraft, maxX);
 
         if (AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
-            guiGraphics.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), GUTTER_COLOR);
-            guiGraphics.verticalLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), GUTTER_LINE_COLOR);
+            guiGraphics.fill(PADDING, PADDING, PADDING + gutterWidth, Math.max(PADDING + 1, blockHeight - PADDING), context.layout().color("colors.components.code_block.gutter_background", GUTTER_COLOR));
+            guiGraphics.verticalLine(PADDING + gutterWidth, PADDING, Math.max(PADDING, blockHeight - PADDING - 1), context.layout().color("colors.components.code_block.gutter_line", GUTTER_LINE_COLOR));
         }
         Matrix3x2fStack pose = guiGraphics.pose();
         pose.pushMatrix();
@@ -236,24 +236,24 @@ public class MDCodeBlockComponent extends MDComponent {
         int y = 0;
         int lineNumber = 1;
         for (CodeLineInfo lineInfo : this.codeLines) {
-            FormattedText lineText = lineInfo.text();
-            int offsetX = minecraft.font.width(" ") * lineInfo.indentation();
-            int offsetWidth = contentWidth - offsetX;
+            FormattedText lineText = context.layout().text(lineInfo.text());
+            int offsetX = GuideFont.get().width(" ") * lineInfo.indentation();
+            int offsetWidth = Math.max(1, contentWidth - offsetX);
             List<FormattedCharSequence> split;
             if (AgeratumClient.CONFIG.allowCodeBlockLineContentLineBreaks) {
-                split = minecraft.font.split(lineText, offsetWidth);
+                split = GuideFont.get().split(lineText, offsetWidth);
             } else {
-                split = minecraft.font.split(lineText, Integer.MAX_VALUE);
+                split = GuideFont.get().split(lineText, Integer.MAX_VALUE);
             }
 
             if (lineInfo.highlight()) {
-                int highlightColor = 0x29657585;
+                int highlightColor = context.layout().color("colors.components.code_block.highlight_line", 0x29657585);
                 if (AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
                     guiGraphics.fill(
                         PADDING + gutterWidth,
                         PADDING + y,
                         maxX,
-                        PADDING + y + minecraft.font.lineHeight * split.size(),
+                        PADDING + y + GuideFont.get().lineHeight * split.size(),
                         highlightColor
                     );
                 } else {
@@ -261,7 +261,7 @@ public class MDCodeBlockComponent extends MDComponent {
                         PADDING,
                         PADDING + y,
                         maxX,
-                        PADDING + y + minecraft.font.lineHeight * split.size(),
+                        PADDING + y + GuideFont.get().lineHeight * split.size(),
                         highlightColor
                     );
                 }
@@ -269,28 +269,26 @@ public class MDCodeBlockComponent extends MDComponent {
 
             if (AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
                 String lineStr = String.valueOf(lineNumber);
-                int lineNumX = PADDING + gutterWidth - minecraft.font.width(lineStr) - 1;
+                int lineNumX = PADDING + gutterWidth - GuideFont.get().width(lineStr) - 1;
                 int lineNumY = PADDING + y;
-                guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
+                GuideFont.get().draw(guiGraphics, lineStr, lineNumX, lineNumY, context.layout().color("colors.components.code_block.line_number", LINE_NUMBER_COLOR), false);
             }
 
             if (split.isEmpty()) {
-                y += minecraft.font.lineHeight;
+                y += GuideFont.get().lineHeight;
             } else {
                 int strX = PADDING + gutterWidth + GUTTER_PADDING + offsetX;
                 if (!AgeratumClient.CONFIG.showCodeBlockLineNumbers) {
                     strX = PADDING + offsetX;
                 }
                 for (FormattedCharSequence sequence : split) {
-                    guiGraphics.anvillib$text(
-                        AnvilLibFont.getSelectFont(),
-                        sequence,
+                    GuideFont.get().draw(guiGraphics, sequence,
                         strX,
                         PADDING + y,
                         0xFF000000,
                         false
                     );
-                    y += minecraft.font.lineHeight;
+                    y += GuideFont.get().lineHeight;
                 }
             }
             lineNumber++;
@@ -307,12 +305,12 @@ public class MDCodeBlockComponent extends MDComponent {
         int contentWidth = this.getContentWidth(minecraft, maxX);
         int lineCount = 0;
         for (CodeLineInfo lineInfo : this.codeLines) {
-            int offsetX = minecraft.font.width(" ") * lineInfo.indentation();
-            int offsetWidth = AgeratumClient.CONFIG.allowCodeBlockLineContentLineBreaks ? contentWidth - offsetX : Integer.MAX_VALUE;
-            int wrapped = minecraft.font.split(lineInfo.text, offsetWidth).size();
+            int offsetX = GuideFont.get().width(" ") * lineInfo.indentation();
+            int offsetWidth = AgeratumClient.CONFIG.allowCodeBlockLineContentLineBreaks ? Math.max(1, contentWidth - offsetX) : Integer.MAX_VALUE;
+            int wrapped = GuideFont.get().split(lineInfo.text, offsetWidth).size();
             lineCount += Math.max(1, wrapped);
         }
-        return lineCount * minecraft.font.lineHeight + PADDING * 2;
+        return lineCount * GuideFont.get().lineHeight + PADDING * 2;
     }
 
     private int getContentWidth(Minecraft minecraft, int maxX) {
@@ -330,7 +328,7 @@ public class MDCodeBlockComponent extends MDComponent {
             return 0;
         }
         int digits = String.valueOf(Math.max(1, lineCount)).length();
-        return minecraft.font.width("0".repeat(digits)) + 3;
+        return GuideFont.get().width("0".repeat(digits)) + 3;
     }
 
     private record CodeLineInfo(int indentation, FormattedText text, boolean highlight) {

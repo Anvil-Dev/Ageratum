@@ -7,6 +7,7 @@ import dev.anvilcraft.resource.ageratum.client.AgeratumClientConfig;
 public class AgeratumLangHandler {
     public static void init(RegistrumLangProvider provider) {
         ConfigData.readConfigClass(provider, AgeratumClientConfig.class);
+        provider.add("ageratum.guide.zoom.default", "Default");
         provider.add("commands.ageratum.preview.disable", "Preview is not enabled");
         provider.add("system.ageratum.share.tip", "Player %s has shared a guide with you:");
         provider.add("system.ageratum.share.button", "[CLICK TO OPEN]");

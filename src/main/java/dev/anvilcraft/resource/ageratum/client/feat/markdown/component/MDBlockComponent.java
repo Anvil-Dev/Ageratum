@@ -1,6 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -43,8 +43,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);
             int lineMaxX = this.getLineMaxX(maxX, textX);
-            List<FormattedCharSequence> split = minecraft.font.split(cachedItem.text(), lineMaxX);
-            int lineHeight = split.size() * minecraft.font.lineHeight;
+            List<FormattedCharSequence> split = GuideFont.get().split(context.layout().text(cachedItem.text()), lineMaxX);
+            int lineHeight = split.size() * GuideFont.get().lineHeight;
             if (lineHeight <= 0 || maxY < lineHeight) {
                 return;
             }
@@ -99,7 +99,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     protected int getItemHeight(Minecraft minecraft, CachedItem<E> cachedItem, int maxX) {
-        return minecraft.font.wordWrapHeight(cachedItem.text(), this.getLineMaxX(maxX, this.getTextX(cachedItem)));
+        return GuideFont.get().split(cachedItem.text(), this.getLineMaxX(maxX, this.getTextX(cachedItem))).size() * GuideFont.get().lineHeight;
     }
 
     protected abstract int getTextX(CachedItem<E> cachedItem);
@@ -138,8 +138,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         pose.pushMatrix();
         pose.translate(textX, y);
         for (FormattedCharSequence sequence : split) {
-            guiGraphics.anvillib$text(AnvilLibFont.getSelectFont(), sequence, 0, 0, 0xFF000000, false);
-            pose.translate(0, minecraft.font.lineHeight);
+            GuideFont.get().draw(guiGraphics, sequence, 0, 0, 0xFF000000, false);
+            pose.translate(0, GuideFont.get().lineHeight);
         }
         pose.popMatrix();
     }

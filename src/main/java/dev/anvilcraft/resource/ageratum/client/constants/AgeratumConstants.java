@@ -194,27 +194,27 @@ public interface AgeratumConstants {
          * 背景纹理资源位置。
          */
         interface Textures {
-            Identifier GUIDE = Ageratum.location("textures/gui/guide/guide.png");
-            Identifier LABEL_PRIMARY = Ageratum.location("textures/gui/guide/label_primary.png");
-            Identifier LABEL_SECONDARY = Ageratum.location("textures/gui/guide/label_secondary.png");
-            Identifier BUTTON_DOWN = Ageratum.location("textures/gui/guide/button_down.png");
-            Identifier BUTTON_UP = Ageratum.location("textures/gui/guide/button_up.png");
-            Identifier BUTTON_CLOSE = Ageratum.location("textures/gui/guide/button_close.png");
-            Identifier BUTTON_SHARE = Ageratum.location("textures/gui/guide/button_share.png");
-            Identifier BUTTON_RETURN = Ageratum.location("textures/gui/guide/button_back.png");
-            Identifier BUTTON_ADD = Ageratum.location("textures/gui/guide/button_add.png");
-            Identifier LABEL_BOOKMARK = Ageratum.location("textures/gui/guide/label_bookmark.png");
+            Identifier GUIDE = Ageratum.location("textures/gui/guide/light/guide.png");
+            Identifier LABEL_PRIMARY = Ageratum.location("textures/gui/guide/light/label_primary.png");
+            Identifier LABEL_SECONDARY = Ageratum.location("textures/gui/guide/light/label_secondary.png");
+            Identifier BUTTON_DOWN = Ageratum.location("textures/gui/guide/light/button_down.png");
+            Identifier BUTTON_UP = Ageratum.location("textures/gui/guide/light/button_up.png");
+            Identifier BUTTON_CLOSE = Ageratum.location("textures/gui/guide/light/button_close.png");
+            Identifier BUTTON_SHARE = Ageratum.location("textures/gui/guide/light/button_share.png");
+            Identifier BUTTON_RETURN = Ageratum.location("textures/gui/guide/light/button_back.png");
+            Identifier BUTTON_ADD = Ageratum.location("textures/gui/guide/light/button_add.png");
+            Identifier LABEL_BOOKMARK = Ageratum.location("textures/gui/guide/light/label_bookmark.png");
         }
 
         /**
          * 纹理尺寸（原始像素）。
          */
         interface TextureSizes {
-            int GUIDE_IMAGE_SIZE = 512;
-            int GUIDE_IMAGE_WIDTH = 360;
+            int GUIDE_IMAGE_SIZE = 256;
+            int GUIDE_IMAGE_WIDTH = 256;
             int GUIDE_IMAGE_HEIGHT = 232;
-            int LABEL_IMAGE_SIZE = 64;
-            int LABEL_IMAGE_WIDTH = 60;
+            int LABEL_IMAGE_SIZE = 128;
+            int LABEL_IMAGE_WIDTH = 128;
             int LABEL_IMAGE_HEIGHT = 16;
             int BUTTON_IMAGE_SIZE = 32;
             int BUTTON_IMAGE_WIDTH = 32;
@@ -296,7 +296,7 @@ public interface AgeratumConstants {
             /**
              * 标签基础 X 坐标偏移
              */
-            int LABEL_BASE_X = -30;
+            int LABEL_BASE_X = -TextureSizes.LABEL_IMAGE_WIDTH / 2;
             /**
              * 内容区域 X 坐标起始偏移（相对于背景左边界）
              */
@@ -324,7 +324,7 @@ public interface AgeratumConstants {
             /**
              * 书签文本绘制基础偏移 X
              */
-            int BOOKMARK_TEXT_BASE_X = 50;
+            int BOOKMARK_TEXT_BASE_X = TextureSizes.LABEL_IMAGE_WIDTH - 10;
             /**
              * 背景图像下方额外绘制范围
              */
@@ -435,7 +435,7 @@ public interface AgeratumConstants {
          * 结构预览资源位置。
          */
         interface Textures {
-            Identifier BUTTON_PROJECTION = Ageratum.location("textures/gui/guide/button_projection.png");
+            Identifier BUTTON_PROJECTION = Ageratum.location("textures/gui/guide/light/button_projection.png");
         }
 
         /**

@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
@@ -151,20 +152,9 @@ public final class MDNBTStructureComponent extends MDComponent {
     private void renderButton(MDRenderContext context) {
         GuiGraphicsExtractor graphics = context.graphics();
         boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
-        graphics.blit(
-            RenderPipelines.GUI_TEXTURED,
-            BUTTON_PROJECTION_LOCATION,
-            context.maxX() - AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_RIGHT_MARGIN,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_TOP_MARGIN,
-            0,
-            isHover ? AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT : 0,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
-            32
-        );
+        context.layout().componentTexture(Identifier.parse("ageratum:structure_button_projection"),
+            dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture.of(BUTTON_PROJECTION_LOCATION, 16, 16, 16, 32))
+            .draw(graphics, context.maxX() - 21, 5, 16, 16, isHover);
         if (isHover) {
             context.addTooltip(Component.translatable("tooltip.ageratum.structure_projection.layer_shortcut",
                 Component.keybind("key.ageratum.structure_projection.layer_up"),
@@ -209,7 +199,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
-        if (!GuideScreen.hasControlDown() || scrollY == 0.0d) {
+        if (scrollY == 0.0d) {
             return false;
         }
 
@@ -226,8 +216,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button == 0 && this.previewLevel != null) {
             int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
             String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
-            int labelWidth = minecraft.font.width(layerLabel);
-            int btnSize = minecraft.font.lineHeight + padding;
+            int labelWidth = GuideFont.get().width(layerLabel);
+            int btnSize = GuideFont.get().lineHeight + padding;
             int btnGap = 2;
             int btnUpX = 4 + padding + labelWidth + padding + btnGap;
             int btnDownX = btnUpX + btnSize + btnGap;
@@ -322,8 +312,8 @@ public final class MDNBTStructureComponent extends MDComponent {
     private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
         int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
         String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
-        int fontHeight = context.minecraft().font.lineHeight;
-        int labelWidth = context.minecraft().font.width(layerLabel);
+        int fontHeight = GuideFont.get().lineHeight;
+        int labelWidth = GuideFont.get().width(layerLabel);
         int btnSize = fontHeight + padding;
         int btnGap = 2;
         int totalWidth = padding + labelWidth + padding + btnGap + btnSize + btnGap + btnSize + padding;
@@ -332,9 +322,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         int startY = 4;
 
         graphics.fill(startX, startY, startX + totalWidth, startY + totalHeight, AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_BG);
-        graphics.text(
-            context.minecraft().font,
-            layerLabel,
+        GuideFont.get().draw(graphics, layerLabel,
             startX + padding,
             startY + padding,
             AgeratumConstants.GuideScreenUI.Colors.LAYER_INDICATOR_TEXT,
@@ -352,8 +340,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         int btnBgDown = hoverDown ? 0x88AAAAAA : 0x88444444;
         graphics.fill(btnUpX, startY, btnUpX + btnSize, startY + btnSize, btnBgUp);
         graphics.fill(btnDownX, startY, btnDownX + btnSize, startY + btnSize, btnBgDown);
-        graphics.text(context.minecraft().font, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
-        graphics.text(context.minecraft().font, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
+        GuideFont.get().draw(graphics, "+", btnUpX + 3, startY + 1, 0xFFFFFFFF, false);
+        GuideFont.get().draw(graphics, "-", btnDownX + 3, startY + 1, 0xFFFFFFFF, false);
 
         if (hoverUp || hoverDown) {
             context.addTooltip(Component.literal("快捷键: PageUp/PageDown"));

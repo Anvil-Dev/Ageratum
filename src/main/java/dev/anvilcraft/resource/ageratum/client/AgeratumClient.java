@@ -2,7 +2,6 @@ package dev.anvilcraft.resource.ageratum.client;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
-import dev.anvilcraft.lib.v2.config.ConfigManager;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
@@ -48,7 +47,7 @@ public class AgeratumClient {
      */
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final AgeratumClientConfig CONFIG = ConfigManager.register(Ageratum.MOD_ID, AgeratumClientConfig::new);
+    public static final AgeratumClientConfig CONFIG = new AgeratumClientConfig();
 
     /**
      * 模组客户端侧构造函数，由 NeoForge 在加载时调用。
@@ -57,6 +56,7 @@ public class AgeratumClient {
      * @param modContainer 模组容器
      */
     public AgeratumClient(IEventBus modEventBus, ModContainer modContainer) {
+        CONFIG.register(modContainer, modEventBus);
         // 注册自定义注册表
         AgeratumRegistries.register(modEventBus);
         // 触发内置扩展组件注册项的类加载
@@ -88,6 +88,7 @@ public class AgeratumClient {
      */
     @SubscribeEvent
     public static void onReloadListenerRegister(AddClientReloadListenersEvent event) {
+        event.addListener(Ageratum.location("layouts"), dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager.reloadListener());
         event.addListener(Ageratum.location("document"), GuideDocumentCache.reloadListener());
         event.addListener(Ageratum.location("structure"), AgeratumStructureTemplateManager.reloadListener());
     }

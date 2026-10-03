@@ -247,7 +247,7 @@ Tilde fenced code block is now supported.
 
 ## Implemented: Image (line-only, namespace:path)
 
-![](ageratum:gui/guide/guide.png)
+![](ageratum:gui/guide/light/guide.png)
 
 ---
 

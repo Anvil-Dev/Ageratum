@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -28,7 +29,7 @@ public class MDTextComponent extends MDComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        return minecraft.font.width(this.text);
+        return GuideFont.get().width(this.text);
     }
 
     /**
