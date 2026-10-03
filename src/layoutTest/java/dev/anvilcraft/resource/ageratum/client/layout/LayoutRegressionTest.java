@@ -20,7 +20,28 @@ public final class LayoutRegressionTest {
         if (!value) throw new AssertionError(message);
     }
 
+    private static void noticeColors() throws Exception {
+        var darkResource = json(java.nio.file.Files.readString(java.nio.file.Path.of(
+            "src/main/resources/assets/ageratum/ageratum/layouts/dark.json")));
+        var dark = new GuideLayout(id("ageratum:dark"), GuideLayoutManager.merge(LayoutDefaults.light(), darkResource));
+        var fallback = new GuideLayout(id("ageratum:dark"), LayoutDefaults.dark());
+        for (String name : List.of("info", "tip", "warning", "danger")) {
+            int background = dark.componentColor(id("ageratum:" + name), "background", 0);
+            check((background >>> 24) == 255, name + " dark notice background is opaque");
+            check((background & 255) < 64 && ((background >>> 8) & 255) < 64 && ((background >>> 16) & 255) < 64,
+                name + " dark notice preserves light text contrast");
+            check(background == fallback.componentColor(id("ageratum:" + name), "background", 0),
+                name + " fallback matches resource theme");
+        }
+        check(GuideLayoutManager.defaults().componentColor(id("ageratum:info"), "background", 0xAADEEDF7) == 0xAADEEDF7,
+            "light notice retains original background");
+        var custom = new GuideLayout(id("test:notice"), json("{\"colors\":{\"components\":{\"ageratum:info\":{\"background\":\"#123456\",\"border\":\"#654321\"}}}}"));
+        check(custom.componentColor(id("ageratum:info"), "background", 0) == 0xFF123456, "notice background override");
+        check(custom.componentColor(id("ageratum:info"), "border", 0) == 0xFF654321, "notice border override");
+    }
+
     public static void main(String[] args) throws Exception {
+        noticeColors();
         zoomPersistence();
         List<String> warnings = new ArrayList<>();
         var resolver = new GuideLayoutManager.Resolver(Map.of(

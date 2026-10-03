@@ -7,10 +7,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import javax.annotation.Nullable;
 
 /**
@@ -35,10 +37,12 @@ public class MDNoticeBoxComponent extends MDComponent {
         WARNING(0xFFF59E0B, 0xAAFEF3C7),   // 橙色
         DANGER(0xFFEF4444, 0xAAFEE2E2);    // 红色
 
+        private final Identifier layoutKey;
         private final int borderColor;
         private final int backgroundColor;
 
         NoticeType(int borderColor, int backgroundColor) {
+            this.layoutKey = Identifier.fromNamespaceAndPath("ageratum", this.name().toLowerCase(Locale.ROOT));
             this.borderColor = borderColor;
             this.backgroundColor = backgroundColor;
         }
@@ -71,10 +75,12 @@ public class MDNoticeBoxComponent extends MDComponent {
         int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
 
         // 绘制背景
-        guiGraphics.fill(0, 0, maxX, boxHeight, this.type.getBackgroundColor());
+        guiGraphics.fill(0, 0, maxX, boxHeight,
+            context.layout().componentColor(this.type.getLayoutKey(), "background", this.type.getBackgroundColor()));
 
         // 绘制左侧边框
-        guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
+        guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight,
+            context.layout().componentColor(this.type.getLayoutKey(), "border", this.type.getBorderColor()));
 
         // 绘制内容
         Matrix3x2fStack pose = guiGraphics.pose();

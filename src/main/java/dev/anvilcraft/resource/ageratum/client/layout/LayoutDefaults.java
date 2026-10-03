@@ -41,7 +41,9 @@ public final class LayoutDefaults {
             {"textures":{"scrollbar_thumb":{"tint":"#FFE8E0D0"},"scrollbar_track":{"tint":"#FF606A78"}},
              "colors":{"content_text":"#E8E0D0","label_text_active":"#FFD75F",
               "label_text_clickable":"#E8E0D0","label_text_disabled":"#A0A0A0","bookmark_text":"#E8E0D0",
-              "components":{"code_block":{"text":"#D8DEE9","background":"#40202830","line_number":"#99AAAAAA"}}}}
+              "components":{"info":{"background":"#FF172B3A"},"tip":{"background":"#FF17382F"},
+                "warning":{"background":"#FF3B2D17"},"danger":{"background":"#FF3B2024"},
+                "code_block":{"text":"#D8DEE9","background":"#40202830","line_number":"#99AAAAAA"}}}}
             """).getAsJsonObject());
         applyTextures(layout, "dark");
         return layout;
