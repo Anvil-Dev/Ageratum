@@ -84,6 +84,10 @@
     "background_gradient_start": "#F0080808",
     "background_gradient_end": "#F0080808",
     "components": {
+      "info": { "background": "#FF172B3A" },
+      "tip": { "background": "#FF17382F" },
+      "warning": { "background": "#FF3B2D17" },
+      "danger": { "background": "#FF3B2024" },
       "code_block": {
         "background": "#40202830",
         "border": "#88555566",
