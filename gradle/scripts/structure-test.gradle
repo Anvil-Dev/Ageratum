@@ -1,0 +1,47 @@
+sourceSets {
+    clientTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+neoForge {
+    mods {
+        ageratum_structure_test { sourceSet sourceSets.clientTest }
+    }
+    runs {
+        layoutClientTest {
+            client()
+            gameDirectory = project.file('build/layout-client-test/run')
+            programArguments.addAll '--width', '800', '--height', '600'
+            systemProperty 'ageratum.layoutTest', 'true'
+        }
+        structureTest {
+            client()
+            gameDirectory = project.file('build/structure-test/run')
+            programArguments.addAll '--width', '800', '--height', '600'
+        }
+    }
+}
+
+def structureTestLog = layout.buildDirectory.file('structure-test/run/logs/latest.log')
+tasks.named('runStructureTest') {
+    notCompatibleWithConfigurationCache('Opt-in client regression checks the isolated game log')
+    doLast {
+        def log = structureTestLog.get().asFile.getText('UTF-8')
+        if (!log.contains('AGERATUM_STRUCTURE_TEST PASS') || log.contains('AGERATUM_STRUCTURE_TEST FAILED')) {
+            throw new GradleException('Structure regression failed; inspect the isolated client log')
+        }
+    }
+}
+
+def layoutClientTestLog = layout.buildDirectory.file('layout-client-test/run/logs/latest.log')
+tasks.named('runLayoutClientTest') {
+    notCompatibleWithConfigurationCache('Opt-in client regression checks the isolated game log')
+    doLast {
+        def log = layoutClientTestLog.get().asFile.getText('UTF-8')
+        if (!log.contains('AGERATUM_LAYOUT_CLIENT_TEST PASS') || log.contains('AGERATUM_LAYOUT_CLIENT_TEST FAILED')) {
+            throw new GradleException('Layout client regression failed; inspect the isolated client log')
+        }
+    }
+}

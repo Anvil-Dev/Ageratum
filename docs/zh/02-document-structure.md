@@ -202,7 +202,7 @@ assets/mymod/ageratum/en_us/
 
 ```markdown
 ![描述](mymod:gui/my_image.png)
-![描述](ageratum:gui/guide/guide.png)
+![描述](ageratum:gui/guide/light/guide.png)
 ```
 
 图片在文档中**独占一行**，内联图片（段落内）当前不支持。

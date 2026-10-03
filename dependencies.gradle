@@ -7,3 +7,13 @@ dependencies {
     implementation(libs.jsoup) { transitive = false }
     jarJar(libs.jsoup)
 }
+
+// Verify the unpublished renderer port without replacing unrelated library modules.
+if (providers.gradleProperty('anvillibRenderingJar').isPresent()) {
+    configurations.configureEach {
+        exclude group: 'dev.anvilcraft.lib', module: 'anvillib-rendering-neoforge-26.1'
+    }
+    dependencies {
+        implementation files(providers.gradleProperty('anvillibRenderingJar').get())
+    }
+}

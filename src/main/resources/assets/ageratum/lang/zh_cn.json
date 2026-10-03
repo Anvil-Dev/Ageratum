@@ -1,4 +1,5 @@
 {
+  "ageratum.guide.zoom.default": "默认",
   "ageratum.configuration.allow_code_block_line_content_line_breaks": "允许代码块中的行内容换行",
   "ageratum.configuration.allow_code_block_line_content_line_breaks.tooltip": "允许在代码块内容中插入换行符",
   "ageratum.configuration.bread_crumbs_has_label": "面包屑记录标签",
@@ -7,8 +8,8 @@
   "ageratum.configuration.enable_preview.tooltip": "是否启用预览模式（启用该模式后，可以实时查看指定路径下文档的更改情况）",
   "ageratum.configuration.preview_path": "预览路径",
   "ageratum.configuration.preview_path.tooltip": "用于设置预览模式的路径",
-  "ageratum.configuration.scale": "缩放",
-  "ageratum.configuration.scale.tooltip": "界面的缩放比例",
+  "ageratum.configuration.scale": "界面缩放",
+  "ageratum.configuration.scale.tooltip": "界面无级缩放，范围 0.5～4.0；支持小数，修改后自动重排当前手册",
   "ageratum.configuration.section.ageratum.client.toml": "藿香 客户端配置",
   "ageratum.configuration.section.ageratum.client.toml.title": "藿香 客户端配置",
   "ageratum.configuration.share_guide_only_in_team": "仅在队伍内分享指南",
@@ -28,5 +29,13 @@
   "system.ageratum.share.tip": "玩家 %s 向您分享了一份指南：",
   "gui.ageratum.github.loading": "加载中，请稍后...",
   "gui.ageratum.github.load_failed": "加载失败...",
-  "tooltip.ageratum.bind_item_hold": "按住 %s 寻思"
+  "tooltip.ageratum.bind_item_hold": "按住 %s 寻思",
+  "tooltip.ageratum.structure_projection.layer_shortcut": "按下 %s / %s 调整投影层数",
+  "tooltip.ageratum.structure_projection.remove_shortcut": "按下 %s 关闭投影",
+  "ageratum.configuration.dark_mode": "深色模式",
+  "ageratum.configuration.dark_mode.tooltip": "对当前及之后打开的手册启用深色变体，明暗按钮会保存此配置",
+  "ageratum.configuration.directory_side": "目录位置",
+  "ageratum.configuration.directory_side.tooltip": "选择目录所在侧：左侧为左目录、右内容；右侧为右目录、左内容。修改后对当前手册生效",
+  "ageratum.configuration.directory_side.left": "左侧目录，右侧内容",
+  "ageratum.configuration.directory_side.right": "右侧目录，左侧内容"
 }

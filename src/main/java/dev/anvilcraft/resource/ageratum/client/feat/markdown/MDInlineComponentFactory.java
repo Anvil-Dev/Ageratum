@@ -9,7 +9,7 @@ import net.minecraft.network.chat.FormattedText;
  * {@code <namespace:id .../>} 形式的行内标签。</p>
  */
 @FunctionalInterface
-public interface MDInlineComponentFactory {
+public interface MDInlineComponentFactory extends dev.anvilcraft.resource.ageratum.client.layout.LayoutResourceProvider {
     /**
      * 根据上下文创建行内组件文本。
      */

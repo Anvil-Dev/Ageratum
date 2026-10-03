@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import com.mojang.brigadier.StringReader;
-import dev.anvilcraft.lib.v2.font.AnvilLibFont;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
@@ -79,8 +79,8 @@ public final class MDEntityComponent extends MDComponent {
 
         if (this.showText) {
             Component hoverName = entity.getType().getDescription();
-            int nameWidth = minecraft.font.width(hoverName);
-            graphics.anvillib$text(AnvilLibFont.getSelectFont(), hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
+            int nameWidth = GuideFont.get().width(hoverName);
+            GuideFont.get().draw(graphics, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
         }
 
 //        context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
@@ -107,7 +107,7 @@ public final class MDEntityComponent extends MDComponent {
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
         Entity entity = this.cachedEntity;
         if (entity == null) return super.getPreferredWidth(minecraft, maxX, maxY);
-        int textWidth = this.showText ? minecraft.font.width(entity.getName()) : 0;
+        int textWidth = this.showText ? GuideFont.get().width(entity.getName()) : 0;
         return Math.max(this.getContentWidth(maxX), textWidth);
     }
 
@@ -115,7 +115,7 @@ public final class MDEntityComponent extends MDComponent {
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         Entity entity = this.cachedEntity;
         if (entity == null) return super.getHeight(minecraft, maxX, maxY);
-        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        int textHeight = this.showText ? GuideFont.get().lineHeight : 0;
         return this.getContentHeight() + textHeight + 2;
     }
 

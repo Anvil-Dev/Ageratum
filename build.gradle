@@ -42,3 +42,23 @@ idea {
 lombok {
     version = "1.18.44"
 }
+
+if (providers.gradleProperty('structureTest').isPresent() || providers.gradleProperty('layoutClientTest').isPresent()) {
+    apply from: 'gradle/scripts/structure-test.gradle'
+}
+
+sourceSets {
+    layoutTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+// Pure resolver/geometry regressions; no game window or third-party test framework required.
+tasks.register('layoutTest', JavaExec) {
+    dependsOn tasks.named('layoutTestClasses')
+    classpath = sourceSets.layoutTest.runtimeClasspath
+    mainClass = 'dev.anvilcraft.resource.ageratum.client.layout.LayoutRegressionTest'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(project.java_version) }
+}
+tasks.named('check') { dependsOn tasks.named('layoutTest') }
