@@ -202,7 +202,7 @@ public class AgeratumClient {
             GuideScreen screen = new GuideScreen(location, cachedDocument.get(), breadCrumbs, false);
             screen.setAnchor(anchor);
             screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
-            minecraft.setScreen(screen);
+            setGuideScreen(minecraft, screen);
             return true;
         }
 
@@ -271,8 +271,15 @@ public class AgeratumClient {
         GuideScreen screen = new GuideScreen(location, parsedDocument, breadCrumbs, preview);
         screen.setAnchor(anchor);
         screen.setLabelScrollState(inheritedLabelScrollRows, inheritedLabelScrollRemainder);
-        minecraft.setScreen(screen);
+        setGuideScreen(minecraft, screen);
         return true;
+    }
+
+    private static void setGuideScreen(Minecraft minecraft, GuideScreen screen) {
+        if (minecraft.player != null && minecraft.player.containerMenu != minecraft.player.inventoryMenu) {
+            minecraft.player.closeContainer();
+        }
+        minecraft.setScreen(screen);
     }
 
     public static boolean isPreviewLocation(Identifier location) {
