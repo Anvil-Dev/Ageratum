@@ -224,7 +224,7 @@ public class AgeratumClient {
             if (preserveLabelState && currentGuideScreen != null) {
                 screen.setLabelStatePreserved(currentGuideScreen);
             }
-            minecraft.setScreen(screen);
+            setGuideScreen(minecraft, screen);
             return true;
         }
 
@@ -307,8 +307,15 @@ public class AgeratumClient {
         if (preserveLabelState && currentGuideScreen != null) {
             screen.setLabelStatePreserved(currentGuideScreen);
         }
-        minecraft.setScreen(screen);
+        setGuideScreen(minecraft, screen);
         return true;
+    }
+
+    private static void setGuideScreen(Minecraft minecraft, GuideScreen screen) {
+        if (minecraft.player != null && minecraft.player.containerMenu != minecraft.player.inventoryMenu) {
+            minecraft.player.closeContainer();
+        }
+        minecraft.setScreen(screen);
     }
 
     public static boolean isPreviewLocation(ResourceLocation location) {
