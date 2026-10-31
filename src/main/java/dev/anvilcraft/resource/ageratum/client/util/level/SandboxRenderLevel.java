@@ -22,6 +22,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.random.WeightedList;
@@ -95,6 +96,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     private final ChunkSource chunkSource = new SandboxChunkProvider(this);
     private final Holder<Biome> biome;
     private final RegistryAccess registryAccess;
+    private final FeatureFlagSet enabledFeatures;
     private final LongSet filledBlocks = new LongOpenHashSet();
     private final LongSet litSections = new LongOpenHashSet();
     private final WorldBorder worldBorder = new WorldBorder();
@@ -112,10 +114,14 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     }
 
     public SandboxRenderLevel(RegistryAccess registryAccess) {
-        this(new ClientLevel.ClientLevelData(Difficulty.PEACEFUL, false, false), registryAccess);
+        this(registryAccess, FeatureFlags.DEFAULT_FLAGS);
     }
 
-    private SandboxRenderLevel(ClientLevel.ClientLevelData levelData, RegistryAccess registryAccess) {
+    public SandboxRenderLevel(RegistryAccess registryAccess, FeatureFlagSet enabledFeatures) {
+        this(new ClientLevel.ClientLevelData(Difficulty.PEACEFUL, false, false), registryAccess, enabledFeatures);
+    }
+
+    private SandboxRenderLevel(ClientLevel.ClientLevelData levelData, RegistryAccess registryAccess, FeatureFlagSet enabledFeatures) {
         super(
             levelData,
             LEVEL_ID,
@@ -129,6 +135,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
         );
         this.clientLevelData = levelData;
         this.registryAccess = registryAccess;
+        this.enabledFeatures = enabledFeatures;
         this.clockManager = createClientClockManager(registryAccess);
         this.biome = registryAccess.lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
         var nibbles = new byte[DataLayer.SIZE];
@@ -289,6 +296,10 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
         return !this.filledBlocks.isEmpty();
     }
 
+    public boolean hasContent() {
+        return this.hasFilledBlocks() || this.getEntitiesForRendering().iterator().hasNext();
+    }
+
     /**
      * 返回当前已加载预览区块中所有非空气方块位置。
      */
@@ -313,7 +324,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
      * 计算包围所有已渲染方块与实体的世界坐标轴对齐包围盒。
      */
     public Bounds getBounds() {
-        if (this.filledBlocks.isEmpty()) {
+        if (!this.hasContent()) {
             return new Bounds(BlockPos.ZERO, BlockPos.ZERO);
         }
 
@@ -335,9 +346,9 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
         for (var entity : getEntitiesForRendering()) {
             var bounds = entity.getBoundingBox();
 
-            min.setX(Math.min(min.getX(), (int) bounds.minX));
-            min.setY(Math.min(min.getY(), (int) bounds.minY));
-            min.setZ(Math.min(min.getZ(), (int) bounds.minZ));
+            min.setX(Math.min(min.getX(), Mth.floor(bounds.minX)));
+            min.setY(Math.min(min.getY(), Mth.floor(bounds.minY)));
+            min.setZ(Math.min(min.getZ(), Mth.floor(bounds.minZ)));
 
             max.setX(Math.max(max.getX(), (int) Math.ceil(bounds.maxX)));
             max.setY(Math.max(max.getY(), (int) Math.ceil(bounds.maxY)));
@@ -471,7 +482,7 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
 
     @Override
     public FeatureFlagSet enabledFeatures() {
-        return FeatureFlags.DEFAULT_FLAGS;
+        return this.enabledFeatures;
     }
 
     private static class LevelCallbackCallbacks implements LevelCallback<Entity> {
