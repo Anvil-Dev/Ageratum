@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.SingleThreadedRandomSource;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -29,10 +30,12 @@ public final class StructureSandboxFactory {
         SingleThreadedRandomSource random = new SingleThreadedRandomSource(0L);
         StructurePlaceSettings settings = new StructurePlaceSettings();
         settings.setIgnoreEntities(true);
+        // 保留蓝图中的连接状态，避免邻接更新改变预览结构。
+        settings.setKnownShape(true);
 
         SandboxRenderLevel level = new SandboxRenderLevel(clientLevel.registryAccess());
         DelegatingServerLevelAccessor fakeServerLevel = new DelegatingServerLevelAccessor(level);
-        if (!template.placeInWorld(fakeServerLevel, placementPos, placementPos, settings, random, 0)) {
+        if (!template.placeInWorld(fakeServerLevel, placementPos, placementPos, settings, random, Block.UPDATE_KNOWN_SHAPE)) {
             log.debug("Failed to place structure preview into sandbox at {}", placementPos);
         }
         return level;
