@@ -4,32 +4,46 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import dev.anvilcraft.lib.v2.rendering.projection.ProjectionFeatures;
-import dev.anvilcraft.lib.v2.rendering.projection.ProjectionRenderTypes;
 import dev.anvilcraft.lib.v2.rendering.projection.ProjectionScene;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.block.FluidRenderer;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3x2f;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 /** Isolated native GUI target; uses the same layer view as world projections. */
 public final class StructurePreviewPipRenderer extends PictureInPictureRenderer<StructurePreviewPipRenderer.State> {
-    private final ProjectionFeatures features = new ProjectionFeatures();
+    private final SubmitNodeStorage nodes = new SubmitNodeStorage();
+    private final FeatureRenderDispatcher features;
 
     public StructurePreviewPipRenderer(MultiBufferSource.BufferSource buffers) {
         super(buffers);
+        var client = Minecraft.getInstance();
+        var renderBuffers = client.renderBuffers();
+        this.features = new FeatureRenderDispatcher(this.nodes, client.getModelManager(), buffers, client.getAtlasManager(),
+            renderBuffers.outlineBufferSource(), renderBuffers.crumblingBufferSource(),
+            client.font, client.gameRenderer.getGameRenderState());
     }
 
     @Override
@@ -70,7 +84,8 @@ public final class StructurePreviewPipRenderer extends PictureInPictureRenderer<
             }
         }
         var renderer = new ModelBlockRenderer(mc.options.ambientOcclusion().get(), true, mc.getBlockColors());
-        var fluids = new FluidRenderer(mc.getModelManager().getFluidStateModelSet());
+        var fluidModels = mc.getModelManager().getFluidStateModelSet();
+        var fluids = new FluidRenderer(fluidModels);
         var previousLights = RenderSystem.getShaderLights();
         mc.gameRenderer.getLighting().setupFor(Lighting.Entry.LEVEL);
         pose.pushPose();
@@ -82,28 +97,77 @@ public final class StructurePreviewPipRenderer extends PictureInPictureRenderer<
             pose.mulPose(state.transform());
             // The source camera lives in the view matrix, so entity lighting stays in structure space.
             pose.last().normal().identity();
-            for (var pos : blocks) {
-                var block = view.getBlockState(pos);
-                renderer.tesselateBlock((x, y, z, quad, instance) -> {
-                    pose.pushPose();
-                    pose.translate(x, y, z);
-                    this.bufferSource.getBuffer(ProjectionRenderTypes.blocks()).putBakedQuad(pose.last(), quad, instance);
-                    pose.popPose();
-                }, pos.getX(), pos.getY(), pos.getZ(), view, pos, block,
-                    mc.getModelManager().getBlockStateModelSet().get(block), block.getSeed(pos));
-                if (!block.getFluidState().isEmpty()) {
-                    pose.pushPose();
-                    pose.translate(pos.getX(), pos.getY(), pos.getZ());
-                    var vertices = new PosedConsumer(this.bufferSource.getBuffer(ProjectionRenderTypes.blocks()), pose.last().copy());
-                    fluids.tesselate(view.shifted(pos), BlockPos.ZERO, ignored -> vertices, block, block.getFluidState());
-                    pose.popPose();
+            // 半透明方块和流体在方块实体后绘制，避免提前写入深度而遮挡实体。
+            for (int pass = 0; pass < 2; pass++) {
+                boolean translucent = pass == 1;
+                var positions = translucent ? blocks.stream().sorted(Comparator.comparingDouble(pos ->
+                    state.transform().m02() * pos.getX() + state.transform().m12() * pos.getY()
+                        + state.transform().m22() * pos.getZ())).toList() : blocks;
+                for (var pos : positions) {
+                    var block = view.getBlockState(pos);
+                    renderer.tesselateBlock((x, y, z, quad, instance) -> {
+                        var type = quad.materialInfo().itemRenderType();
+                        if (type.hasBlending() == translucent) {
+                            pose.pushPose();
+                            pose.translate(x, y, z);
+                            this.bufferSource.getBuffer(type).putBakedQuad(pose.last(), quad, instance);
+                            pose.popPose();
+                        }
+                    }, pos.getX(), pos.getY(), pos.getZ(), view, pos, block,
+                        mc.getModelManager().getBlockStateModelSet().get(block), block.getSeed(pos));
+                    var fluid = block.getFluidState();
+                    if (!fluid.isEmpty() && (fluidModels.get(fluid).layer() == ChunkSectionLayer.TRANSLUCENT) == translucent) {
+                        pose.pushPose();
+                        pose.translate(pos.getX(), pos.getY(), pos.getZ());
+                        fluids.tesselate(view.shifted(pos), BlockPos.ZERO, layer -> {
+                            var type = switch (layer) {
+                                case SOLID, CUTOUT -> Sheets.cutoutBlockSheet();
+                                case TRANSLUCENT -> Sheets.translucentBlockSheet();
+                            };
+                            return new PosedConsumer(this.bufferSource.getBuffer(type), pose.last().copy());
+                        }, block, fluid);
+                        pose.popPose();
+                    }
+                }
+                this.bufferSource.endBatch();
+                if (!translucent) {
+                    var camera = mc.gameRenderer.getGameRenderState().levelRenderState.cameraRenderState;
+                    for (var entity : blockEntities) {
+                        this.submitBlockEntity(entity, pose, camera);
+                    }
+                    for (var entity : entities) {
+                        var entityState = mc.getEntityRenderDispatcher().extractEntity(entity, 0);
+                        entityState.lightCoords = LightCoordsUtil.FULL_BRIGHT;
+                        mc.getEntityRenderDispatcher().submit(entityState, camera, entity.getX(), entity.getY(), entity.getZ(), pose, this.nodes);
+                    }
+                    this.features.renderAllFeatures();
+                    this.bufferSource.endBatch();
                 }
             }
-            this.bufferSource.endBatch();
-            this.features.render(blockEntities, entities, pose, mc.gameRenderer.getGameRenderState().levelRenderState.cameraRenderState, 255);
+            this.features.endFrame();
+            this.nodes.endFrame();
         } finally {
-            this.features.clear();
+            this.nodes.clear();
             RenderSystem.setShaderLights(previousLights);
+            pose.popPose();
+        }
+    }
+
+    private <T extends BlockEntity> void submitBlockEntity(T entity, PoseStack pose, CameraRenderState camera) {
+        BlockEntityRenderer<T, BlockEntityRenderState> renderer = Minecraft.getInstance()
+            .getBlockEntityRenderDispatcher().getRenderer(entity);
+        if (renderer == null) {
+            return;
+        }
+        BlockEntityRenderState state = renderer.createRenderState();
+        renderer.extractRenderState(entity, state, 0, Vec3.ZERO, null);
+        state.lightCoords = LightCoordsUtil.FULL_BRIGHT;
+        var pos = entity.getBlockPos();
+        pose.pushPose();
+        try {
+            pose.translate(pos.getX(), pos.getY(), pos.getZ());
+            renderer.submit(state, pose, this.nodes, camera);
+        } finally {
             pose.popPose();
         }
     }
