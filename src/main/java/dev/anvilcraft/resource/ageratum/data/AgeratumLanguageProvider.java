@@ -24,6 +24,12 @@ public class AgeratumLanguageProvider extends LanguageProvider {
         this.add("tooltip.ageratum.bind_item_hold", "Hold %s to get more info");
         this.add("tooltip.ageratum.structure_projection.layer_shortcut", "Press %s / %s to adjust projection layers");
         this.add("tooltip.ageratum.structure_projection.remove_shortcut", "Press %s to close projection");
+        this.add("tooltip.ageratum.dark_mode", "Switch to dark mode");
+        this.add("tooltip.ageratum.light_mode", "Switch to light mode");
+        this.add("tooltip.ageratum.structure_preview.inspect", "Left-click a block to inspect it; drag to pan, right-drag to rotate");
+        this.add("tooltip.ageratum.structure_preview.position", "Structure position: %s, %s, %s");
+        this.add("tooltip.ageratum.structure_preview.properties", "Block state:");
+        this.add("tooltip.ageratum.structure_preview.empty_properties", "This block has no state properties");
         this.add("tooltip.ageratum.structure_export", "Export the full structure to the current server world's data/ageratum folder");
         this.add("system.ageratum.structure_export.sending", "Sending structure export to the server...");
         this.add("system.ageratum.structure_export.success", "Structure exported to the current world: %s");

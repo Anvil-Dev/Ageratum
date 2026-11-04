@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
@@ -74,7 +75,7 @@ public final class MDEntityComponent extends MDComponent {
         if (this.showText) {
             Component hoverName = entity.getType().getDescription();
             int nameWidth = minecraft.font.width(hoverName);
-            graphics.drawString(minecraft.font, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
+            graphics.drawString(minecraft.font, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, GuideTheme.textColor(), false);
         }
 
         context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);

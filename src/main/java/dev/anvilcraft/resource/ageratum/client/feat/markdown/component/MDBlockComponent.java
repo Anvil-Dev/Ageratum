@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -137,7 +138,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         pose.pushPose();
         pose.translate(textX, y, 0);
         for (FormattedCharSequence sequence : split) {
-            guiGraphics.drawString(minecraft.font, sequence, 0, 0, 0x000000, false);
+            guiGraphics.drawString(minecraft.font, GuideTheme.text(sequence), 0, 0, GuideTheme.textColor(), false);
             pose.translate(0, minecraft.font.lineHeight, 0);
         }
         pose.popPose();

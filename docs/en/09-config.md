@@ -14,6 +14,19 @@ Ageratum provides a client-side configuration file to adjust the document reader
 
 ## Configuration Options
 
+### `darkMode`
+
+**Type**: `boolean`
+**Default**: `false`
+**Description**: Use dark backgrounds, tabs, buttons, item slots and recipe textures with matching default text colors. The theme button near the bottom of the guide's right sidebar switches immediately and saves the preference across pages and restarts.
+
+```toml
+# Use dark guide textures and colors
+dark_mode = false
+```
+
+---
+
 ### `breadCrumbsHasLabel`
 
 **Type**: `boolean`  

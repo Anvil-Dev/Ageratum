@@ -44,6 +44,8 @@ public class MDRowComponent extends MDComponent {
     private final Direction direction;
     private final HorizontalAlign horizontalAlign;
     private final VerticalAlign verticalAlign;
+    private @Nullable ChildHit activeMouseChild;
+    private int activeMouseButton = -1;
 
     public MDRowComponent(
         List<MDComponent> contentComponents,
@@ -327,13 +329,18 @@ public class MDRowComponent extends MDComponent {
         if (hit == null) {
             return false;
         }
-        return hit.component.mouseClicked(
+        boolean handled = hit.component.mouseClicked(
             minecraft,
             mouseX - hit.x,
             mouseY - hit.y,
             button,
             hit.width
         );
+        if (handled) {
+            this.activeMouseChild = hit;
+            this.activeMouseButton = button;
+        }
+        return handled;
     }
 
     @Override
@@ -346,8 +353,8 @@ public class MDRowComponent extends MDComponent {
         double dragY,
         int maxX
     ) {
-        ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
-        if (hit == null) {
+        ChildHit hit = this.activeMouseChild;
+        if (hit == null || button != this.activeMouseButton) {
             return false;
         }
         return hit.component.mouseDragged(
@@ -363,10 +370,12 @@ public class MDRowComponent extends MDComponent {
 
     @Override
     public boolean mouseReleased(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
-        ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
-        if (hit == null) {
+        ChildHit hit = this.activeMouseChild;
+        if (hit == null || button != this.activeMouseButton) {
             return false;
         }
+        this.activeMouseChild = null;
+        this.activeMouseButton = -1;
         return hit.component.mouseReleased(
             minecraft,
             mouseX - hit.x,

@@ -12,6 +12,9 @@ import net.neoforged.fml.config.ModConfig;
     type = ModConfig.Type.CLIENT
 )
 public class AgeratumClientConfig {
+    @Comment("Use dark guide textures and colors")
+    public boolean darkMode = false;
+
     @Comment("Do breadcrumbs record jumps from sidebar tabs")
     public boolean breadCrumbsHasLabel = false;
 

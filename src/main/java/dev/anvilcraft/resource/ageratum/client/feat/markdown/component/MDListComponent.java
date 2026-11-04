@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -135,7 +136,7 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         if (item.kind() == ListKind.TASK) {
             return item.checked() ? TASK_CHECKED_COLOR : TASK_UNCHECKED_COLOR;
         }
-        return 0x000000;
+        return GuideTheme.textColor();
     }
 
     private record PreparedData(List<CachedItem<ListItem>> cachedItems, FormattedText componentText) {

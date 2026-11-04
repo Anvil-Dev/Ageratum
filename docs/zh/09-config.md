@@ -14,6 +14,19 @@ Ageratum 提供了一个客户端配置文件，用于调整文档阅读界面�
 
 ## 配置项说明
 
+### `darkMode`
+
+**类型**：`boolean`
+**默认值**：`false`
+**说明**：启用深色手册，切换背景、标签、按钮、物品槽与配方底图，并调整默认文字配色。手册右侧底部的主题按钮可即时切换，偏好会保存到客户端配置，在切换页面和重启后保留。
+
+```toml
+# Use dark guide textures and colors
+dark_mode = false
+```
+
+---
+
 ### `breadCrumbsHasLabel`
 
 **类型**：`boolean`  
