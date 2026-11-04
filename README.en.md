@@ -212,7 +212,7 @@ documents:
   document inside the resource pack; in preview mode the matching file is loaded from `run/ageratum_review/`
 - The component first shows structure metadata such as size, palette, block count, and entity count, then renders a top-down block preview
   followed by a depth-limited NBT tree
-- Hovering a block in the preview shows its block ID, structure coordinates, palette index, and whether it carries block-entity NBT
+- Left-clicking a block in the preview shows its localized name, block ID, structure coordinates, and all block-state properties. Click empty space to clear the selection; dragging still pans or rotates the preview
 
 ### Preloading & Caching
 

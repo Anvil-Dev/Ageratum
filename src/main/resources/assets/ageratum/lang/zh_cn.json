@@ -39,5 +39,11 @@
   "system.ageratum.structure_export.success": "结构已导出到当前存档：%s",
   "system.ageratum.structure_export.failed": "结构导出失败，请查看游戏或服务端日志。",
   "system.ageratum.structure_export.too_large": "结构导出的压缩大小超过 8 MiB 限制。",
-  "system.ageratum.structure_export.busy": "请等待两秒后再导出结构。"
+  "system.ageratum.structure_export.busy": "请等待两秒后再导出结构。",
+  "tooltip.ageratum.dark_mode": "切换到深色模式",
+  "tooltip.ageratum.light_mode": "切换到浅色模式",
+  "tooltip.ageratum.structure_preview.inspect": "左键点击方块查看名称和状态；拖动平移，右键拖动旋转",
+  "tooltip.ageratum.structure_preview.position": "结构内坐标：%s, %s, %s",
+  "tooltip.ageratum.structure_preview.properties": "方块状态：",
+  "tooltip.ageratum.structure_preview.empty_properties": "此方块没有状态属性"
 }

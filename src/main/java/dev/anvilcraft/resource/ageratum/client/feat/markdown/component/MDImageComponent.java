@@ -11,6 +11,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
@@ -177,7 +178,7 @@ public class MDImageComponent extends MDComponent {
         float minV = (0.0F + 0.0F) / (float) textureHeight;
         float maxV = (0.0F + (float) height) / (float) textureHeight;
         RenderSystem.enableBlend();
-        RenderSystem.setShaderTexture(0, atlasLocation);
+        RenderSystem.setShaderTexture(0, GuideTheme.texture(atlasLocation));
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
         BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);

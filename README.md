@@ -380,7 +380,7 @@ public static final DeferredHolder<MDRecipeComponent.RecipeComponentFactory<?>, 
 - `maxEntries`：可选，每层最多显示的键/列表项数量，默认 `12`
 - 支持相对路径，按当前文档目录解析；可直接读取资源包中与 Markdown 同目录的 `.nbt` / `.snbt` 文件，预览模式下则会从 `run/ageratum_review/` 读取对应文件
 - 组件会优先显示结构尺寸、调色板、方块数、实体数等摘要，其后渲染俯视方块预览，并在下方展示受限深度的 NBT 树
-- 将鼠标悬停到预览区域的方块上时，可查看方块 ID、结构坐标、palette 索引及是否带块实体数据
+- 左键点击预览区域的方块后，可查看本地化名称、方块 ID、结构内坐标和全部方块状态属性；点击空白处取消选择，拖动仍用于平移或旋转
 
 ## 许可证
 

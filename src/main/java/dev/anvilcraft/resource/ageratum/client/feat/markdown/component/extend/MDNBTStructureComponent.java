@@ -1,5 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import com.mojang.blaze3d.platform.GlConst;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
@@ -9,10 +11,12 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCompone
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureExportClient;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewPicker;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
@@ -37,6 +41,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.BufferedInputStream;
@@ -69,6 +76,9 @@ public final class MDNBTStructureComponent extends MDComponent {
     private static final float ROTATE_PITCH_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.ROTATE_PITCH;
     private static final float PAN_SENSITIVITY = AgeratumConstants.Structure.Sensitivity.PAN;
     private static final ResourceLocation BUTTON_PROJECTION_LOCATION = AgeratumConstants.Structure.Textures.BUTTON_PROJECTION;
+    private static final ResourceLocation BUTTON_EXPORT_LOCATION = ResourceLocation.fromNamespaceAndPath(
+        "ageratum", "textures/gui/guide/button_import.png"
+    );
 
     private final StructureTarget target;
     private final ViewportCameraRig cameraRig = new ViewportCameraRig();
@@ -83,10 +93,22 @@ public final class MDNBTStructureComponent extends MDComponent {
     private boolean layerPreviewInitialized;
     private int contentHeight = 220;
     private int bottomHeight = 220;
+    private @Nullable Matrix4f inversePreviewMatrix;
+    private @Nullable BlockPos selectedBlock;
+    private int previewScreenWidth;
+    private int previewScreenHeight;
+    private int previewOriginX;
+    private int previewOriginY;
+    private int previewWidth;
+    private float clickThreshold = 3.0f;
+    private double pressX;
+    private double pressY;
+    private boolean dragging;
 
     private MDNBTStructureComponent(StructureTarget target) {
         super("[结构未加载]");
         this.target = target;
+        this.cameraRig.setZoom(2.0f);
     }
 
     /**
@@ -127,10 +149,20 @@ public final class MDNBTStructureComponent extends MDComponent {
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
         this.cameraRig.configureViewport(context.screenWidth(), context.screenHeight());
-        this.cameraRig.setZoom(2.0f);
         // 将结构投影居中到组件分配区域的中心（考虑 offsetX + maxX 与屏幕中心的偏移）
-        this.cameraRig.setOffsetX(context.offsetX() + maxX / 2.0f - context.screenWidth() / 2.0f + this.panOffsetX);
-        this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f - context.offsetY() + this.panOffsetY);
+        this.cameraRig.setOffsetX(context.leftPos() + context.offsetX() + maxX / 2.0f - context.screenWidth() / 2.0f + this.panOffsetX);
+        this.cameraRig.setOffsetY(context.screenHeight() / 2.0f - this.contentHeight + this.bottomHeight / 2.0f
+            - context.topPos() - context.offsetY() + this.panOffsetY);
+        this.inversePreviewMatrix = this.cameraRig.buildProjectionMatrix().mul(this.cameraRig.buildViewMatrix()).invert();
+        this.previewScreenWidth = context.screenWidth();
+        this.previewScreenHeight = context.screenHeight();
+        this.previewOriginX = context.leftPos() + context.offsetX();
+        this.previewOriginY = context.topPos() + context.offsetY();
+        this.previewWidth = maxX;
+        this.clickThreshold = 3.0f * context.scale();
+        // 结构使用独立的正交深度范围；只在当前预览裁剪区内隔离它与前后 GUI 的深度。
+        graphics.flush();
+        RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         StructurePreviewRenderer.getInstance()
             .render(
                 this.previewLevel,
@@ -139,9 +171,11 @@ public final class MDNBTStructureComponent extends MDComponent {
                 this.visibleMinY,
                 this.visibleMinY + this.visibleLayerCount
             );
+        RenderSystem.clear(GlConst.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
+        this.renderBlockDetails(context);
     }
 
     private boolean isHoverProjectionButton(int maxX, float mouseX, float mouseY) {
@@ -171,28 +205,25 @@ public final class MDNBTStructureComponent extends MDComponent {
     private void renderButton(MDRenderContext context) {
         GuiGraphics graphics = context.graphics();
         int exportX = context.maxX() - 21;
-        boolean exportHover = isHoverExportButton(context.maxX(), context.mouseX(), context.mouseY());
-        graphics.fill(exportX, 25, exportX + 16, 41, exportHover ? 0xBBAAAAAA : 0x88444444);
-        // Download arrow and tray, using pixel geometry so no external texture is required.
-        graphics.fill(exportX + 7, 28, exportX + 9, 34, 0xFFFFFFFF);
-        graphics.fill(exportX + 5, 32, exportX + 11, 34, 0xFFFFFFFF);
-        graphics.fill(exportX + 6, 34, exportX + 10, 35, 0xFFFFFFFF);
-        graphics.fill(exportX + 7, 35, exportX + 9, 36, 0xFFFFFFFF);
-        graphics.fill(exportX + 4, 37, exportX + 12, 39, 0xFFFFFFFF);
+        boolean mouseVisible = isMouseVisible(context);
+        boolean exportHover = mouseVisible && isHoverExportButton(context.maxX(), context.mouseX(), context.mouseY());
+        graphics.blit(GuideTheme.texture(BUTTON_EXPORT_LOCATION), exportX, 25, 16, 16,
+            0, exportHover ? 16 : 0, 16, 16, 16, 32);
         if (exportHover) {
             context.addTooltip(Component.translatable("tooltip.ageratum.structure_export"));
         }
-        boolean isHover = isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
+        boolean isHover = mouseVisible && isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY());
         graphics.blit(
-            BUTTON_PROJECTION_LOCATION,
+            GuideTheme.texture(BUTTON_PROJECTION_LOCATION),
             context.maxX() - AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_RIGHT_MARGIN,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_TOP_MARGIN,
-            0,
-            0,
-            isHover ? AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT : 0,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
             AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_HEIGHT,
-            AgeratumConstants.GuideScreenUI.Positions.STRUCTURE_BUTTON_WIDTH,
+            0,
+            isHover ? 16 : 0,
+            16,
+            16,
+            16,
             32
         );
         if (isHover) {
@@ -259,6 +290,11 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != 0 && button != 1) {
             return false;
         }
+        // 屏幕为内容区预留的边距可能使事件宽度与实际渲染宽度略有不同。
+        if (this.previewWidth > 0) {
+            maxX = this.previewWidth;
+        }
+        this.dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
         if (button == 0 && this.structureTemplateCache != null
             && this.isHoverExportButton(maxX, (float) mouseX, (float) mouseY)) {
             StructureExportClient.export(this.target.location(), this.structureTemplateCache);
@@ -298,6 +334,9 @@ public final class MDNBTStructureComponent extends MDComponent {
             return true;
         }
         this.dragButton = button;
+        this.pressX = mouseX;
+        this.pressY = mouseY;
+        this.dragging = false;
         return true;
     }
 
@@ -305,6 +344,18 @@ public final class MDNBTStructureComponent extends MDComponent {
     public boolean mouseDragged(Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX) {
         if (button != this.dragButton) {
             return false;
+        }
+
+        if (!this.dragging) {
+            double distanceX = mouseX - this.pressX;
+            double distanceY = mouseY - this.pressY;
+            if (distanceX * distanceX + distanceY * distanceY <= this.clickThreshold * this.clickThreshold) {
+                return true;
+            }
+            this.dragging = true;
+            // 在越过拖动阈值时补上此前忽略的移动，避免相机跳动或丢失位移。
+            dragX = distanceX;
+            dragY = distanceY;
         }
 
         if (button == 0) {
@@ -329,7 +380,59 @@ public final class MDNBTStructureComponent extends MDComponent {
             return false;
         }
         this.dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
+        double distanceX = mouseX - this.pressX;
+        double distanceY = mouseY - this.pressY;
+        if (button == 0 && !this.dragging
+            && distanceX * distanceX + distanceY * distanceY <= this.clickThreshold * this.clickThreshold
+            && isHover(1, 1, this.previewWidth - 2, this.contentHeight - 2, (float) mouseX, (float) mouseY)) {
+            this.selectedBlock = this.pickBlock(mouseX, mouseY);
+        }
+        this.dragging = false;
         return true;
+    }
+
+    private @Nullable BlockPos pickBlock(double mouseX, double mouseY) {
+        if (this.previewLevel == null || this.inversePreviewMatrix == null
+            || this.previewScreenWidth <= 0 || this.previewScreenHeight <= 0) {
+            return null;
+        }
+        float clipX = (float) (2.0 * (mouseX + this.previewOriginX) / this.previewScreenWidth - 1.0);
+        float clipY = (float) (1.0 - 2.0 * (mouseY + this.previewOriginY) / this.previewScreenHeight);
+        Vector3f near = this.inversePreviewMatrix.transformProject(new Vector3f(clipX, clipY, -1.0f));
+        Vector3f far = this.inversePreviewMatrix.transformProject(new Vector3f(clipX, clipY, 1.0f));
+        return StructurePreviewPicker.pick(this.previewLevel, new Vec3(near.x, near.y, near.z),
+            new Vec3(far.x, far.y, far.z), this.visibleMinY, this.visibleMinY + this.visibleLayerCount);
+    }
+
+    private void renderBlockDetails(MDRenderContext context) {
+        if (this.previewLevel == null || this.structureTemplateCache == null) {
+            return;
+        }
+        if (this.selectedBlock != null && (this.selectedBlock.getY() < this.visibleMinY
+            || this.selectedBlock.getY() >= this.visibleMinY + this.visibleLayerCount)) {
+            this.selectedBlock = null;
+        }
+        if (this.dragButton != AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON
+            || !isMouseVisible(context)
+            || !isHover(1, 1, context.maxX() - 2, this.contentHeight - 2, context.mouseX(), context.mouseY())
+            || this.isHoverProjectionButton(context.maxX(), context.mouseX(), context.mouseY())
+            || this.isHoverExportButton(context.maxX(), context.mouseX(), context.mouseY())
+            || context.mouseY() < 4 + context.minecraft().font.lineHeight
+                + AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING * 2) {
+            return;
+        }
+        if (this.selectedBlock == null) {
+            context.addTooltip(Component.translatable("tooltip.ageratum.structure_preview.inspect"));
+        } else {
+            context.addTooltip(StructurePreviewPicker.tooltip(this.previewLevel, this.selectedBlock,
+                StructureSandboxFactory.centeredPlacement(this.structureTemplateCache)));
+        }
+    }
+
+    private static boolean isMouseVisible(MDRenderContext context) {
+        Vector3f screenMouse = context.graphics().pose().last().pose()
+            .transformPosition(new Vector3f(context.mouseX(), context.mouseY(), 0.0f));
+        return context.graphics().containsPointInScissor(Math.round(screenMouse.x), Math.round(screenMouse.y));
     }
 
     private void ensureLayerPreviewInitialized() {
@@ -355,6 +458,8 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void resetLayerPreview() {
+        this.selectedBlock = null;
+        this.inversePreviewMatrix = null;
         this.visibleMinY = 0;
         this.totalLayerCount = 1;
         this.visibleLayerCount = 1;
@@ -390,8 +495,9 @@ public final class MDNBTStructureComponent extends MDComponent {
         int btnDownX = btnUpX + btnSize + btnGap;
         float mouseX = context.mouseX();
         float mouseY = context.mouseY();
-        boolean hoverUp = isHover(btnUpX, startY, btnSize, btnSize, mouseX, mouseY);
-        boolean hoverDown = isHover(btnDownX, startY, btnSize, btnSize, mouseX, mouseY);
+        boolean mouseVisible = isMouseVisible(context);
+        boolean hoverUp = mouseVisible && isHover(btnUpX, startY, btnSize, btnSize, mouseX, mouseY);
+        boolean hoverDown = mouseVisible && isHover(btnDownX, startY, btnSize, btnSize, mouseX, mouseY);
 
         int btnBgUp = hoverUp ? 0x88AAAAAA : 0x88444444;
         int btnBgDown = hoverDown ? 0x88AAAAAA : 0x88444444;

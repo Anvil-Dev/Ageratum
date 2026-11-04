@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -147,7 +148,7 @@ public class MDTableComponent extends MDComponent {
             int rowH = rowHeight(minecraft, row, colWidth, isHeader);
 
             if (isHeader) {
-                guiGraphics.fill(1, y, maxX - 1, y + rowH, HEADER_COLOR);
+                guiGraphics.fill(1, y, maxX - 1, y + rowH, GuideTheme.color(HEADER_COLOR, 0x3355AAFF));
             } else if ((rowIdx - (this.hasHeader ? 1 : 0)) % 2 == 1) {
                 guiGraphics.fill(1, y, maxX - 1, y + rowH, ALT_ROW_COLOR);
             }
@@ -166,7 +167,7 @@ public class MDTableComponent extends MDComponent {
                         case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
                         default -> 0;
                     };
-                    guiGraphics.drawString(minecraft.font, seq, drawX, 0, 0x000000, false);
+                    guiGraphics.drawString(minecraft.font, GuideTheme.text(seq), drawX, 0, GuideTheme.textColor(), false);
                     pose.translate(0, minecraft.font.lineHeight, 0);
                 }
                 pose.popPose();
@@ -177,7 +178,7 @@ public class MDTableComponent extends MDComponent {
             }
 
             if (rowIdx < this.rows.size() - 1) {
-                int sepColor = (isHeader) ? HEADER_SEP_COLOR : BORDER_COLOR;
+                int sepColor = GuideTheme.color(isHeader ? HEADER_SEP_COLOR : BORDER_COLOR, 0x886F737A);
                 guiGraphics.hLine(1, maxX - 2, y + rowH - 1, sepColor);
             }
 

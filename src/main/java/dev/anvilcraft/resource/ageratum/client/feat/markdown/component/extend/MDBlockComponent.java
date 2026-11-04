@@ -4,6 +4,7 @@ import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
@@ -99,7 +100,7 @@ GuiGraphics graphics = context.graphics();
         if (this.showText) {
             Component hoverName = state.getBlock().getName();
             int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.drawString(font, hoverName, 16 - width / 2, 32, GuideTheme.textColor(), false);
         }
     }
 

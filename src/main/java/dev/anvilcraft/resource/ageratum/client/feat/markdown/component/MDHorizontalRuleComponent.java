@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -27,7 +28,7 @@ public class MDHorizontalRuleComponent extends MDComponent {
         int maxX = context.maxX();
         GuiGraphics guiGraphics = context.graphics();
         int y = minecraft.font.lineHeight / 2;
-        guiGraphics.hLine(0, Math.max(0, maxX - 1), y, 0x88000000);
+        guiGraphics.hLine(0, Math.max(0, maxX - 1), y, GuideTheme.color(0x88000000, 0x88777777));
     }
 
     /**

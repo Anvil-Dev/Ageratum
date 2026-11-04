@@ -134,6 +134,8 @@ public class StructurePreviewRenderer {
         Lighting.setupLevel();
 
         renderContent(level, buffers, visibleMinY, visibleMaxYExclusive);
+        // 自定义方块实体也可能使用上述标准渲染层以外的缓冲，必须在恢复 GUI 矩阵前提交。
+        buffers.endBatch();
 
         modelViewStack.popMatrix();
         RenderSystem.applyModelViewMatrix();

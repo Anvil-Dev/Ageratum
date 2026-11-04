@@ -87,3 +87,7 @@ This order follows vanilla `LevelRenderer` behavior closely to reduce visual art
 - `./gradlew runStructureTest -PstructureTest`: runs an isolated hidden client under `build/structure-test` to verify projections, resource reload, cleanup and chunked exports. Test sources are excluded from release JARs.
 - Automated tests do not replace manual acceptance of the guide button layout, visual quality or remote multiplayer servers.
 
+
+## Inspecting blocks
+
+Left-click a block in a structure or machine preview to show its localized name, registry ID, coordinates within the structure, and every block-state property while the pointer is over the preview. Click empty space to clear the selection. Hidden layers are excluded from picking. Left-drag pans, right-drag rotates, and Ctrl+scroll zooms; dragging does not select a block.

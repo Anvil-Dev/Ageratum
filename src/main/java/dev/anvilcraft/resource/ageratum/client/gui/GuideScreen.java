@@ -806,7 +806,7 @@ public class GuideScreen extends Screen {
         float scaleX = (float) this.imageWidth / GUIDE_IMAGE_WIDTH;
         float scaleY = (float) this.imageHeight / GUIDE_IMAGE_HEIGHT;
         pose.scale(this.getBgImageScale(), this.getBgImageScale(), 1.0f);
-        guiGraphics.blit(GUIDE_LOCATION, 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
+        guiGraphics.blit(GuideTheme.texture(GUIDE_LOCATION), 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
         pose.popPose();
     }
 
@@ -869,7 +869,7 @@ public class GuideScreen extends Screen {
         pose.pushPose();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
         guiGraphics.blit(
-            BUTTON_CLOSE_LOCATION,
+            GuideTheme.texture(BUTTON_CLOSE_LOCATION),
             originX * this.getLabelScaleCountDown(),
             originY * this.getLabelScaleCountDown(),
             0,
@@ -884,7 +884,7 @@ public class GuideScreen extends Screen {
             originY += BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
             guiGraphics.blit(
-                BUTTON_SHARE_LOCATION,
+                GuideTheme.texture(BUTTON_SHARE_LOCATION),
                 originX * this.getLabelScaleCountDown(),
                 originY * this.getLabelScaleCountDown(),
                 0,
@@ -896,12 +896,21 @@ public class GuideScreen extends Screen {
                 BUTTON_IMAGE_SIZE
             );
         }
+        // 主题切换按钮，放在底部返回按钮上方并预留书签空间。
+        originY = this.getThemeButtonY();
+        isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
+        guiGraphics.blit(
+            GuideTheme.texture(Ageratum.location("textures/gui/guide/button_dark.png")),
+            originX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(),
+            0, 0, isHover ? BUTTON_IMAGE_HEIGHT : 0,
+            BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE
+        );
         // 返回按钮
         if (this.hasReturnButton()) {
             originY = this.getReturnButtonY();
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
             guiGraphics.blit(
-                BUTTON_RETURN_LOCATION,
+                GuideTheme.texture(BUTTON_RETURN_LOCATION),
                 originX * this.getLabelScaleCountDown(),
                 originY * this.getLabelScaleCountDown(),
                 0,
@@ -937,6 +946,11 @@ public class GuideScreen extends Screen {
         return this.imageHeight - BUTTON_IMAGE_HEIGHT - this.getLabelStartY();
     }
 
+    private int getThemeButtonY() {
+        return this.getReturnButtonY() - (this.hasReturnButton()
+            ? BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING : 0);
+    }
+
     private boolean hasReturnButton() {
         return !this.breadCrumbs.isEmpty();
     }
@@ -967,6 +981,10 @@ public class GuideScreen extends Screen {
                 this.addCurrentPageToBookmarks();
                 return true;
             }
+        }
+        if (this.mouseInRange(closeButtonX, this.getThemeButtonY(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
+            GuideTheme.toggle();
+            return true;
         }
         if (!this.hasReturnButton()) {
             return false;
@@ -1010,7 +1028,7 @@ public class GuideScreen extends Screen {
             float alpha = this.computeArrowAlpha(this.labelScrollRows);
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
             guiGraphics.blit(
-                BUTTON_UP_LOCATION,
+                GuideTheme.texture(BUTTON_UP_LOCATION),
                 arrowX * this.getLabelScaleCountDown(),
                 arrowUpY * this.getLabelScaleCountDown(),
                 0,
@@ -1028,7 +1046,7 @@ public class GuideScreen extends Screen {
             float alpha = this.computeArrowAlpha(rowsToBottom);
             guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
             guiGraphics.blit(
-                BUTTON_DOWN_LOCATION,
+                GuideTheme.texture(BUTTON_DOWN_LOCATION),
                 arrowX * this.getLabelScaleCountDown(),
                 arrowDownY * this.getLabelScaleCountDown(),
                 0,
@@ -1076,9 +1094,7 @@ public class GuideScreen extends Screen {
     }
 
     private int getBookmarkViewportBottomY() {
-        int bottom = this.hasReturnButton()
-                     ? this.getReturnButtonY() - AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING
-                     : this.getContentStartY() + this.getContentHeight();
+        int bottom = this.getThemeButtonY() - AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
         return Math.max(
             this.getBookmarkViewportTopY() + this.labelHeight,
             bottom - (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING)
@@ -1159,7 +1175,7 @@ public class GuideScreen extends Screen {
         pose.pushPose();
         pose.scale(labelScale, labelScale, labelScale);
         guiGraphics.blit(
-            BUTTON_ADD_LOCATION,
+            GuideTheme.texture(BUTTON_ADD_LOCATION),
             addX * this.getLabelScaleCountDown(),
             addY * this.getLabelScaleCountDown(),
             0,
@@ -1188,7 +1204,7 @@ public class GuideScreen extends Screen {
             pose.pushPose();
             pose.scale(labelScale, labelScale, labelScale);
             guiGraphics.blit(
-                LABEL_BOOKMARK_LOCATION,
+                GuideTheme.texture(LABEL_BOOKMARK_LOCATION),
                 renderX * this.getLabelScaleCountDown(),
                 originY * this.getLabelScaleCountDown(),
                 0,
@@ -1200,7 +1216,7 @@ public class GuideScreen extends Screen {
                 LABEL_IMAGE_HEIGHT
             );
             pose.popPose();
-            int textColor = AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT;
+            int textColor = GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT, 0xFFE0D2BD);
             int width = this.font.width(this.fitLabelTitle(entry.title()));
             guiGraphics.drawString(
                 this.font,
@@ -1223,7 +1239,7 @@ public class GuideScreen extends Screen {
                 float alpha = this.computeArrowAlpha(this.bookmarkScrollRows);
                 guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
                 guiGraphics.blit(
-                    BUTTON_UP_LOCATION,
+                    GuideTheme.texture(BUTTON_UP_LOCATION),
                     arrowX * this.getLabelScaleCountDown(),
                     arrowUpY * this.getLabelScaleCountDown(),
                     0,
@@ -1241,7 +1257,7 @@ public class GuideScreen extends Screen {
                 float alpha = this.computeArrowAlpha(rowsToBottom);
                 guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
                 guiGraphics.blit(
-                    BUTTON_DOWN_LOCATION,
+                    GuideTheme.texture(BUTTON_DOWN_LOCATION),
                     arrowX * this.getLabelScaleCountDown(),
                     arrowDownY * this.getLabelScaleCountDown(),
                     0,
@@ -2346,7 +2362,7 @@ public class GuideScreen extends Screen {
         pose.pushPose();
         pose.scale(labelImageScale, labelImageScale, labelImageScale);
         guiGraphics.blit(
-            entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION,
+            GuideTheme.texture(entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION),
             originX * this.getLabelScaleCountDown(),
             originY * this.getLabelScaleCountDown(),
             0,
@@ -2359,11 +2375,11 @@ public class GuideScreen extends Screen {
         );
         pose.popPose();
         int textColor = isActive
-                        ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE
+                        ? GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE, 0xFFFFD18A)
                         : (
                             entry.clickable
-                            ? AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE
-                            : AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED
+                            ? GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE, 0xFFE0D2BD)
+                            : GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED, 0xFFAAAAAA)
                         );
         int resolvedColor = (entry.color != null && !isActive) ? entry.color : textColor;
         String displayTitle = this.fitLabelTitle(entry.title);
@@ -2387,6 +2403,12 @@ public class GuideScreen extends Screen {
      * <p>对父标签显示完整名称和左键折叠/展开提示。</p>
      */
     private void renderLabelTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (this.mouseInRange(this.getCloseButtonX(), this.getThemeButtonY(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY)) {
+            guiGraphics.renderTooltip(this.font,
+                Component.translatable(GuideTheme.isDark() ? "tooltip.ageratum.light_mode" : "tooltip.ageratum.dark_mode"),
+                this.leftPos + mouseX, this.topPos + mouseY);
+            return;
+        }
         int pinnedParentIndex = this.findPinnedParentIndex();
         int pinnedRowCount = pinnedParentIndex >= 0 ? 1 : 0;
         int start = this.getLabelViewportStart(pinnedRowCount);

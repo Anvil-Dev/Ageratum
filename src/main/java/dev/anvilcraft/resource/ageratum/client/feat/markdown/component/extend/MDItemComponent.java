@@ -7,6 +7,7 @@ import com.mojang.serialization.JsonOps;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
@@ -68,7 +69,7 @@ public class MDItemComponent extends MDImageComponent {
         if (this.showText) {
             Component hoverName = itemStack.getHoverName();
             int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, 0x00000000, false);
+            graphics.drawString(font, hoverName, 16 - width / 2, 32, GuideTheme.textColor(), false);
         }
     }
 

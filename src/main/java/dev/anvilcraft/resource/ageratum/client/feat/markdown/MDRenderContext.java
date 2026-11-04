@@ -101,30 +101,38 @@ public record MDRenderContext(
     }
 
     public void renderTooltip() {
-        for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
-            ItemStack stack = tooltip.stack();
-            int mouseX = Math.round(this.mouseX());
-            int mouseY = Math.round(this.mouseY());
-            if (stack.isEmpty()) {
-                this.graphics()
-                    .renderTooltip(
-                        this.minecraft().font,
-                        tooltip.tooltipLines(),
-                        tooltip.visualTooltipComponent(),
-                        mouseX,
-                        mouseY
-                    );
-            } else {
-                this.graphics()
-                    .renderTooltip(
-                        this.minecraft().font,
-                        tooltip.tooltipLines(),
-                        tooltip.visualTooltipComponent(),
-                        stack,
-                        mouseX,
-                        mouseY
-                    );
+        // 原版提示框按整个屏幕限制宽度和位置；保留手册缩放，但移除书页原点偏移。
+        var pose = this.graphics().pose();
+        pose.pushPose();
+        pose.translate(-this.leftPos(), -this.topPos(), 0);
+        try {
+            int mouseX = Math.round(this.mouseX() + this.leftPos());
+            int mouseY = Math.round(this.mouseY() + this.topPos());
+            for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
+                ItemStack stack = tooltip.stack();
+                if (stack.isEmpty()) {
+                    this.graphics()
+                        .renderTooltip(
+                            this.minecraft().font,
+                            tooltip.tooltipLines(),
+                            tooltip.visualTooltipComponent(),
+                            mouseX,
+                            mouseY
+                        );
+                } else {
+                    this.graphics()
+                        .renderTooltip(
+                            this.minecraft().font,
+                            tooltip.tooltipLines(),
+                            tooltip.visualTooltipComponent(),
+                            stack,
+                            mouseX,
+                            mouseY
+                        );
+                }
             }
+        } finally {
+            pose.popPose();
         }
     }
 

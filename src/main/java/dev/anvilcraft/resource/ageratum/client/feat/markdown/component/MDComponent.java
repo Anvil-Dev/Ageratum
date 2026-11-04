@@ -5,6 +5,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.ExtensionParamParse
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDInlineComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -50,7 +51,6 @@ public abstract class MDComponent {
     private static final String COMMONMARK_ESCAPABLE_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     private static final String ESCAPE_TOKEN_PREFIX = "%%MDESC";
     private static final String ESCAPE_TOKEN_SUFFIX = "%%";
-    private static final int CODE_SPAN_COLOR = 0x7a4f2f;
     /**
      * -- GETTER --
      * 获取组件的 FormattedText。
@@ -108,7 +108,7 @@ public abstract class MDComponent {
         int line = 0;
         for (FormattedCharSequence sequence : split) {
             if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.drawString(minecraft.font, sequence, 0, minecraft.font.lineHeight * line, 0x000000, false);
+            guiGraphics.drawString(minecraft.font, GuideTheme.text(sequence), 0, minecraft.font.lineHeight * line, GuideTheme.textColor(), false);
             line++;
             maxY -= minecraft.font.lineHeight;
         }
@@ -300,7 +300,7 @@ public abstract class MDComponent {
             if (codeSpan.length() >= 2 && codeSpan.startsWith(" ") && codeSpan.endsWith(" ") && !codeSpan.isBlank()) {
                 codeSpan = codeSpan.substring(1, codeSpan.length() - 1);
             }
-            parts.add(FormattedText.of(codeSpan, baseStyle.withColor(CODE_SPAN_COLOR)));
+            parts.add(GuideTheme.inlineCode(codeSpan, baseStyle));
             pos = closeStart + tickCount;
         }
 

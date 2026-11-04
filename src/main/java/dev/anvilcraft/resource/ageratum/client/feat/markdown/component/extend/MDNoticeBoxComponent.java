@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -84,7 +85,7 @@ public class MDNoticeBoxComponent extends MDComponent {
         int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
 
         // 绘制背景
-        guiGraphics.fill(0, 0, maxX, boxHeight, this.type.getBackgroundColor());
+        guiGraphics.fill(0, 0, maxX, boxHeight, GuideTheme.noticeBackground(this.type.getBackgroundColor()));
 
         // 绘制左侧边框
         guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());

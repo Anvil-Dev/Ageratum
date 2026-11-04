@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -220,7 +221,7 @@ public class MDCodeBlockComponent extends MDComponent {
         int maxY = context.maxY();
         GuiGraphics guiGraphics = context.graphics();
         int blockHeight = this.getHeight(minecraft, maxX, maxY);
-        guiGraphics.fill(0, 0, maxX, blockHeight, BACKGROUND_COLOR);
+        guiGraphics.fill(0, 0, maxX, blockHeight, GuideTheme.color(BACKGROUND_COLOR, 0x55222222));
         guiGraphics.renderOutline(0, 0, maxX, blockHeight, BORDER_COLOR);
         int gutterWidth = this.getGutterWidth(minecraft, this.codeLines.size());
         int contentWidth = this.getContentWidth(minecraft, maxX);
@@ -270,7 +271,7 @@ public class MDCodeBlockComponent extends MDComponent {
                 String lineStr = String.valueOf(lineNumber);
                 int lineNumX = PADDING + gutterWidth - minecraft.font.width(lineStr) - 1;
                 int lineNumY = PADDING + y;
-                guiGraphics.drawString(minecraft.font, lineStr, lineNumX, lineNumY, LINE_NUMBER_COLOR, false);
+                guiGraphics.drawString(minecraft.font, lineStr, lineNumX, lineNumY, GuideTheme.color(LINE_NUMBER_COLOR, 0xFFAAAAAA), false);
             }
 
             if (split.isEmpty()) {
@@ -283,10 +284,10 @@ public class MDCodeBlockComponent extends MDComponent {
                 for (FormattedCharSequence sequence : split) {
                     guiGraphics.drawString(
                         minecraft.font,
-                        sequence,
+                        GuideTheme.codeText(sequence),
                         strX,
                         PADDING + y,
-                        0x000000,
+                        GuideTheme.textColor(),
                         false
                     );
                     y += minecraft.font.lineHeight;

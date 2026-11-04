@@ -11,6 +11,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineComponents;
@@ -57,6 +58,7 @@ public class AgeratumClient {
      * @param modContainer 模组容器
      */
     public AgeratumClient(IEventBus modEventBus, ModContainer modContainer) {
+        modEventBus.addListener(GuideTheme::onConfigLoading);
         // 注册自定义注册表
         AgeratumRegistries.register(modEventBus);
         // 触发内置扩展组件注册项的类加载
