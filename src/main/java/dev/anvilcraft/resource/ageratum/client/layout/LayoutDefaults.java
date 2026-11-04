@@ -54,7 +54,7 @@ public final class LayoutDefaults {
         layout.getAsJsonObject("content").getAsJsonObject("background").addProperty("location", directory + "guide");
         JsonObject textures = layout.getAsJsonObject("textures");
         for (String name : new String[]{"label_primary", "label_secondary", "label_bookmark", "button_close",
-            "button_share", "button_return", "button_add", "button_up", "button_down", "button_dark",
+            "button_share", "button_return", "button_add", "button_up", "button_down", "button_dark", "button_import",
             "scrollbar_track", "scrollbar_thumb", "zoom_track", "zoom_thumb"}) {
             String resource = switch (name) {
                 case "button_return" -> "button_back";
@@ -64,9 +64,25 @@ public final class LayoutDefaults {
             };
             JsonObject texture = textures.has(name) ? textures.getAsJsonObject(name) : new JsonObject();
             texture.addProperty("location", directory + resource);
+            if (name.equals("button_import")) {
+                texture.addProperty("width", 16);
+                texture.addProperty("height", 16);
+                texture.addProperty("texture_width", 16);
+                texture.addProperty("texture_height", 32);
+            }
             textures.add(name, texture);
         }
         JsonObject components = new JsonObject();
+        String componentDirectory = "ageratum:gui/" + (theme.equals("dark") ? "dark/" : "") + "component/";
+        JsonObject slot = new JsonObject();
+        slot.addProperty("location", componentDirectory + "slot");
+        components.add("item_slot", slot);
+        for (String name : new String[]{"anvil", "arrow", "crafting_table", "ember_smithing_table", "furnace",
+            "jewelcrafting_table", "plus", "slot", "slots_1n", "slots_2n", "slots_3n", "smithing_table", "stonecutter"}) {
+            JsonObject texture = new JsonObject();
+            texture.addProperty("location", componentDirectory + name);
+            components.add("recipe_" + name, texture);
+        }
         JsonObject projection = new JsonObject();
         projection.addProperty("location", directory + "button_projection");
         components.add("structure_button_projection", projection);

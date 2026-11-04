@@ -13,7 +13,61 @@
     "button_add": "ageratum:gui/guide/light/button_add",
     "button_up": "ageratum:gui/guide/light/button_up",
     "button_down": "ageratum:gui/guide/light/button_down",
-    "button_dark": "ageratum:gui/guide/light/button_dark"
+    "button_dark": "ageratum:gui/guide/light/button_dark",
+    "button_import": {
+      "location": "ageratum:gui/guide/light/button_import",
+      "width": 16,
+      "height": 16,
+      "texture_width": 16,
+      "texture_height": 32
+    },
+    "components": {
+      "item_slot": {
+        "location": "ageratum:gui/component/slot"
+      },
+      "recipe_anvil": {
+        "location": "ageratum:gui/component/anvil"
+      },
+      "recipe_arrow": {
+        "location": "ageratum:gui/component/arrow"
+      },
+      "recipe_crafting_table": {
+        "location": "ageratum:gui/component/crafting_table"
+      },
+      "recipe_ember_smithing_table": {
+        "location": "ageratum:gui/component/ember_smithing_table"
+      },
+      "recipe_furnace": {
+        "location": "ageratum:gui/component/furnace"
+      },
+      "recipe_jewelcrafting_table": {
+        "location": "ageratum:gui/component/jewelcrafting_table"
+      },
+      "recipe_plus": {
+        "location": "ageratum:gui/component/plus"
+      },
+      "recipe_slot": {
+        "location": "ageratum:gui/component/slot"
+      },
+      "recipe_slots_1n": {
+        "location": "ageratum:gui/component/slots_1n"
+      },
+      "recipe_slots_2n": {
+        "location": "ageratum:gui/component/slots_2n"
+      },
+      "recipe_slots_3n": {
+        "location": "ageratum:gui/component/slots_3n"
+      },
+      "recipe_smithing_table": {
+        "location": "ageratum:gui/component/smithing_table"
+      },
+      "recipe_stonecutter": {
+        "location": "ageratum:gui/component/stonecutter"
+      },
+      "structure_button_projection": {
+        "location": "ageratum:gui/guide/light/button_projection"
+      }
+    }
   },
   "colors": {
     "components": {

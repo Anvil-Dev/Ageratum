@@ -44,22 +44,49 @@
     },
     "components": {
       "item_slot": {
-        "tint": "#FF606A78"
+        "location": "ageratum:gui/dark/component/slot"
       },
       "recipe_crafting_table": {
-        "tint": "#FF606A78"
+        "location": "ageratum:gui/dark/component/crafting_table"
       },
       "recipe_furnace": {
-        "tint": "#FF606A78"
+        "location": "ageratum:gui/dark/component/furnace"
       },
       "recipe_smithing_table": {
-        "tint": "#FF606A78"
+        "location": "ageratum:gui/dark/component/smithing_table"
       },
       "recipe_stonecutter": {
-        "tint": "#FF606A78"
+        "location": "ageratum:gui/dark/component/stonecutter"
       },
       "structure_button_projection": {
         "location": "ageratum:gui/guide/dark/button_projection"
+      },
+      "recipe_anvil": {
+        "location": "ageratum:gui/dark/component/anvil"
+      },
+      "recipe_arrow": {
+        "location": "ageratum:gui/dark/component/arrow"
+      },
+      "recipe_ember_smithing_table": {
+        "location": "ageratum:gui/dark/component/ember_smithing_table"
+      },
+      "recipe_jewelcrafting_table": {
+        "location": "ageratum:gui/dark/component/jewelcrafting_table"
+      },
+      "recipe_plus": {
+        "location": "ageratum:gui/dark/component/plus"
+      },
+      "recipe_slot": {
+        "location": "ageratum:gui/dark/component/slot"
+      },
+      "recipe_slots_1n": {
+        "location": "ageratum:gui/dark/component/slots_1n"
+      },
+      "recipe_slots_2n": {
+        "location": "ageratum:gui/dark/component/slots_2n"
+      },
+      "recipe_slots_3n": {
+        "location": "ageratum:gui/dark/component/slots_3n"
       }
     },
     "button_dark": {
@@ -70,6 +97,13 @@
     },
     "zoom_thumb": {
       "location": "ageratum:gui/guide/dark/scrollbar_thumb"
+    },
+    "button_import": {
+      "location": "ageratum:gui/guide/dark/button_import",
+      "width": 16,
+      "height": 16,
+      "texture_width": 16,
+      "texture_height": 32
     }
   },
   "colors": {

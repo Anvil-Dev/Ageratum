@@ -130,7 +130,7 @@ layout: ageratum:fullscreen
 
 控件纹理键：`label_primary`、`label_secondary`、`label_bookmark`、`button_close`、`button_share`、`button_return`、`button_add`、`button_up`、`button_down`。放在 `textures` 下。
 
-`textures.components` 支持 `item_slot`、`recipe_crafting_table`、`recipe_furnace`、`recipe_smithing_table`、`recipe_stonecutter`、`structure_button_projection`。组件保持自己的逻辑尺寸及槽位坐标；更换源图片规格不会移动物品和悬停区域，也不会把配方变成任意自由布局。
+`textures.components` 支持 `item_slot`、`recipe_<贴图名称>`、`structure_button_projection`。内置明暗布局为 `anvil`、`arrow`、`crafting_table`、`ember_smithing_table`、`furnace`、`jewelcrafting_table`、`plus`、`slot`、`slots_1n`、`slots_2n`、`slots_3n`、`smithing_table`、`stonecutter` 提供对应原始贴图。组件保持自己的逻辑尺寸及槽位坐标；更换源图片规格不会移动物品和悬停区域，也不会把配方变成任意自由布局。
 
 颜色接受 `#RRGGBB`、`#AARRGGBB` 和 MC 命名颜色。`colors` 包含 `link`、`broken_link`、`label_text_active/clickable/disabled`、`bookmark_text`、`panel_text`、`content_text`、`background_gradient_start/end`。作者显式设置的正文颜色保留；目录当前项采用 active 颜色，其余条目保留文档导航颜色。
 

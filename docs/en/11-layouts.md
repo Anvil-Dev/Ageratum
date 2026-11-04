@@ -130,7 +130,7 @@ Texture locations accept `mymod:gui/guide/paper` or `mymod:textures/gui/guide/pa
 
 UI keys under `textures`: `label_primary`, `label_secondary`, `label_bookmark`, `button_close`, `button_share`, `button_return`, `button_add`, `button_up`, `button_down`.
 
-Keys under `textures.components`: `item_slot`, `recipe_crafting_table`, `recipe_furnace`, `recipe_smithing_table`, `recipe_stonecutter`, `structure_button_projection`. Components retain their logical sizes, item coordinates and hover regions when source image dimensions change. Skinning does not introduce arbitrary recipe slot positioning.
+Keys under `textures.components`: `item_slot`, `recipe_<texture name>`, `structure_button_projection`. The bundled light and dark layouts provide original textures for `anvil`, `arrow`, `crafting_table`, `ember_smithing_table`, `furnace`, `jewelcrafting_table`, `plus`, `slot`, `slots_1n`, `slots_2n`, `slots_3n`, `smithing_table` and `stonecutter`. Components retain their logical sizes, item coordinates and hover regions when source image dimensions change. Skinning does not introduce arbitrary recipe slot positioning.
 
 Colors accept `#RRGGBB`, `#AARRGGBB` and Minecraft named colors. `colors` supports `link`, `broken_link`, `label_text_active/clickable/disabled`, `bookmark_text`, `panel_text`, `content_text`, `background_gradient_start/end`. Explicit document text colors survive theming. The active tree row uses the active color; other rows preserve document navigation colors.
 

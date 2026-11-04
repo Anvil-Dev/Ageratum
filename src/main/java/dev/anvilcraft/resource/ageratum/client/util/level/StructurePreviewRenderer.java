@@ -3,8 +3,11 @@ package dev.anvilcraft.resource.ageratum.client.util.level;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructurePreviewPipRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -39,10 +42,7 @@ public final class StructurePreviewRenderer {
             (float) Math.hypot(graphics.pose().m10(), graphics.pose().m11()));
         if (parentScale <= 0 || maxX <= 0 || height <= 0) return;
         float pixelsPerBlock = 10.0f * cameraRig.getZoom();
-        var transform = new Matrix4f().translate(panOffsetX / pixelsPerBlock, panOffsetY / pixelsPerBlock, 0)
-            .rotateZ(Mth.DEG_TO_RAD * cameraRig.getRotationZ())
-            .rotateX(Mth.DEG_TO_RAD * cameraRig.getRotationX())
-            .rotateY(Mth.DEG_TO_RAD * cameraRig.getRotationY());
+        var transform = createTransform(cameraRig, panOffsetX, panOffsetY);
         int x0 = Math.round(graphics.pose().m20());
         int y0 = Math.round(graphics.pose().m21());
         int x1 = x0 + Math.max(1, Math.round(Math.min(maxX, 8192) * parentScale));
@@ -50,5 +50,33 @@ public final class StructurePreviewRenderer {
         var state = new StructurePreviewPipRenderer.State(level, visibleMinY, visibleMaxYExclusive,
             transform, x0, y0, x1, y1, pixelsPerBlock * parentScale, graphics.peekScissorStack());
         if (state.bounds() != null) graphics.submitPictureInPictureRenderState(state);
+    }
+
+    /** 使用与 PiP 绘制一致的局部坐标和相机变换，界面缩放不影响选取。 */
+    public @Nullable BlockPos pick(
+        SandboxRenderLevel level, ViewportCameraRig cameraRig, int width, int height,
+        double mouseX, double mouseY, int minY, int maxY, float panOffsetX, float panOffsetY
+    ) {
+        float pixelsPerBlock = 10.0f * cameraRig.getZoom();
+        if (pixelsPerBlock <= 0 || width <= 0 || height <= 0) return null;
+        Matrix4f inverse = createTransform(cameraRig, panOffsetX, panOffsetY).invert();
+        float x = (float) (mouseX - width / 2.0) / pixelsPerBlock;
+        float y = (float) (height / 2.0 - mouseY) / pixelsPerBlock;
+        var bounds = level.getBounds();
+        float depth = new Vector3f(
+            Math.max(Math.abs(bounds.min().getX()), Math.abs(bounds.max().getX())),
+            Math.max(Math.abs(bounds.min().getY()), Math.abs(bounds.max().getY())),
+            Math.max(Math.abs(bounds.min().getZ()), Math.abs(bounds.max().getZ()))).length() + 2;
+        Vector3f near = inverse.transformPosition(new Vector3f(x, y, depth));
+        Vector3f far = inverse.transformPosition(new Vector3f(x, y, -depth));
+        return StructurePreviewPicker.pick(level, new Vec3(near), new Vec3(far), minY, maxY);
+    }
+
+    private static Matrix4f createTransform(ViewportCameraRig cameraRig, float panOffsetX, float panOffsetY) {
+        float pixelsPerBlock = 10.0f * cameraRig.getZoom();
+        return new Matrix4f().translate(panOffsetX / pixelsPerBlock, panOffsetY / pixelsPerBlock, 0)
+            .rotateZ(Mth.DEG_TO_RAD * cameraRig.getRotationZ())
+            .rotateX(Mth.DEG_TO_RAD * cameraRig.getRotationX())
+            .rotateY(Mth.DEG_TO_RAD * cameraRig.getRotationY());
     }
 }

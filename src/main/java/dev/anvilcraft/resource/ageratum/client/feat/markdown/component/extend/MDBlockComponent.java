@@ -62,7 +62,10 @@ public class MDBlockComponent extends MDImageComponent {
     @Override
     protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphicsExtractor graphics = context.graphics();
-        this.innerBlit(graphics, this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
+        context.layout().componentTexture(Identifier.parse("ageratum:item_slot"),
+            dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture.of(
+                this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height()))
+            .draw(graphics, 0, 0, SLOT_SIZE, SLOT_SIZE, false);
         this.extractBlockRenderState(context, mouseX, mouseY);
     }
 

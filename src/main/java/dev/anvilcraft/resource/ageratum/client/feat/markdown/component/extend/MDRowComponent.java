@@ -44,6 +44,8 @@ public class MDRowComponent extends MDComponent {
     private final Direction direction;
     private final HorizontalAlign horizontalAlign;
     private final VerticalAlign verticalAlign;
+    private @Nullable ChildHit activeMouseChild;
+    private int activeMouseButton = -1;
 
     public MDRowComponent(
         List<MDComponent> contentComponents,
@@ -314,56 +316,31 @@ public class MDRowComponent extends MDComponent {
     @Override
     public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
         ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
-        if (hit == null) {
+        if (hit == null || !hit.component.mouseClicked(minecraft, mouseX - hit.x, mouseY - hit.y, button, hit.width)) {
             return false;
         }
-        return hit.component.mouseClicked(
-            minecraft,
-            mouseX - hit.x,
-            mouseY - hit.y,
-            button,
-            hit.width
-        );
+        this.activeMouseChild = hit;
+        this.activeMouseButton = button;
+        return true;
     }
 
     @Override
     public boolean mouseDragged(
-        Minecraft minecraft,
-        double mouseX,
-        double mouseY,
-        int button,
-        double dragX,
-        double dragY,
-        int maxX
+        Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX
     ) {
-        ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
-        if (hit == null) {
-            return false;
-        }
-        return hit.component.mouseDragged(
-            minecraft,
-            mouseX - hit.x,
-            mouseY - hit.y,
-            button,
-            dragX,
-            dragY,
-            hit.width
+        ChildHit hit = this.activeMouseChild;
+        return hit != null && button == this.activeMouseButton && hit.component.mouseDragged(
+            minecraft, mouseX - hit.x, mouseY - hit.y, button, dragX, dragY, hit.width
         );
     }
 
     @Override
     public boolean mouseReleased(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
-        ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
-        if (hit == null) {
-            return false;
-        }
-        return hit.component.mouseReleased(
-            minecraft,
-            mouseX - hit.x,
-            mouseY - hit.y,
-            button,
-            hit.width
-        );
+        ChildHit hit = this.activeMouseChild;
+        if (hit == null || button != this.activeMouseButton) return false;
+        this.activeMouseChild = null;
+        this.activeMouseButton = -1;
+        return hit.component.mouseReleased(minecraft, mouseX - hit.x, mouseY - hit.y, button, hit.width);
     }
 
     @Override

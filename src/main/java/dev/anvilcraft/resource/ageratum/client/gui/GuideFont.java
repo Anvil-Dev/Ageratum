@@ -57,7 +57,8 @@ public final class GuideFont {
     public int width(FormattedCharSequence text) { return (int) Math.ceil(this.splitter.stringWidth(text)); }
 
     public String plainSubstrByWidth(String text, int width) {
-        return this.splitter.plainHeadByWidth(text, Math.max(0, width), Style.EMPTY);
+        // Titles may contain legacy § codes; count only visible glyphs, as width() does.
+        return this.splitter.headByWidth(FormattedText.of(text), Math.max(0, width), Style.EMPTY).getString();
     }
 
     public List<FormattedCharSequence> split(FormattedText text, int width) {
@@ -78,10 +79,9 @@ public final class GuideFont {
     }
 
     public void draw(GuiGraphicsExtractor graphics, String text, int x, int y, int color, boolean shadow) {
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y);
-        graphics.anvillib$text(this.font, text, 0, 0, color, shadow);
-        graphics.pose().popMatrix();
+        // The SDF string overload renders § codes literally. Use the same styled path
+        // as document text so colors, resets and font styles agree with our metrics.
+        this.draw(graphics, FormattedText.of(text), x, y, color, shadow);
     }
 
     public void draw(GuiGraphicsExtractor graphics, FormattedText text, int x, int y, int color, boolean shadow) {
