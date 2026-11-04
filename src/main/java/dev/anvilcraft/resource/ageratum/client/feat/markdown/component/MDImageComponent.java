@@ -165,6 +165,17 @@ public class MDImageComponent extends MDComponent {
 
     protected void extractContentRenderState(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphicsExtractor guiGraphics = context.graphics();
+        Identifier image = this.getImageLocation();
+        String prefix = "textures/gui/component/";
+        if (image.getNamespace().equals("ageratum") && image.getPath().startsWith(prefix)
+            && image.getPath().endsWith(".png")) {
+            String name = image.getPath().substring(prefix.length(), image.getPath().length() - 4);
+            context.layout().componentTexture(Identifier.fromNamespaceAndPath("ageratum", "recipe_" + name),
+                dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture.of(
+                    image, size.width(), size.height(), size.width(), size.height()))
+                .draw(guiGraphics, 0, 0, size.width(), size.height(), false);
+            return;
+        }
         this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 

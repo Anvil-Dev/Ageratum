@@ -102,18 +102,25 @@ public record MDRenderContext(
     }
 
     public void extractTooltipRenderState() {
-        for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
-            List<ClientTooltipComponent> list = new ArrayList<>();
-            tooltip.tooltipLines().forEach(component -> list.add(ClientTooltipComponent.create(component.getVisualOrderText())));
-            tooltip.visualTooltipComponent().ifPresent(component -> list.add(ClientTooltipComponent.create(component)));
-            this.graphics().tooltip(
-                this.minecraft().font,
-                list,
-                Math.round(this.mouseX()),
-                Math.round(this.mouseY()),
-                DefaultTooltipPositioner.INSTANCE,
-                null
-            );
+        // 提示定位器使用整个手册视口；撤销书页平移，同时保留手册缩放。
+        this.graphics().pose().pushMatrix();
+        this.graphics().pose().translate(-this.leftPos(), -this.topPos());
+        try {
+            for (MDRenderContext.Tooltip tooltip : this.tooltips()) {
+                List<ClientTooltipComponent> list = new ArrayList<>();
+                tooltip.tooltipLines().forEach(component -> list.add(ClientTooltipComponent.create(component.getVisualOrderText())));
+                tooltip.visualTooltipComponent().ifPresent(component -> list.add(ClientTooltipComponent.create(component)));
+                this.graphics().tooltip(
+                    this.minecraft().font,
+                    list,
+                    Math.round(this.mouseX()) + this.leftPos(),
+                    Math.round(this.mouseY()) + this.topPos(),
+                    DefaultTooltipPositioner.INSTANCE,
+                    null
+                );
+            }
+        } finally {
+            this.graphics().pose().popMatrix();
         }
     }
 

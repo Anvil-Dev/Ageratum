@@ -2,6 +2,15 @@
 
 This document explains how `MDNBTStructureComponent` renders `.nbt` / `.snbt` (SNBT) structures inside the guide UI, including the core pipeline and class responsibilities.
 
+
+## Block information and mouse controls
+
+- Left-click a block in the preview to inspect its translated name, registry ID, position within the structure, and every block state property (such as facing, powered, and waterlogged). The tooltip stays available while the pointer is over the preview. Click empty space to clear the selection.
+- Drag with the left button to pan, drag with the right button to rotate, and scroll to zoom. Dragging does not select a block.
+- Hide upper layers with the layer buttons or PageUp / PageDown to select exposed blocks below. Hiding the selected block's layer clears the selection.
+- Picking shares the rendering camera transform and uses block outlines, including under guide scaling, layouts, and row components.
+
+
 ---
 
 ## Overview

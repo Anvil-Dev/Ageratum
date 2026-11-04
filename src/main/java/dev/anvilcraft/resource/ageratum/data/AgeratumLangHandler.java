@@ -20,6 +20,10 @@ public class AgeratumLangHandler {
         provider.add("key.ageratum.structure_projection.remove", "Remove Structure Projection");
         provider.add("tooltip.ageratum.structure_projection.layer_shortcut", "Press %s / %s to adjust projection layers");
         provider.add("tooltip.ageratum.structure_projection.remove_shortcut", "Press %s to close projection");
+        provider.add("tooltip.ageratum.structure_preview.inspect", "Left-click to inspect a block; drag with left/right button to pan/rotate");
+        provider.add("tooltip.ageratum.structure_preview.position", "Structure position: %s, %s, %s");
+        provider.add("tooltip.ageratum.structure_preview.properties", "Block state:");
+        provider.add("tooltip.ageratum.structure_preview.empty_properties", "This block has no state properties");
         provider.add("key.category.ageratum.key", "Ageratum");
     }
 }

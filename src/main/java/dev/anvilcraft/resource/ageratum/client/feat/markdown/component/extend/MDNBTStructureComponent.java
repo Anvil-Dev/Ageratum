@@ -13,6 +13,7 @@ import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewPicker;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.BlockHitResult;
+import org.joml.Vector2f;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -78,6 +80,13 @@ public final class MDNBTStructureComponent extends MDComponent {
     private float panOffsetX;
     private float panOffsetY;
     private int dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
+    private double dragStartX;
+    private double dragStartY;
+    private boolean dragging;
+    private double clickThresholdSquared = 9.0d;
+    private @Nullable BlockPos selectedBlock;
+    private List<Component> selectedBlockTooltip = List.of();
+    private BlockPos placementPos = BlockPos.ZERO;
     private int visibleMinY;
     private int totalLayerCount = 1;
     private int visibleLayerCount = 1;
@@ -125,6 +134,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.ensureLayerPreviewInitialized();
 
         int height = this.getHeight(minecraft, maxX, context.maxY()); // 确保 scale 计算正确
+        double clickThreshold = 3.0d * context.scale();
+        this.clickThresholdSquared = clickThreshold * clickThreshold;
         graphics.outline(0, 0, maxX, height, 0xAA000000);
         graphics.fill(0, 0, maxX, height, 0x55000000);
         context.enableScissor(1, 1, maxX - 1, height - 1);
@@ -143,6 +154,31 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.renderLayerIndicator(context, graphics);
         this.renderButton(context);
         context.disableScissor();
+        this.renderSelectionTooltip(context);
+    }
+
+    private void renderSelectionTooltip(MDRenderContext context) {
+        if (this.selectedBlock != null && (this.selectedBlock.getY() < this.visibleMinY
+            || this.selectedBlock.getY() >= this.visibleMinY + this.visibleLayerCount)) {
+            this.selectedBlock = null;
+            this.selectedBlockTooltip = List.of();
+        }
+        if (!isHover(1, 1, context.maxX() - 2, this.contentHeight - 2, context.mouseX(), context.mouseY())
+            || this.isHoverControls(context.maxX(), context.mouseX(), context.mouseY()) || this.dragging) return;
+        Vector2f screenMouse = context.graphics().pose().transformPosition(context.mouseX(), context.mouseY(), new Vector2f());
+        if (!context.graphics().containsPointInScissor(Math.round(screenMouse.x), Math.round(screenMouse.y))) return;
+        List<Component> lines = this.selectedBlock != null ? this.selectedBlockTooltip
+            : List.of(Component.translatable("tooltip.ageratum.structure_preview.inspect"));
+        context.tooltips().add(new MDRenderContext.Tooltip(lines, java.util.Optional.empty()));
+    }
+
+    private boolean isHoverControls(int maxX, float mouseX, float mouseY) {
+        int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
+        int fontHeight = GuideFont.get().lineHeight;
+        int labelWidth = GuideFont.get().width("层数: " + this.visibleLayerCount + "/" + this.totalLayerCount);
+        int width = padding + labelWidth + padding + 2 + (fontHeight + padding) * 2 + 2 + padding;
+        return this.isHoverProjectionButton(maxX, mouseX, mouseY)
+            || isHover(4, 4, width, fontHeight + padding * 2, mouseX, mouseY);
     }
 
     private boolean isHoverProjectionButton(int maxX, float mouseX, float mouseY) {
@@ -245,7 +281,11 @@ public final class MDNBTStructureComponent extends MDComponent {
             }
             return true;
         }
+        if (this.isHoverControls(maxX, (float) mouseX, (float) mouseY)) return true;
         this.dragButton = button;
+        this.dragStartX = mouseX;
+        this.dragStartY = mouseY;
+        this.dragging = false;
         return true;
     }
 
@@ -253,6 +293,15 @@ public final class MDNBTStructureComponent extends MDComponent {
     public boolean mouseDragged(Minecraft minecraft, double mouseX, double mouseY, int button, double dragX, double dragY, int maxX) {
         if (button != this.dragButton) {
             return false;
+        }
+
+        if (!this.dragging) {
+            double totalX = mouseX - this.dragStartX;
+            double totalY = mouseY - this.dragStartY;
+            if (totalX * totalX + totalY * totalY <= this.clickThresholdSquared) return true;
+            this.dragging = true;
+            dragX = totalX;
+            dragY = totalY;
         }
 
         if (button == 0) {
@@ -276,7 +325,22 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (button != this.dragButton) {
             return false;
         }
+        double deltaX = mouseX - this.dragStartX;
+        double deltaY = mouseY - this.dragStartY;
+        if (button == 0 && !this.dragging && deltaX * deltaX + deltaY * deltaY <= this.clickThresholdSquared
+            && this.previewLevel != null
+            && isHover(1, 1, maxX - 2, this.contentHeight - 2, (float) mouseX, (float) mouseY)
+            && !this.isHoverControls(maxX, (float) mouseX, (float) mouseY)) {
+            this.selectedBlock = StructurePreviewRenderer.getInstance().pick(
+                this.previewLevel, this.cameraRig, maxX, this.contentHeight, mouseX, mouseY,
+                this.visibleMinY, this.visibleMinY + this.visibleLayerCount,
+                this.panOffsetX, this.panOffsetY + this.bottomHeight / 2.0f - this.contentHeight / 2.0f
+            );
+            this.selectedBlockTooltip = this.selectedBlock == null ? List.of()
+                : StructurePreviewPicker.tooltip(this.previewLevel, this.selectedBlock, this.placementPos);
+        }
         this.dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
+        this.dragging = false;
         return true;
     }
 
@@ -307,6 +371,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.totalLayerCount = 1;
         this.visibleLayerCount = 1;
         this.layerPreviewInitialized = false;
+        this.selectedBlock = null;
+        this.selectedBlockTooltip = List.of();
     }
 
     private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {
@@ -378,6 +444,7 @@ public final class MDNBTStructureComponent extends MDComponent {
             template.load(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
+            this.placementPos = pos;
             this.contentHeight = Math.max(46, (int) (AgeratumConstants.Structure.Render.CONTENT_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(size))));
             this.bottomHeight = (int) (AgeratumConstants.Structure.Render.BOTTOM_HEIGHT_FACTOR * Math.sqrt(BlockPos.ZERO.distSqr(pos)));
             this.structureTemplateCache = template;

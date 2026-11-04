@@ -42,5 +42,9 @@
   "system.ageratum.share.tip": "Player %s has shared a guide with you:",
   "tooltip.ageratum.bind_item_hold": "Hold %s to get more info",
   "tooltip.ageratum.structure_projection.layer_shortcut": "Press %s / %s to adjust projection layers",
-  "tooltip.ageratum.structure_projection.remove_shortcut": "Press %s to close projection"
+  "tooltip.ageratum.structure_projection.remove_shortcut": "Press %s to close projection",
+  "tooltip.ageratum.structure_preview.inspect": "Left-click to inspect a block; drag with left/right button to pan/rotate",
+  "tooltip.ageratum.structure_preview.position": "Structure position: %s, %s, %s",
+  "tooltip.ageratum.structure_preview.properties": "Block state:",
+  "tooltip.ageratum.structure_preview.empty_properties": "This block has no state properties"
 }
