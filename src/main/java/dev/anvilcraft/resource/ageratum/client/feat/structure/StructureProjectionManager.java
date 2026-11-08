@@ -57,7 +57,7 @@ public final class StructureProjectionManager {
         }
 
         SandboxRenderLevel previewLevel = StructureSandboxFactory.create(clientLevel, template, BlockPos.ZERO);
-        if (previewLevel == null || !previewLevel.hasFilledBlocks()) {
+        if (previewLevel == null || !previewLevel.hasContent()) {
             return false;
         }
 
@@ -78,7 +78,7 @@ public final class StructureProjectionManager {
         }
 
         SandboxRenderLevel previewLevel = StructureSandboxFactory.create(clientLevel, template, BlockPos.ZERO);
-        if (previewLevel == null || !previewLevel.hasFilledBlocks()) {
+        if (previewLevel == null || !previewLevel.hasContent()) {
             return false;
         }
 
