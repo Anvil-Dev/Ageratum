@@ -17,6 +17,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.InactiveProfiler;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.TickRateManager;
@@ -71,6 +72,7 @@ public class SandboxRenderLevel extends Level {
     private final ChunkSource chunkSource = new SandboxChunkProvider(this);
     private final Holder<Biome> biome;
     private final RegistryAccess registryAccess;
+    private final FeatureFlagSet enabledFeatures;
     private final LongSet filledBlocks = new LongOpenHashSet();
     private final LongSet litSections = new LongOpenHashSet();
     private final DataLayer defaultDataLayer;
@@ -86,10 +88,15 @@ public class SandboxRenderLevel extends Level {
     }
 
     public SandboxRenderLevel(RegistryAccess registryAccess) {
-        this(createLevelData(), registryAccess);
+        this(registryAccess, FeatureFlags.DEFAULT_FLAGS);
     }
 
-    private SandboxRenderLevel(ClientLevel.ClientLevelData levelData, RegistryAccess registryAccess) {
+    /** 使用当前世界启用的特性创建沙盒，保证实体类型与预览一致。 */
+    public SandboxRenderLevel(RegistryAccess registryAccess, FeatureFlagSet enabledFeatures) {
+        this(createLevelData(), registryAccess, enabledFeatures);
+    }
+
+    private SandboxRenderLevel(ClientLevel.ClientLevelData levelData, RegistryAccess registryAccess, FeatureFlagSet enabledFeatures) {
         super(
             levelData,
             LEVEL_ID,
@@ -104,6 +111,7 @@ public class SandboxRenderLevel extends Level {
         );
         this.clientLevelData = levelData;
         this.registryAccess = registryAccess;
+        this.enabledFeatures = enabledFeatures;
         this.biome = registryAccess.registryOrThrow(Registries.BIOME).getHolderOrThrow(Biomes.PLAINS);
 
         var nibbles = new byte[DataLayer.SIZE];
@@ -199,6 +207,11 @@ public class SandboxRenderLevel extends Level {
         partialTick = tracker.getGameTimeDeltaPartialTick(false);
     }
 
+    /** 判断预览是否包含方块或实体，供仅有实体的结构选择投影和边界。 */
+    public boolean hasContent() {
+        return this.hasFilledBlocks() || this.getEntitiesForRendering().iterator().hasNext();
+    }
+
     public boolean hasFilledBlocks() {
         return !this.filledBlocks.isEmpty();
     }
@@ -220,7 +233,7 @@ public class SandboxRenderLevel extends Level {
      * 计算包围所有已渲染方块与实体的世界坐标轴对齐包围盒。
      */
     public Bounds getBounds() {
-        if (this.filledBlocks.isEmpty()) {
+        if (!this.hasContent()) {
             return new Bounds(BlockPos.ZERO, BlockPos.ZERO);
         }
 
@@ -242,9 +255,9 @@ public class SandboxRenderLevel extends Level {
         for (var entity : getEntitiesForRendering()) {
             var bounds = entity.getBoundingBox();
 
-            min.setX(Math.min(min.getX(), (int) bounds.minX));
-            min.setY(Math.min(min.getY(), (int) bounds.minY));
-            min.setZ(Math.min(min.getZ(), (int) bounds.minZ));
+            min.setX(Math.min(min.getX(), Mth.floor(bounds.minX)));
+            min.setY(Math.min(min.getY(), Mth.floor(bounds.minY)));
+            min.setZ(Math.min(min.getZ(), Mth.floor(bounds.minZ)));
 
             max.setX(Math.max(max.getX(), (int) Math.ceil(bounds.maxX)));
             max.setY(Math.max(max.getY(), (int) Math.ceil(bounds.maxY)));
@@ -403,7 +416,7 @@ public class SandboxRenderLevel extends Level {
 
     @Override
     public FeatureFlagSet enabledFeatures() {
-        return FeatureFlags.DEFAULT_FLAGS;
+        return this.enabledFeatures;
     }
 
     private static class LevelCallbackCallbacks implements LevelCallback<Entity> {
