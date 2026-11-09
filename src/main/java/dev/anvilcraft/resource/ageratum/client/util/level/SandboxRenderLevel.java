@@ -19,6 +19,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.core.particles.ExplosionParticleInfo;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -73,6 +74,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -98,6 +100,8 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     private final RegistryAccess registryAccess;
     private final FeatureFlagSet enabledFeatures;
     private final LongSet filledBlocks = new LongOpenHashSet();
+    private final Map<BlockPos, CompoundTag> structureBlockEntityData = new HashMap<>();
+
     private final LongSet litSections = new LongOpenHashSet();
     private final WorldBorder worldBorder = new WorldBorder();
     private final ClientClockManager clockManager;
@@ -108,6 +112,17 @@ public class SandboxRenderLevel extends Level implements BlockAndTintGetter {
     private final DeltaTracker.Timer tracker = new DeltaTracker.Timer(20.0F, 0L, def -> def);
     @Getter
     private float partialTick;
+
+    /** 保存放置前的结构数据，防止加载回调改写配置。 */
+    void captureBlockEntityData(CompoundTag template, BlockPos placementPos) {
+        this.structureBlockEntityData.clear();
+        this.structureBlockEntityData.putAll(StructureBlockEntityDetails.capture(template, placementPos));
+    }
+
+    public @Nullable CompoundTag getStructureBlockEntityData(BlockPos pos) {
+        CompoundTag data = this.structureBlockEntityData.get(pos);
+        return data == null ? null : data.copy();
+    }
 
     public SandboxRenderLevel() {
         this(Objects.requireNonNull(Minecraft.getInstance().level).registryAccess());

@@ -5,7 +5,8 @@ This document explains how `MDNBTStructureComponent` renders `.nbt` / `.snbt` (S
 
 ## Block information and mouse controls
 
-- Left-click a block in the preview to inspect its translated name, registry ID, position within the structure, and every block state property (such as facing, powered, and waterlogged). The tooltip stays available while the pointer is over the preview. Click empty space to clear the selection.
+- Left-click a block to inspect its name, registry ID, structure position, state and saved block entity data. Pulse generators show trigger mode, delay, pulse duration and output inversion. Comparator, detector and collector settings are translated; inventories, filters, marked items, fluids, sign text and other nested data are expanded.
+- Hold Shift and scroll to page through long details. Text wraps to the window width. Selecting another block resets the page; clicking empty space clears the selection. Details use the original structure snapshot, before preview loading callbacks can change it.
 - Drag with the left button to pan, drag with the right button to rotate, and scroll to zoom. Dragging does not select a block.
 - Hide upper layers with the layer buttons or PageUp / PageDown to select exposed blocks below. Hiding the selected block's layer clears the selection.
 - Picking shares the rendering camera transform and uses block outlines, including under guide scaling, layouts, and row components.
@@ -79,3 +80,9 @@ This order follows vanilla `LevelRenderer` behavior closely to reduce visual art
 - Lighting priming depends on `refreshLightingAround`; keep calling it when adding new placement paths.
 - If new render layers/post effects are introduced, re-check buffer flush ordering.
 
+
+## Block entity field translations
+
+All mods' saved fields are supported without depending on their Java classes. Resource packs can translate field names with `tooltip.ageratum.structure_preview.nbt.<namespace>.<block_path>.<NBT_path>`, enum values with the `.value.<stored_value>` suffix, and units with a `.format` translation containing `%s`. For example, `tooltip.ageratum.structure_preview.nbt.anvilcraft.pulse_generator.ExtraData.WaitingTime.format` is `%s ticks`. Common field names use `tooltip.ageratum.structure_preview.nbt.field.<field_name>`.
+
+Unknown fields retain their paths and values. Only root type/position metadata and `keepPacked` are hidden; nested item IDs and coordinates remain visible. Details reflect saved data and do not infer missing defaults. Expansion is limited to 4096 entries and 32 nested levels per block, with an explicit notice when exceeded.
