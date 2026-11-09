@@ -81,6 +81,13 @@ public final class StructureTest {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || mc.level == null
             || mc.player == null || mc.screen != null || mc.getOverlay() != null || this.stage == 5) return;
         try {
+            if (Boolean.getBoolean("ageratum.blockDetailsTest")) {
+                BlockDetailsClientTest.run(mc);
+                LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: block entity snapshot, inventory, translations, wrapping and pagination");
+                this.stage = 5;
+                mc.stop();
+                return;
+            }
             if (this.stage == 1) {
                 CompoundTag root = TagParser.parseTag("""
                     {size:[2,2,2],palette:[{Name:"minecraft:stone"},{Name:"minecraft:glass"},
