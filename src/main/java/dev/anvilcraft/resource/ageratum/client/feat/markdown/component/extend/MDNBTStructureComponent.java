@@ -16,6 +16,7 @@ import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructureDetailsPager;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewPicker;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +96,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     private int bottomHeight = 220;
     private @Nullable Matrix4f inversePreviewMatrix;
     private @Nullable BlockPos selectedBlock;
+    private final StructureDetailsPager blockDetails = new StructureDetailsPager();
     private int previewScreenWidth;
     private int previewScreenHeight;
     private int previewOriginX;
@@ -276,6 +278,12 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
+        if (scrollY != 0 && Screen.hasShiftDown() && this.selectedBlock != null
+            && this.selectedBlock.getY() >= this.visibleMinY
+            && this.selectedBlock.getY() < this.visibleMinY + this.visibleLayerCount) {
+            this.blockDetails.scroll(scrollY);
+            return true;
+        }
         if (!Screen.hasControlDown() || scrollY == 0.0d) {
             return false;
         }
@@ -386,6 +394,9 @@ public final class MDNBTStructureComponent extends MDComponent {
             && distanceX * distanceX + distanceY * distanceY <= this.clickThreshold * this.clickThreshold
             && isHover(1, 1, this.previewWidth - 2, this.contentHeight - 2, (float) mouseX, (float) mouseY)) {
             this.selectedBlock = this.pickBlock(mouseX, mouseY);
+            this.blockDetails.setLines(this.selectedBlock == null || this.previewLevel == null || this.structureTemplateCache == null
+                ? List.of() : StructurePreviewPicker.tooltip(this.previewLevel, this.selectedBlock,
+                    StructureSandboxFactory.centeredPlacement(this.structureTemplateCache)));
         }
         this.dragging = false;
         return true;
@@ -424,8 +435,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (this.selectedBlock == null) {
             context.addTooltip(Component.translatable("tooltip.ageratum.structure_preview.inspect"));
         } else {
-            context.addTooltip(StructurePreviewPicker.tooltip(this.previewLevel, this.selectedBlock,
-                StructureSandboxFactory.centeredPlacement(this.structureTemplateCache)));
+            context.addTooltip(this.blockDetails.visible(context.minecraft().font, context.screenWidth(), context.screenHeight()));
         }
     }
 
@@ -459,6 +469,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     private void resetLayerPreview() {
         this.selectedBlock = null;
+        this.blockDetails.setLines(List.of());
         this.inversePreviewMatrix = null;
         this.visibleMinY = 0;
         this.totalLayerCount = 1;
