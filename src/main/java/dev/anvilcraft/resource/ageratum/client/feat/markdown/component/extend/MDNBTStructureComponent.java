@@ -10,9 +10,11 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCompone
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.client.util.ViewportCameraRig;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;
+import dev.anvilcraft.resource.ageratum.client.util.level.StructureDetailsPager;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewPicker;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructurePreviewRenderer;
 import dev.anvilcraft.resource.ageratum.client.util.level.StructureSandboxFactory;
@@ -85,7 +87,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     private boolean dragging;
     private double clickThresholdSquared = 9.0d;
     private @Nullable BlockPos selectedBlock;
-    private List<Component> selectedBlockTooltip = List.of();
+    private final StructureDetailsPager blockDetails = new StructureDetailsPager();
     private BlockPos placementPos = BlockPos.ZERO;
     private int visibleMinY;
     private int totalLayerCount = 1;
@@ -161,13 +163,14 @@ public final class MDNBTStructureComponent extends MDComponent {
         if (this.selectedBlock != null && (this.selectedBlock.getY() < this.visibleMinY
             || this.selectedBlock.getY() >= this.visibleMinY + this.visibleLayerCount)) {
             this.selectedBlock = null;
-            this.selectedBlockTooltip = List.of();
+            this.blockDetails.setLines(List.of());
         }
         if (!isHover(1, 1, context.maxX() - 2, this.contentHeight - 2, context.mouseX(), context.mouseY())
             || this.isHoverControls(context.maxX(), context.mouseX(), context.mouseY()) || this.dragging) return;
         Vector2f screenMouse = context.graphics().pose().transformPosition(context.mouseX(), context.mouseY(), new Vector2f());
         if (!context.graphics().containsPointInScissor(Math.round(screenMouse.x), Math.round(screenMouse.y))) return;
-        List<Component> lines = this.selectedBlock != null ? this.selectedBlockTooltip
+        List<Component> lines = this.selectedBlock != null
+            ? this.blockDetails.visible(context.minecraft().font, context.screenWidth(), context.screenHeight())
             : List.of(Component.translatable("tooltip.ageratum.structure_preview.inspect"));
         context.tooltips().add(new MDRenderContext.Tooltip(lines, java.util.Optional.empty()));
     }
@@ -235,6 +238,12 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
+        if (scrollY != 0 && GuideScreen.hasShiftDown() && this.selectedBlock != null
+            && this.selectedBlock.getY() >= this.visibleMinY
+            && this.selectedBlock.getY() < this.visibleMinY + this.visibleLayerCount) {
+            this.blockDetails.scroll(scrollY);
+            return true;
+        }
         if (scrollY == 0.0d) {
             return false;
         }
@@ -336,8 +345,8 @@ public final class MDNBTStructureComponent extends MDComponent {
                 this.visibleMinY, this.visibleMinY + this.visibleLayerCount,
                 this.panOffsetX, this.panOffsetY + this.bottomHeight / 2.0f - this.contentHeight / 2.0f
             );
-            this.selectedBlockTooltip = this.selectedBlock == null ? List.of()
-                : StructurePreviewPicker.tooltip(this.previewLevel, this.selectedBlock, this.placementPos);
+            this.blockDetails.setLines(this.selectedBlock == null ? List.of()
+                : StructurePreviewPicker.tooltip(this.previewLevel, this.selectedBlock, this.placementPos));
         }
         this.dragButton = AgeratumConstants.GuideScreenUI.Positions.INVALID_BUTTON;
         this.dragging = false;
@@ -372,7 +381,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         this.visibleLayerCount = 1;
         this.layerPreviewInitialized = false;
         this.selectedBlock = null;
-        this.selectedBlockTooltip = List.of();
+        this.blockDetails.setLines(List.of());
     }
 
     private void renderLayerIndicator(MDRenderContext context, GuiGraphicsExtractor graphics) {

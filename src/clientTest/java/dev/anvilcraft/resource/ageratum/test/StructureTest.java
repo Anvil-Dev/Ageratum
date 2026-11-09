@@ -90,6 +90,13 @@ public final class StructureTest {
         if (this.stage == 99 || mc.level == null || mc.player == null || mc.getOverlay() != null
             || System.currentTimeMillis() < this.next) return;
         try {
+            if (Boolean.getBoolean("ageratum.blockDetailsTest")) {
+                BlockDetailsClientTest.run(mc);
+                LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: block entity snapshot, inventory, translations, wrapping and pagination");
+                this.stage = 99;
+                mc.stop();
+                return;
+            }
             if (this.stage == 1) {
                 if (mc.screen != null) return;
                 mc.options.guiScale().set(1);
@@ -167,7 +174,7 @@ public final class StructureTest {
                 mc.player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                     dev.anvilcraft.resource.ageratum.init.AgeratumItems.DEFAULT_GUIDE_ITEM.get().getDefaultInstance());
                 control = true;
-                var scroll = new InputEvent.MouseScrollingEvent(0, 1, false, false, false, 0, 0);
+                var scroll = new InputEvent.MouseScrollingEvent(0, 1, new org.joml.Vector2i(0, 1), false, false, false, 0, 0);
                 StructureProjectionManager.onMouseScrolling(scroll);
                 control = false;
                 check(scroll.isCanceled(), "control wheel consumes scroll");

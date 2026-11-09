@@ -6,6 +6,15 @@ dependencies {
     jarJar libs.jhighlight
     implementation(libs.jsoup) { transitive = false }
     jarJar(libs.jsoup)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) { useJUnitPlatform() }
+
+sourceSets.test {
+    compileClasspath += sourceSets.main.compileClasspath
+    runtimeClasspath += sourceSets.main.runtimeClasspath
 }
 
 // Verify the unpublished renderer port without replacing unrelated library modules.

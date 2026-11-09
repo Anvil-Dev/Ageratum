@@ -42,10 +42,12 @@ public final class StructureSandboxFactory {
         settings.setKnownShape(true);
 
         SandboxRenderLevel level = new SandboxRenderLevel(clientLevel.registryAccess(), clientLevel.enabledFeatures());
+        CompoundTag structureData = template.save(new CompoundTag());
+        level.captureBlockEntityData(structureData, placementPos);
         DelegatingServerLevelAccessor fakeServerLevel = new DelegatingServerLevelAccessor(level);
         boolean placed = template.placeInWorld(fakeServerLevel, placementPos, placementPos, settings, random, Block.UPDATE_KNOWN_SHAPE);
         // 原版结构实体加载依赖服务端关卡，预览在客户端沙盒中重建实体。
-        for (CompoundTag entry : template.save(new CompoundTag()).getListOrEmpty("entities").compoundStream().toList()) {
+        for (CompoundTag entry : structureData.getListOrEmpty("entities").compoundStream().toList()) {
             CompoundTag entityData = entry.getCompound("nbt").orElseThrow().copy();
             ListTag relativePos = entry.getListOrEmpty("pos");
             ListTag originalPos = entityData.getListOrEmpty("Pos");

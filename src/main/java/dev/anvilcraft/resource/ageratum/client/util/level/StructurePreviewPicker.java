@@ -53,6 +53,11 @@ public final class StructurePreviewPicker {
         lines.add(Component.literal(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()).withStyle(ChatFormatting.GRAY));
         BlockPos relative = pos.subtract(placementPos);
         lines.add(Component.translatable("tooltip.ageratum.structure_preview.position", relative.getX(), relative.getY(), relative.getZ()));
+        var data = level.getStructureBlockEntityData(pos);
+        if (data != null) {
+            lines.add(Component.translatable("tooltip.ageratum.structure_preview.block_entity"));
+            lines.addAll(StructureBlockEntityDetails.describe(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString(), data));
+        }
         if (state.getProperties().isEmpty()) {
             lines.add(Component.translatable("tooltip.ageratum.structure_preview.empty_properties").withStyle(ChatFormatting.GRAY));
         } else {
