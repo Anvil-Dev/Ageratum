@@ -34,6 +34,7 @@ import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkSource;
 import net.minecraft.world.level.chunk.DataLayer;
@@ -78,6 +79,7 @@ public class SandboxRenderLevel extends Level {
     private final FeatureFlagSet enabledFeatures;
     private final LongSet filledBlocks = new LongOpenHashSet();
     private final Map<BlockPos, CompoundTag> structureBlockEntityData = new HashMap<>();
+    private final Map<BlockPos, BlockEntity> inspectionBlockEntities = new HashMap<>();
 
     private final LongSet litSections = new LongOpenHashSet();
     private final DataLayer defaultDataLayer;
@@ -97,6 +99,23 @@ public class SandboxRenderLevel extends Level {
     public @Nullable CompoundTag getStructureBlockEntityData(BlockPos pos) {
         CompoundTag data = this.structureBlockEntityData.get(pos);
         return data == null ? null : data.copy();
+    }
+
+    /** 重新加载保存状态，避免原生加载回调的红石和计时更新影响只读菜单。 */
+    public void restoreBlockEntitiesForInspection() {
+        this.structureBlockEntityData.forEach((pos, data) -> {
+            BlockEntity entity = BlockEntity.loadStatic(pos, this.getBlockState(pos), data.copy(), this.registryAccess());
+            if (entity != null) {
+                entity.setLevel(this);
+                this.inspectionBlockEntities.put(pos, entity);
+            }
+        });
+    }
+
+    @Override
+    public @Nullable BlockEntity getBlockEntity(BlockPos pos) {
+        BlockEntity entity = this.inspectionBlockEntities.get(pos);
+        return entity != null ? entity : super.getBlockEntity(pos);
     }
 
     public SandboxRenderLevel() {

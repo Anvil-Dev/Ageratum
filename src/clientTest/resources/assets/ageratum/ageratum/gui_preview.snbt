@@ -1,0 +1,7 @@
+{size:[6,1,3],palette:[{Name:"anvilcraft:pulse_generator"},{Name:"anvilcraft:advanced_comparator"},{Name:"anvilcraft:item_detector"},{Name:"minecraft:chest"},{Name:"minecraft:furnace"},{Name:"minecraft:dispenser"}],blocks:[
+{pos:[0,0,0],state:0,nbt:{id:"anvilcraft:pulse_generator",ExtraData:{StartMode:2b,OutputMode:1b,WaitingTime:17,SignalDuration:41}}},
+{pos:[2,0,0],state:1,nbt:{id:"anvilcraft:advanced_comparator",ExtraData:{CompareMode:1b,OutputMode:1b,HighLimit:12,LowLimit:4}}},
+{pos:[4,0,0],state:2,nbt:{id:"anvilcraft:item_detector",Range:3,FilterMode:"ALL",OutputMode:2}},
+{pos:[0,0,2],state:3,nbt:{id:"minecraft:chest",Items:[{Slot:0b,id:"minecraft:diamond",count:23}]}},
+{pos:[2,0,2],state:4,nbt:{id:"minecraft:furnace",BurnTime:120,BurnDuration:160,CookTime:70,CookTimeTotal:200,Items:[{Slot:0b,id:"minecraft:iron_ore",count:16},{Slot:1b,id:"minecraft:coal",count:5}]}},
+{pos:[4,0,2],state:5,nbt:{id:"minecraft:dispenser",Items:[{Slot:0b,id:"minecraft:arrow",count:7}]}}],entities:[]}

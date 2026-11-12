@@ -213,6 +213,10 @@ public class GuideScreen extends Screen {
     protected List<ResourceLocation> breadCrumbs;
     @Getter
     protected double scale = 1.0f;
+    private final StructureGuiPreview structureGuiPreview = new StructureGuiPreview();
+
+    public StructureGuiPreview structureGuiPreview() { return this.structureGuiPreview; }
+
     protected double scaleCountDown = 1.0f;
     protected final boolean preview;
     protected final MDDocument document;
@@ -425,6 +429,8 @@ public class GuideScreen extends Screen {
      */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.structureGuiPreview.beginFrame();
+        if (this.structureGuiPreview.contains(mouseX, mouseY)) { mouseX = -100000; mouseY = -100000; }
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1.0f);
@@ -454,6 +460,7 @@ public class GuideScreen extends Screen {
         // 渲染侧边标签 tooltip
         this.renderLabelTooltips(guiGraphics, mouseX - i, mouseY - j);
         pose.popPose();
+        this.structureGuiPreview.render(guiGraphics);
     }
 
     @Override
@@ -479,6 +486,7 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (this.structureGuiPreview.contains(mouseX, mouseY)) return true;
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         if (scrollY == 0.0D) {
@@ -542,6 +550,7 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (this.structureGuiPreview.mouseClicked(mouseX, mouseY, button)) return true;
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         if (button == 0 && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
@@ -594,6 +603,7 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (this.structureGuiPreview.mouseDragged(mouseX, mouseY, button)) return true;
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         dragX = dragX * this.scale;
@@ -619,6 +629,7 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (this.structureGuiPreview.mouseReleased(button)) return true;
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         if (this.activeMouseComponent != null && this.minecraft != null) {
@@ -2673,4 +2684,10 @@ public class GuideScreen extends Screen {
     public void setAnchor(@Nullable String anchor) {
         this.pendingAnchor = anchor;
     }
+    @Override
+    public void removed() {
+        this.structureGuiPreview.clear();
+        super.removed();
+    }
+
 }
