@@ -14,7 +14,13 @@
     "MouseHandlerMixin",
     "accessor.ClientClockManager$ClockInstanceAccessor",
     "accessor.ClientClockManagerAccessor",
-    "accessor.StringSplitterAccessor"
+    "accessor.StringSplitterAccessor",
+    "StructureGuiScreenMixin",
+    "StructureGuiGraphicsMixin",
+    "StructureGuiItemStateMixin",
+    "StructureGuiItemRendererMixin",
+    "StructureGuiOversizedItemMixin",
+    "StructureGuiRecipeBookMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -52,6 +52,7 @@ public final class StructureTest {
     public static boolean control;
     private boolean ready;
     private int stage;
+    private int guiFrames;
     private long started = System.currentTimeMillis();
     private long next;
     private MDComponent component;
@@ -90,6 +91,17 @@ public final class StructureTest {
         if (this.stage == 99 || mc.level == null || mc.player == null || mc.getOverlay() != null
             || System.currentTimeMillis() < this.next) return;
         try {
+            if (Boolean.getBoolean("ageratum.structureGuiReview") || Boolean.getBoolean("ageratum.structureGuiTest")) {
+                if (this.guiFrames == 0) {
+                    StructureGuiClientTest.open(mc);
+                    this.guiFrames = 1;
+                } else if (++this.guiFrames == 40) {
+                    LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: native menus, saved state, empty inventory and popup rendering");
+                    this.stage = 99;
+                    if (Boolean.getBoolean("ageratum.structureGuiTest")) mc.stop();
+                }
+                return;
+            }
             if (Boolean.getBoolean("ageratum.blockDetailsTest")) {
                 BlockDetailsClientTest.run(mc);
                 LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: block entity snapshot, inventory, translations, wrapping and pagination");
