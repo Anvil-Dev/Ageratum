@@ -225,6 +225,10 @@ public class GuideScreen extends Screen {
     protected List<Identifier> breadCrumbs;
     @Getter
     protected double scale = 1.0f;
+    private final StructureGuiPreview structureGuiPreview = new StructureGuiPreview();
+
+    public StructureGuiPreview structureGuiPreview() { return this.structureGuiPreview; }
+
     protected double scaleCountDown = 1.0f;
     protected final boolean preview;
     protected MDDocument document;
@@ -558,6 +562,8 @@ public class GuideScreen extends Screen {
      */
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.structureGuiPreview.beginFrame();
+        if (this.structureGuiPreview.contains(mouseX, mouseY)) { mouseX = -100000; mouseY = -100000; }
         if (this.zoomSlider.contains(mouseX, mouseY) || this.zoomSlider.dragging()) {
             mouseX = -100000;
             mouseY = -100000;
@@ -596,6 +602,7 @@ public class GuideScreen extends Screen {
         pose.popMatrix();
         guiGraphics.nextStratum();
         this.zoomSlider.render(guiGraphics, this.layout, this.zoom);
+        this.structureGuiPreview.render(guiGraphics);
     }
 
     @Override
@@ -621,6 +628,7 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (this.structureGuiPreview.contains(mouseX, mouseY)) return true;
         return this.mouseScrolled(mouseX, mouseY, scrollX, scrollY, hasControlDown(), hasShiftDown());
     }
 
@@ -682,6 +690,7 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (this.structureGuiPreview.mouseClicked(event.x(), event.y(), event.button())) return true;
         if (this.zoomSlider.contains(event.x(), event.y())) {
             if (event.button() == 0 && this.zoomSlider.resetContains(event.x(), event.y())) {
                 this.resetZoom();
@@ -753,6 +762,7 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (this.structureGuiPreview.mouseDragged(event.x(), event.y(), event.button())) return true;
         if (this.zoomSlider.dragging()) {
             if (event.button() == 0) this.applyZoom(this.zoomSlider.drag(event.y()));
             return true;
@@ -787,6 +797,7 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
+        if (this.structureGuiPreview.mouseReleased(event.button())) return true;
         if (this.zoomSlider.dragging()) {
             if (event.button() == 0) {
                 this.applyZoom(this.zoomSlider.drag(event.y()));
@@ -2837,6 +2848,7 @@ public class GuideScreen extends Screen {
 
     @Override
     public void removed() {
+        this.structureGuiPreview.clear();
         this.contentScrollbar.cancel();
         this.zoomSlider.cancel();
         GuideZoomStore.instance().flush();

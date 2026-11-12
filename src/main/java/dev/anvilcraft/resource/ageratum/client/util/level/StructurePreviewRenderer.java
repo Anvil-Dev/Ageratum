@@ -72,6 +72,15 @@ public final class StructurePreviewRenderer {
         return StructurePreviewPicker.pick(level, new Vec3(near), new Vec3(far), minY, maxY);
     }
 
+    /** 与选取、绘制一致的方块中心投影，结果为组件内坐标。 */
+    public org.joml.Vector2f projectCenter(BlockPos pos, ViewportCameraRig cameraRig, int width, int height,
+                                           float panOffsetX, float panOffsetY) {
+        Vector3f point = createTransform(cameraRig, panOffsetX, panOffsetY)
+            .transformPosition(new Vector3f(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f));
+        float pixelsPerBlock = 10 * cameraRig.getZoom();
+        return new org.joml.Vector2f(width / 2f + point.x * pixelsPerBlock, height / 2f - point.y * pixelsPerBlock);
+    }
+
     private static Matrix4f createTransform(ViewportCameraRig cameraRig, float panOffsetX, float panOffsetY) {
         float pixelsPerBlock = 10.0f * cameraRig.getZoom();
         return new Matrix4f().translate(panOffsetX / pixelsPerBlock, panOffsetY / pixelsPerBlock, 0)
