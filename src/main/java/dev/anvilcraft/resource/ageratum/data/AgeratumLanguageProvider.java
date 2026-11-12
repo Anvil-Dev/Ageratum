@@ -26,7 +26,8 @@ public class AgeratumLanguageProvider extends LanguageProvider {
         this.add("tooltip.ageratum.structure_projection.remove_shortcut", "Press %s to close projection");
         this.add("tooltip.ageratum.dark_mode", "Switch to dark mode");
         this.add("tooltip.ageratum.light_mode", "Switch to light mode");
-        this.add("tooltip.ageratum.structure_preview.inspect", "Left-click a block to inspect it; drag to pan, right-drag to rotate");
+        this.add("tooltip.ageratum.structure_preview.inspect", "Click to inspect");
+        this.add("tooltip.ageratum.structure_preview.no_gui", "No preview available");
         this.add("tooltip.ageratum.structure_preview.position", "Structure position: %s, %s, %s");
         this.add("tooltip.ageratum.structure_preview.properties", "Block state:");
         this.add("tooltip.ageratum.structure_preview.empty_properties", "This block has no state properties");

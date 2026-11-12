@@ -42,7 +42,7 @@
   "system.ageratum.structure_export.busy": "请等待两秒后再导出结构。",
   "tooltip.ageratum.dark_mode": "切换到深色模式",
   "tooltip.ageratum.light_mode": "切换到浅色模式",
-  "tooltip.ageratum.structure_preview.inspect": "左键点击方块查看名称和状态；拖动平移，右键拖动旋转",
+  "tooltip.ageratum.structure_preview.inspect": "点击查看",
   "tooltip.ageratum.structure_preview.position": "结构内坐标：%s, %s, %s",
   "tooltip.ageratum.structure_preview.properties": "方块状态：",
   "tooltip.ageratum.structure_preview.empty_properties": "此方块没有状态属性",
@@ -197,5 +197,8 @@
   "tooltip.ageratum.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.0": "截胡模式",
   "tooltip.ageratum.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.1": "2 游戏刻",
   "tooltip.ageratum.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.2": "10 游戏刻",
-  "tooltip.ageratum.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.3": "60 游戏刻"
+  "tooltip.ageratum.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.3": "60 游戏刻",
+  "tooltip.ageratum.structure_preview.no_gui": "此方块没有可预览的界面",
+  "ageratum.configuration.reduced_motion": "减少动态效果",
+  "ageratum.configuration.reduced_motion.tooltip": "减弱结构界面浮窗的缩放动画，保留淡入淡出"
 }

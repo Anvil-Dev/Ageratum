@@ -15,6 +15,9 @@ public class AgeratumClientConfig {
     @Comment("Use dark guide textures and colors")
     public boolean darkMode = false;
 
+    @Comment("Reduce motion in structure GUI previews; keep gentle fades")
+    public boolean reducedMotion = false;
+
     @Comment("Do breadcrumbs record jumps from sidebar tabs")
     public boolean breadCrumbsHasLabel = false;
 

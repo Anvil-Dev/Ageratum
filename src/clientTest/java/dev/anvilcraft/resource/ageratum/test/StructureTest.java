@@ -41,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 public final class StructureTest {
     private boolean ready;
     private int stage;
+    private int guiFrames;
     private int frames;
     private long started = System.nanoTime();
     private CompletableFuture<Void> reload;
@@ -79,13 +80,24 @@ public final class StructureTest {
     private void render(RenderLevelStageEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || mc.level == null
-            || mc.player == null || mc.screen != null || mc.getOverlay() != null || this.stage == 5) return;
+            || mc.player == null || (mc.screen != null && this.guiFrames == 0) || mc.getOverlay() != null || this.stage == 5) return;
         try {
             if (Boolean.getBoolean("ageratum.blockDetailsTest")) {
                 BlockDetailsClientTest.run(mc);
                 LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: block entity snapshot, inventory, translations, wrapping and pagination");
                 this.stage = 5;
                 mc.stop();
+                return;
+            }
+            if (Boolean.getBoolean("ageratum.structureGuiReview") || Boolean.getBoolean("ageratum.structureGuiTest")) {
+                if (this.guiFrames == 0) {
+                    StructureGuiClientTest.open(mc);
+                    this.guiFrames = 1;
+                } else if (++this.guiFrames == 40) {
+                    LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: native menus, saved state, empty inventory and popup rendering");
+                    this.stage = 5;
+                    if (Boolean.getBoolean("ageratum.structureGuiTest")) mc.stop();
+                }
                 return;
             }
             if (this.stage == 1) {

@@ -12,6 +12,8 @@ neoForge {
     runs {
         structureTest {
             client()
+            systemProperty 'ageratum.structureGuiReview', providers.gradleProperty('structureGuiReview').isPresent().toString()
+            systemProperty 'ageratum.structureGuiTest', providers.gradleProperty('structureGuiTest').isPresent().toString()
             systemProperty 'ageratum.blockDetailsTest', providers.gradleProperty('blockDetailsTest').isPresent().toString()
             gameDirectory = project.file('build/structure-test/run')
             programArguments.addAll '--width', '800', '--height', '600'
