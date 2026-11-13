@@ -98,64 +98,17 @@ public class MDRowComponent extends MDComponent {
     }
 
     private void renderHorizontal(MDRenderContext context) {
-        Minecraft minecraft = context.minecraft();
-        int maxX = context.maxX();
-        int maxY = context.maxY();
-        float mouseX = context.mouseX();
-        float mouseY = context.mouseY();
-        GuiGraphicsExtractor guiGraphics = context.graphics();
-
-        int[] widths = this.calculateComponentWidths(minecraft, maxX, Integer.MAX_VALUE);
-        int[] heights = new int[this.contentComponents.size()];
-        int rowHeight = 0;
-        for (int i = 0; i < this.contentComponents.size(); i++) {
-            int h = this.contentComponents.get(i).getHeight(minecraft, widths[i], Integer.MAX_VALUE);
-            heights[i] = h;
-            rowHeight = Math.max(rowHeight, h);
-        }
-
-        int totalWidth = sum(widths) + SPACING * (this.contentComponents.size() - 1);
-        int baseX = alignOffset(maxX, totalWidth, this.horizontalAlign);
-
-        Matrix3x2fStack pose = guiGraphics.pose();
-        pose.pushMatrix();
-        pose.translate(baseX, 0);
-
-        int currentX = 0;
-        for (int i = 0; i < this.contentComponents.size(); i++) {
-            MDComponent component = this.contentComponents.get(i);
-            int componentWidth = widths[i];
-            int componentHeight = heights[i];
-            int yOffset = alignOffset(rowHeight, componentHeight, this.verticalAlign);
-
-            // 子组件渲染时，需要同步：
-            // - PoseStack 的 translate
-            // - child context 的 offsetX/offsetY（用于 scissor / tooltip / 等）
-            // - mouseX/mouseY（用于命中测试）
+        GuiGraphicsExtractor graphics = context.graphics();
+        var pose = graphics.pose();
+        for (ChildHit hit : this.horizontalLayout(context.minecraft(), context.maxX())) {
             pose.pushMatrix();
-            pose.translate(0, yOffset);
-            int childMaxY = maxY <= 0 ? maxY : Math.max(0, maxY - yOffset);
-            int childX = baseX + currentX;
-            component.extractRenderState(
-                context.child(
-                    componentWidth,
-                    childMaxY,
-                    mouseX - childX,
-                    mouseY - yOffset,
-                    context.offsetX() + childX,
-                    context.offsetY() + yOffset,
-                    context.scale()
-                )
-            );
+            pose.translate(hit.x, hit.y);
+            int childMaxY = context.maxY() <= 0 ? context.maxY() : Math.max(0, context.maxY() - hit.y);
+            hit.component.extractRenderState(context.child(hit.width, childMaxY,
+                context.mouseX() - hit.x, context.mouseY() - hit.y,
+                context.offsetX() + hit.x, context.offsetY() + hit.y, context.scale()));
             pose.popMatrix();
-
-            if (i < this.contentComponents.size() - 1) {
-                currentX += componentWidth + SPACING;
-                pose.translate(componentWidth + SPACING, 0);
-            }
         }
-
-        pose.popMatrix();
     }
 
     private void renderVertical(MDRenderContext context) {
@@ -220,14 +173,11 @@ public class MDRowComponent extends MDComponent {
             return height;
         }
 
-        int[] widths = this.calculateComponentWidths(minecraft, maxX, maxY);
-        int maxHeight = 0;
-        for (int i = 0; i < this.contentComponents.size(); i++) {
-            MDComponent component = this.contentComponents.get(i);
-            int height = component.getHeight(minecraft, widths[i], maxY);
-            maxHeight = Math.max(maxHeight, height);
+        int height = 0;
+        for (ChildHit hit : this.horizontalLayout(minecraft, maxX)) {
+            height = Math.max(height, hit.y + hit.height);
         }
-        return maxHeight;
+        return height;
     }
 
     private static int resolveVerticalChildWidth(MDComponent component, Minecraft minecraft, int maxX) {
@@ -241,46 +191,53 @@ public class MDRowComponent extends MDComponent {
         return maxX;
     }
 
-    /**
-     * 计算水平排列时每个子组件应分配的宽度。
-     *
-     * <p>优先使用子组件声明的期望宽度（通过 {@link MDComponent#getPreferredWidth}），
-     * 剩余空间由没有期望宽度的组件平均分配。</p>
-     */
-    private int[] calculateComponentWidths(Minecraft minecraft, int maxX, int maxY) {
-        int componentCount = this.contentComponents.size();
-        int[] widths = new int[componentCount];
-
-        int totalSpacing = SPACING * (componentCount - 1);
-        int availableWidth = Math.max(1, maxX - totalSpacing);
-
-        int usedWidth = 0;
-        int flexibleCount = 0;
-
-        for (int i = 0; i < componentCount; i++) {
+    /** 固定宽度组件保持自身宽度，空间不足时整项换行，柔性组件分享余量。 */
+    private List<ChildHit> horizontalLayout(Minecraft minecraft, int maxX) {
+        int available = Math.max(1, maxX);
+        int count = this.contentComponents.size();
+        int[] widths = new int[count];
+        int fixedWidth = 0;
+        int flexible = 0;
+        for (int i = 0; i < count; i++) {
+            int preferred = this.contentComponents.get(i).getPreferredWidth(minecraft, available, Integer.MAX_VALUE);
+            widths[i] = preferred > 0 ? Math.min(preferred, available) : 0;
+            if (widths[i] == 0) flexible++;
+            else fixedWidth += widths[i];
+        }
+        int remaining = available - fixedWidth - Math.max(0, count - 1) * SPACING;
+        int flexibleWidth = flexible == 0 ? 0 : Math.max(1, remaining > 0 ? remaining / flexible
+            : (available - Math.max(0, flexible - 1) * SPACING) / flexible);
+        List<ChildHit> result = new ArrayList<>(count);
+        List<ChildHit> line = new ArrayList<>();
+        int lineWidth = 0;
+        int lineHeight = 0;
+        int y = 0;
+        for (int i = 0; i < count; i++) {
             MDComponent component = this.contentComponents.get(i);
-            int preferredWidth = component.getPreferredWidth(minecraft, availableWidth, maxY);
-
-            if (preferredWidth > 0) {
-                int remaining = availableWidth - usedWidth;
-                widths[i] = Math.clamp(remaining, 1, preferredWidth);
-                usedWidth += widths[i];
-            } else {
-                widths[i] = -1;
-                flexibleCount++;
+            int width = widths[i] == 0 ? flexibleWidth : widths[i];
+            int height = component.getHeight(minecraft, width, Integer.MAX_VALUE);
+            if (!line.isEmpty() && lineWidth + SPACING + width > available) {
+                this.placeLine(result, line, available, lineWidth, lineHeight, y);
+                y += lineHeight + SPACING;
+                line.clear();
+                lineWidth = 0;
+                lineHeight = 0;
             }
+            if (!line.isEmpty()) lineWidth += SPACING;
+            line.add(new ChildHit(component, lineWidth, 0, width, height));
+            lineWidth += width;
+            lineHeight = Math.max(lineHeight, height);
         }
+        this.placeLine(result, line, available, lineWidth, lineHeight, y);
+        return result;
+    }
 
-        int remainingWidth = Math.max(0, availableWidth - usedWidth);
-        int flexibleWidth = flexibleCount > 0 ? remainingWidth / flexibleCount : 0;
-
-        for (int i = 0; i < componentCount; i++) {
-            if (widths[i] == -1) {
-                widths[i] = Math.max(1, flexibleWidth);
-            }
+    private void placeLine(List<ChildHit> result, List<ChildHit> line, int available, int width, int height, int y) {
+        int x = alignOffset(available, width, this.horizontalAlign);
+        for (ChildHit child : line) {
+            result.add(new ChildHit(child.component, x + child.x,
+                y + alignOffset(height, child.height, this.verticalAlign), child.width, child.height));
         }
-
-        return widths;
     }
 
     @Override
@@ -311,6 +268,13 @@ public class MDRowComponent extends MDComponent {
             scrollY,
             hit.width
         );
+    }
+
+    @Override
+    public java.util.function.DoublePredicate scrollHandler(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
+        return hit == null ? delta -> false
+            : hit.component.scrollHandler(minecraft, mouseX - hit.x, mouseY - hit.y, hit.width);
     }
 
     @Override
@@ -407,37 +371,11 @@ public class MDRowComponent extends MDComponent {
     }
 
     private @Nullable ChildHit hitTestHorizontal(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
-        int[] widths = this.calculateComponentWidths(minecraft, maxX, Integer.MAX_VALUE);
-
-        int[] heights = new int[this.contentComponents.size()];
-        int rowHeight = 0;
-        for (int i = 0; i < this.contentComponents.size(); i++) {
-            int h = this.contentComponents.get(i).getHeight(minecraft, widths[i], Integer.MAX_VALUE);
-            heights[i] = h;
-            rowHeight = Math.max(rowHeight, h);
-        }
-
-        int totalWidth = sum(widths) + SPACING * (this.contentComponents.size() - 1);
-        int baseX = alignOffset(maxX, totalWidth, this.horizontalAlign);
-
-        int currentX = 0;
-        for (int i = 0; i < this.contentComponents.size(); i++) {
-            MDComponent component = this.contentComponents.get(i);
-            int width = widths[i];
-            int height = heights[i];
-            int x = baseX + currentX;
-
-            if (mouseX >= x && mouseX < x + width) {
-                int y = alignOffset(rowHeight, height, this.verticalAlign);
-                if (mouseY < y || mouseY >= y + height) {
-                    return null;
-                }
-                return new ChildHit(component, x, y, width, height);
+        for (ChildHit hit : this.horizontalLayout(minecraft, maxX)) {
+            if (mouseX >= hit.x && mouseX < hit.x + hit.width && mouseY >= hit.y && mouseY < hit.y + hit.height) {
+                return hit;
             }
-
-            currentX += width + SPACING;
         }
-
         return null;
     }
 
@@ -489,14 +427,6 @@ public class MDRowComponent extends MDComponent {
             case CENTER -> remaining / 2;
             case BOTTOM -> remaining;
         };
-    }
-
-    private static int sum(int[] values) {
-        int s = 0;
-        for (int v : values) {
-            s += v;
-        }
-        return s;
     }
 
     private static Direction parseDirection(String raw) {

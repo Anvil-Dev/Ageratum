@@ -93,7 +93,9 @@ The thumb represents visible height / total height, with a minimum grab size for
 | `auto_hide` | `true`; set `false` for an always-visible touch target |
 | `fade_distance` | `48`; zero shows only within the hit area |
 
-Customize `textures.scrollbar_track` and `textures.scrollbar_thumb` independently using the texture format below. Defaults are single 6×6 frames with 2-pixel nine-slice borders. Replacement art should specify its frame and atlas dimensions. Fade multiplies the image and tint alpha. Example:
+Customize Content and structure borders reserve the scrollbar hit width plus a 4-pixel gap. The track stays at the original viewport edge; the space remains reserved while auto-hidden to keep wrapping stable. Disabling the scrollbar restores the full content width.
+
+`textures.scrollbar_track` and `textures.scrollbar_thumb` independently using the texture format below. Defaults are single 6×6 frames with 2-pixel nine-slice borders. Replacement art should specify its frame and atlas dimensions. Fade multiplies the image and tint alpha. Example:
 
 ```json
 {

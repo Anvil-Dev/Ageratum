@@ -12,6 +12,12 @@ public final class LayoutScrollbar {
     private double grabOffset;
     private boolean dragging;
 
+    /** 留出完整命中区域及间距，正文和结构边框不再延伸到滚动条下方。 */
+    public static int contentWidth(int viewportWidth, int width, int hitWidth) {
+        int reserved = Math.max(Math.max(1, width), hitWidth) + 4;
+        return Math.max(1, viewportWidth - reserved);
+    }
+
     public void update(Rect viewport, int width, int hitWidth, int minimumThumb, double maximum, double position) {
         this.geometry(viewport, width, hitWidth, maximum, position);
         this.thumbHeight = Math.min(viewport.height(), Math.max(Math.max(1, minimumThumb),

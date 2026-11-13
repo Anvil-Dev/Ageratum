@@ -49,7 +49,7 @@ public abstract class MDBlockComponent<E> extends MDComponent {
                 return;
             }
 
-            this.extractDecorationRenderState(guiGraphics, minecraft, cachedItem, y, lineHeight, maxX);
+            this.extractDecorationRenderState(context, cachedItem, y, lineHeight, maxX);
             this.drawContent(guiGraphics, minecraft, split, textX, y);
             y += lineHeight;
             maxY -= lineHeight;
@@ -103,6 +103,10 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     protected abstract int getTextX(CachedItem<E> cachedItem);
+
+    protected void extractDecorationRenderState(MDRenderContext context, CachedItem<E> item, int y, int height, int maxX) {
+        this.extractDecorationRenderState(context.graphics(), context.minecraft(), item, y, height, maxX);
+    }
 
     protected abstract void extractDecorationRenderState(
         GuiGraphicsExtractor guiGraphics,

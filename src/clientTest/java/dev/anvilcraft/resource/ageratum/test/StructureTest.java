@@ -91,6 +91,14 @@ public final class StructureTest {
         if (this.stage == 99 || mc.level == null || mc.player == null || mc.getOverlay() != null
             || System.currentTimeMillis() < this.next) return;
         try {
+            if (Boolean.getBoolean("ageratum.scrollEntityTest")) {
+                if (ScrollEntityClientTest.tick(mc)) {
+                    LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: scroll ownership, idle release and entity viewport");
+                    this.stage = 99;
+                    mc.stop();
+                }
+                return;
+            }
             if (Boolean.getBoolean("ageratum.structureGuiReview") || Boolean.getBoolean("ageratum.structureGuiTest")) {
                 if (this.guiFrames == 0) {
                     StructureGuiClientTest.open(mc);

@@ -46,6 +46,14 @@ public final class BuiltinInlineComponents {
             }
         );
 
+    /** 按键标签沿用客户端绑定解析，重绑定后无需改动手册文本。 */
+    public static final DeferredHolder<MDInlineComponentFactory, MDInlineComponentFactory> KEY =
+        AgeratumRegistries.INLINE_COMPONENT_FACTORIES.register("key", () -> context -> {
+            String keyId = context.params().get("id");
+            return keyId == null || keyId.isBlank() ? Component.empty().withStyle(context.baseStyle())
+                : Component.keybind(keyId.trim()).withStyle(context.baseStyle());
+        });
+
     /**
      * 物品引用行内组件：{@code <ref item="<item id>" component="<item component>"/>}。
      *
