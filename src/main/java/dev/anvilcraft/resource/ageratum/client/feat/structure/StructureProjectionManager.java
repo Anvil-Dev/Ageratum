@@ -1,8 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.structure;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.anvilcraft.lib.v2.renderer.projection.ProjectionRenderer;
-import dev.anvilcraft.lib.v2.renderer.projection.ProjectionScene;
+import dev.anvilcraft.lib.v2.rendering.projection.ProjectionRenderer;
+import dev.anvilcraft.lib.v2.rendering.projection.ProjectionScene;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumKeyMappings;
 import dev.anvilcraft.resource.ageratum.client.util.level.SandboxRenderLevel;

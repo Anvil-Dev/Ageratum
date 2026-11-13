@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.test;
 
 import com.mojang.logging.LogUtils;
-import dev.anvilcraft.lib.v2.renderer.projection.ProjectionRenderer;
+import dev.anvilcraft.lib.v2.rendering.projection.ProjectionRenderer;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureExportClient;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionManager;
