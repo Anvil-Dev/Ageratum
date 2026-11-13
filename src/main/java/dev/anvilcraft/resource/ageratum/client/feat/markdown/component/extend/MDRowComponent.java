@@ -273,7 +273,7 @@ public class MDRowComponent extends MDComponent {
         int currentWidth = 0;
         int currentHeight = 0;
         for (int i = 0; i < preferredWidths.length; i++) {
-            int width = preferredWidths[i];
+            int width = Math.min(Math.max(1, maxX), preferredWidths[i]);
             int height = this.contentComponents.get(i).getHeight(minecraft, width, Integer.MAX_VALUE);
             int addWidth = currentChildren.isEmpty() ? width : currentWidth + SPACING + width;
             if (!currentChildren.isEmpty() && addWidth > maxX) {
@@ -321,6 +321,13 @@ public class MDRowComponent extends MDComponent {
             scrollY,
             hit.width
         );
+    }
+
+    @Override
+    public java.util.function.DoublePredicate scrollHandler(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        ChildHit hit = this.hitTest(minecraft, mouseX, mouseY, maxX);
+        return hit == null ? delta -> false
+            : hit.component.scrollHandler(minecraft, mouseX - hit.x, mouseY - hit.y, hit.width);
     }
 
     @Override

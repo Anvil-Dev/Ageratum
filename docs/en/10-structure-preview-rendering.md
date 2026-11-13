@@ -98,4 +98,5 @@ Left-click a block in a structure or machine preview to show its localized name,
 - Left-click to inspect the block name, registry ID, structure coordinates and block state. The hover hint is simply “Click to inspect”.
 - Right-click a block with a menu to open its native read-only GUI. Its saved contents, mode, timing and progress are shown by the native menu. Player inventory and hotbar slots stay empty. No menu input or close/configuration packets are sent.
 - Hold the left button to drag the popup; right-click it to close. A white connector ends at the popup edge and points to the block center. Backgrounds, text and items fade together; `reduced_motion` reduces scaling.
-- Drag the structure with the left/right button to pan/rotate. Ctrl + scroll to zoom. Layer buttons and PageUp / PageDown change visible layers.
+- Drag the structure with the left/right button to pan/rotate. Scroll to zoom. Layer buttons and PageUp / PageDown change visible layers.
+- A wheel gesture stays with the region where it starts: outside a structure it scrolls the page, inside it zooms that same structure. Crossing regions or moving a structure under the pointer does not change the target. At least 0.5 seconds without wheel input releases it; reversing direction does not.

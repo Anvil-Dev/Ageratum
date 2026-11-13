@@ -141,6 +141,7 @@ public class GuideScreen extends Screen {
     protected float contentScroll;
     protected double lastMouseX;
     protected double lastMouseY;
+    private final GuideScrollGesture scrollGesture = new GuideScrollGesture();
     protected @Nullable MDComponent activeMouseComponent;
     protected int activeMouseButton = -1;
     /**
@@ -293,6 +294,7 @@ public class GuideScreen extends Screen {
         }
 
         float previousScroll = this.contentScroll;
+        this.scrollGesture.reset();
         this.parsedComponents.clear();
         this.parsedComponents.addAll(this.parser.parseDocument(this.documentLocation, markdown).components());
         this.recordPreviewDocumentFingerprint();
@@ -486,58 +488,47 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (this.structureGuiPreview.contains(mouseX, mouseY)) return true;
-        mouseX = mouseX * this.scale;
-        mouseY = mouseY * this.scale;
-        if (scrollY == 0.0D) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        if (scrollY == 0) return super.mouseScrolled(mouseX * this.scale, mouseY * this.scale, scrollX, scrollY);
+        long now = System.nanoTime();
+        if (this.scrollGesture.continueScroll(scrollY, now)) return true;
+        if (this.structureGuiPreview.contains(mouseX, mouseY)) {
+            return this.scrollGesture.begin(scrollY, now, delta -> true);
         }
-        if (this.mouseInLabelRange(mouseX, mouseY)) {
-            // Ctrl/Alt/Shift 加速标签栏翻滚（3倍速度）
-            double acceleratedScrollY = scrollY;
-            if (Screen.hasControlDown() || Screen.hasAltDown() || Screen.hasShiftDown()) {
-                acceleratedScrollY *= 3.0;
+        double contentX = mouseX * this.scale, contentY = mouseY * this.scale;
+        double acceleration = Screen.hasControlDown() || Screen.hasAltDown() || Screen.hasShiftDown() ? 3 : 1;
+        // 先处理大卷轴内容，避免被伸入卷轴的左侧标签命中区域截获。
+        if (this.mouseInPageRange(contentX, contentY)) {
+            if (this.minecraft != null && this.mouseInContentRange(contentX, contentY)) {
+                ComponentMouseHit hit = this.getComponentHitAtContentPosition(contentX, contentY);
+                if (hit != null) {
+                    var handler = hit.component().scrollHandler(this.minecraft, hit.mouseX(), hit.mouseY(), this.getContentWidth());
+                    if (this.scrollGesture.begin(scrollY, now, delta -> handler.test(delta * acceleration))) return true;
+                }
             }
-            int rowDelta = this.consumeLabelScrollRows(acceleratedScrollY);
-            if (rowDelta != 0) {
-                this.scrollLabelsBy(rowDelta);
-            }
-            return true;
-        }
-        if (this.mouseInBookmarkRange(mouseX, mouseY)) {
-            this.bookmarkScrollRemainder -= scrollY;
-            int rowDelta = (int) Math.copySign(Math.floor(Math.abs(this.bookmarkScrollRemainder) + 0.5d), this.bookmarkScrollRemainder);
-            if (rowDelta != 0) {
-                this.bookmarkScrollRemainder -= rowDelta;
-                this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows + rowDelta, 0, this.maxBookmarkScrollRows);
-            }
-            return true;
-        }
-        if (!this.mouseInContentRange(mouseX, mouseY)) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        }
-
-        // Ctrl/Alt/Shift 加速内容区翻滚（3倍速度）
-        double acceleratedScrollY = scrollY;
-        if (Screen.hasControlDown() || Screen.hasAltDown() || Screen.hasShiftDown()) {
-            acceleratedScrollY *= 3.0;
-        }
-        if (this.minecraft != null) {
-            ComponentMouseHit hit = this.getComponentHitAtContentPosition(mouseX, mouseY);
-            if (hit != null && hit.component().mouseScrolled(
-                this.minecraft,
-                hit.mouseX(),
-                hit.mouseY(),
-                acceleratedScrollY,
-                this.getContentWidth()
-            )) {
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                this.scrollBy((float) (-delta * acceleration * SCROLL_STEP));
                 return true;
-            }
+            });
         }
-
-        // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
-        this.scrollBy((float) -acceleratedScrollY * SCROLL_STEP);
-        return true;
+        if (this.mouseInLabelRange(contentX, contentY)) {
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                int rows = this.consumeLabelScrollRows(delta * acceleration);
+                if (rows != 0) this.scrollLabelsBy(rows);
+                return true;
+            });
+        }
+        if (this.mouseInBookmarkRange(contentX, contentY)) {
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                this.bookmarkScrollRemainder -= delta;
+                int rows = (int) Math.copySign(Math.floor(Math.abs(this.bookmarkScrollRemainder) + 0.5d), this.bookmarkScrollRemainder);
+                if (rows != 0) {
+                    this.bookmarkScrollRemainder -= rows;
+                    this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows + rows, 0, this.maxBookmarkScrollRows);
+                }
+                return true;
+            });
+        }
+        return super.mouseScrolled(contentX, contentY, scrollX, scrollY);
     }
 
     /**
@@ -2306,12 +2297,18 @@ public class GuideScreen extends Screen {
     }
 
     /**
-     * 判断鼠标是否位于内容区域（屏幕绝对坐标）。
+     * 判断鼠标是否位于卷轴纸面（屏幕绝对坐标）。
      *
      * @param mouseX 鼠标屏幕 X
      * @param mouseY 鼠标屏幕 Y
      * @return 在内容区域内返回 {@code true}
      */
+    private boolean mouseInPageRange(double mouseX, double mouseY) {
+        return mouseX >= this.leftPos && mouseX <= this.leftPos + this.imageWidth
+            && mouseY >= this.topPos && mouseY <= this.topPos + this.imageHeight;
+    }
+
+    /** 正文视口的命中区域。 */
     private boolean mouseInContentRange(double mouseX, double mouseY) {
         int contentLeft = this.leftPos + this.getContentStartX();
         int contentTop = this.topPos + this.getContentStartY();
@@ -2686,6 +2683,7 @@ public class GuideScreen extends Screen {
     }
     @Override
     public void removed() {
+        this.scrollGesture.reset();
         this.structureGuiPreview.clear();
         super.removed();
     }
