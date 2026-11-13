@@ -3,13 +3,13 @@ minecraft = "1.21.1"
 neoForge = "21.1.238"
 modDevGradle = "2.0.147"
 lombok = "9.2.0"
-anvillib = "2.0.0+snapshot.571"
+anvillib = "2.0.0+snapshot.676"
 jhighlight = "1.1.1"
 jsoup = "1.18.3"
 
 [libraries]
 anvillib-config = { group = "dev.anvilcraft.lib", name = "anvillib-config-neoforge-1.21.1", version.ref = "anvillib" }
-anvillib-renderer = { group = "dev.anvilcraft.lib", name = "anvillib-renderer-neoforge-1.21.1", version.ref = "anvillib" }
+anvillib-rendering = { group = "dev.anvilcraft.lib", name = "anvillib-rendering-neoforge-1.21.1", version.ref = "anvillib" }
 jhighlight = { group = "org.codelibs", name = "jhighlight", version.ref = "jhighlight" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 [plugins]
