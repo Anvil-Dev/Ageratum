@@ -1,17 +1,11 @@
 repositories {
-    mavenLocal()
-    exclusiveContent {
-        forRepositories(
-                // 以下二选一
-                mavenCentral()
-        )
-        filter {
-            includeGroup "dev.anvilcraft.lib"
-        }
+    mavenLocal {
+        content { excludeGroup "dev.anvilcraft.lib" }
     }
+    mavenCentral()
     maven { // Anvil Lib
         name = "Cjsah Maven"
-        url = "https://server.cjsah.net:1002/maven/"
+        url = "https://server.cjsah.net:1002/maven/releases/"
         content {
             includeGroup "dev.anvilcraft.lib"
             includeGroup "dev.dubhe"
