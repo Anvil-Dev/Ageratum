@@ -163,6 +163,12 @@ public abstract class MDComponent {
         return false;
     }
 
+    /** 固定滚动起点的组件及局部坐标，供连续滚轮操作复用。 */
+    public java.util.function.DoublePredicate scrollHandler(Minecraft minecraft, double mouseX, double mouseY, int maxX) {
+        return delta -> this.mouseScrolled(minecraft, mouseX, mouseY, delta, maxX);
+    }
+
+
     /**
      * 处理组件内部鼠标按下事件。
      *

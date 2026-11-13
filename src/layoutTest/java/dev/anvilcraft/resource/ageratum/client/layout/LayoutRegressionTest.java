@@ -131,6 +131,13 @@ public final class LayoutRegressionTest {
     private static void scrollbar() {
         var bar = new LayoutScrollbar();
         var viewport = new LayoutGeometry.Rect(20, 30, 200, 200);
+        for (int[] sizes : new int[][]{{6, 12}, {8, 20}, {20, 6}}) {
+            bar.update(viewport, sizes[0], sizes[1], 12, 600, 0);
+            int contentRight = viewport.x() + LayoutScrollbar.contentWidth(viewport.width(), sizes[0], sizes[1]);
+            check(contentRight < bar.track().x(), "content ends before visual scrollbar");
+            check(!bar.contains(contentRight - 1, 80) && !bar.contains(contentRight, 80), "scrollbar hitbox does not cover content");
+            check(bar.contains(viewport.right() - 1, 80), "reserved strip retains scrollbar input");
+        }
         bar.update(viewport, 6, 12, 12, 600, 0);
         check(bar.thumb().height() == 50, "thumb represents visible quarter of document");
         check(bar.opacity(210, 80, 48, true) == 1, "hit area is fully visible");

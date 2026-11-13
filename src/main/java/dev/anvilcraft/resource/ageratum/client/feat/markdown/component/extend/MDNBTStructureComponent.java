@@ -199,7 +199,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         int x = context.maxX() - 21;
         boolean hover = context.mouseX() >= x && context.mouseX() < x + 16
             && context.mouseY() >= 25 && context.mouseY() < 41;
-        context.layout().texture("button_import",
+        context.layout().texture("textures.button_import",
             dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture.of(
                 Identifier.parse("ageratum:textures/gui/guide/light/button_import.png"), 16, 16, 16, 32))
             .draw(context.graphics(), x, 25, 16, 16, hover);

@@ -322,7 +322,7 @@ final class LayoutClientTest {
         }
         void verifyScrollbar() {
             check(this.maxContentScroll > 0, "scrollbar fixture overflows");
-            double x = (this.leftPos + this.getContentStartX() + this.getContentWidth() - 2) / this.scale;
+            double x = (this.leftPos + this.getContentStartX() + this.getContentViewportWidth() - 2) / this.scale;
             double top = (this.topPos + this.getContentStartY()) / this.scale;
             double bottom = (this.topPos + this.getContentStartY() + this.getContentHeight()) / this.scale;
             var click = new MouseButtonEvent(x, (top + bottom) / 2, new MouseButtonInfo(0, 0));

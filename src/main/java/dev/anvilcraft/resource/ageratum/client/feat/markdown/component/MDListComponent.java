@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.FormattedText;
@@ -12,25 +13,13 @@ import java.util.List;
 /**
  * Markdown 列表组件。
  *
- * <p>统一渲染无序列表、有序列表与任务列表，并支持按缩进层级绘制视觉引导带。</p>
+ * <p>统一渲染无序列表、有序列表与任务列表，按首行对齐标记并为多位编号预留统一宽度。</p>
  */
 public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> {
-    private static final String[] BULLETS = {
-        "●",
-        "○",
-        "■",
-        "□",
-        "◆",
-        "◇",
-        "▸",
-        "▹"
-    };
-    private static final String TASK_UNCHECKED = "☐";
-    private static final String TASK_CHECKED = "☑";
-    private static final int INDENT_WIDTH = 10;
-    private static final int MARKER_WIDTH = 12;
-    private static final int TASK_UNCHECKED_COLOR = 0xFF666666;
-    private static final int TASK_CHECKED_COLOR = 0xFF2E7D32;
+    private static final int INDENT_WIDTH = 12;
+    private static final int MIN_MARKER_WIDTH = 8;
+    private static final int MARKER_GAP = 5;
+    private final java.util.Map<Integer, Integer> orderedDigits = new java.util.HashMap<>();
 
     /**
      * 使用解析后的列表项创建组件。
@@ -41,6 +30,11 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
 
     private MDListComponent(PreparedData preparedData) {
         super(preparedData.componentText(), preparedData.cachedItems());
+        for (CachedItem<ListItem> cached : this.cachedItems) {
+            if (cached.item().kind() == ListKind.ORDERED) {
+                this.orderedDigits.merge(cached.level(), Integer.toString(cached.item().index()).length(), Math::max);
+            }
+        }
     }
 
     /**
@@ -66,7 +60,16 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
 
     @Override
     protected int getTextX(CachedItem<ListItem> cachedItem) {
-        return cachedItem.level() * INDENT_WIDTH + MARKER_WIDTH;
+        int x = this.markerWidth(0) + MARKER_GAP;
+        for (int level = 1; level <= cachedItem.level(); level++) {
+            x += Math.max(INDENT_WIDTH, this.markerWidth(level) + MARKER_GAP);
+        }
+        return x;
+    }
+
+    @Override
+    protected void extractDecorationRenderState(MDRenderContext context, CachedItem<ListItem> item, int y, int height, int maxX) {
+        this.drawMarker(context.graphics(), item, y, context.layout().color("colors.content_text", 0xFF202020));
     }
 
     @Override
@@ -78,25 +81,52 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         int lineHeight,
         int maxX
     ) {
-        int lineBottom = y + lineHeight;
-        for (int level = 0; level <= cachedItem.level(); level++) {
-            int bandStartX = level * INDENT_WIDTH;
-            guiGraphics.fill(
-                bandStartX,
-                y,
-                bandStartX + INDENT_WIDTH - 1,
-                lineBottom,
-                LEVEL_LINE_COLORS[level % LEVEL_LINE_COLORS.length] | 0x55000000
-            );
-        }
+        this.drawMarker(guiGraphics, cachedItem, y, 0xFF202020);
+    }
 
+    private void drawMarker(GuiGraphicsExtractor guiGraphics, CachedItem<ListItem> cachedItem, int y, int color) {
         ListItem item = cachedItem.item();
-        GuideFont.get().draw(guiGraphics, marker(item),
-            cachedItem.level() * INDENT_WIDTH,
-            y,
-            markerColor(item),
-            false
-        );
+        int right = this.getTextX(cachedItem) - MARKER_GAP;
+        if (item.kind() == ListKind.ORDERED) {
+            String text = item.index() + ".";
+            GuideFont.get().draw(guiGraphics, text, right - GuideFont.get().width(text), y, color, false);
+            return;
+        }
+        int centerX = right - this.markerWidth(cachedItem.level()) / 2;
+        int centerY = y + GuideFont.get().lineHeight / 2;
+        if (item.kind() == ListKind.TASK) {
+            guiGraphics.outline(centerX - 3, centerY - 3, 7, 7, color);
+            if (item.checked()) {
+                guiGraphics.fill(centerX - 2, centerY, centerX, centerY + 1, color);
+                guiGraphics.fill(centerX - 1, centerY + 1, centerX + 1, centerY + 2, color);
+                guiGraphics.fill(centerX, centerY, centerX + 2, centerY + 1, color);
+                guiGraphics.fill(centerX + 1, centerY - 1, centerX + 3, centerY, color);
+            }
+            return;
+        }
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(centerX + 0.5f, centerY + 0.5f);
+        guiGraphics.pose().scale(0.5f);
+        for (int row = -3; row < 3; row++) {
+            int halfWidth = 3 - (row < 0 ? -row - 1 : row);
+            if (item.level() % 2 == 0 || halfWidth == 1) {
+                guiGraphics.fill(-halfWidth, row, halfWidth, row + 1, color);
+            } else {
+                guiGraphics.fill(-halfWidth, row, -halfWidth + 1, row + 1, color);
+                guiGraphics.fill(halfWidth - 1, row, halfWidth, row + 1, color);
+            }
+        }
+        guiGraphics.pose().popMatrix();
+    }
+
+    private int markerWidth(int level) {
+        int digits = this.orderedDigits.getOrDefault(level, 0);
+        if (digits == 0) return MIN_MARKER_WIDTH;
+        int digitWidth = 0;
+        for (char digit = '0'; digit <= '9'; digit++) {
+            digitWidth = Math.max(digitWidth, GuideFont.get().width(String.valueOf(digit)));
+        }
+        return Math.max(MIN_MARKER_WIDTH, digits * digitWidth + GuideFont.get().width("."));
     }
 
     private static PreparedData prepare(List<ListItem> sourceItems) {
@@ -113,21 +143,6 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         }
 
         return new PreparedData(List.copyOf(cachedItems), composeBlockText(cachedItems));
-    }
-
-    private static String marker(ListItem item) {
-        return switch (item.kind()) {
-            case UNORDERED -> BULLETS[item.level() % BULLETS.length];
-            case ORDERED -> item.index() + ".";
-            case TASK -> item.checked() ? TASK_CHECKED : TASK_UNCHECKED;
-        };
-    }
-
-    private static int markerColor(ListItem item) {
-        if (item.kind() == ListKind.TASK) {
-            return item.checked() ? TASK_CHECKED_COLOR : TASK_UNCHECKED_COLOR;
-        }
-        return 0xFF000000;
     }
 
     private record PreparedData(List<CachedItem<ListItem>> cachedItems, FormattedText componentText) {

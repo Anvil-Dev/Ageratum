@@ -161,6 +161,7 @@ public class GuideScreen extends Screen {
     private long zoomSaveAt;
     protected double lastMouseX;
     protected double lastMouseY;
+    private final GuideScrollGesture scrollGesture = new GuideScrollGesture();
     protected @Nullable MDComponent activeMouseComponent;
     protected int activeMouseButton = -1;
     /**
@@ -299,6 +300,7 @@ public class GuideScreen extends Screen {
         if (this.layoutGeneration != GuideLayoutManager.generation() || this.documentGeneration != GuideDocumentCache.generation()) {
             if (this.documentGeneration != GuideDocumentCache.generation())
                 this.document = GuideDocumentCache.getParsedDocument(this.documentLocation).orElse(this.document);
+            this.scrollGesture.reset();
             this.parsedComponents.clear();
             this.parsedComponents.addAll(this.document.components());
             this.init();
@@ -382,6 +384,7 @@ public class GuideScreen extends Screen {
         }
 
         float previousScroll = this.contentScroll;
+        this.scrollGesture.reset();
         this.parsedComponents.clear();
         this.document = this.parser.parseDocument(this.documentLocation, markdown);
         this.parsedComponents.addAll(this.document.components());
@@ -628,56 +631,60 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (this.structureGuiPreview.contains(mouseX, mouseY)) return true;
         return this.mouseScrolled(mouseX, mouseY, scrollX, scrollY, hasControlDown(), hasShiftDown());
     }
 
     protected boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY, boolean control, boolean shift) {
         if (scrollY == 0) return false;
+        long now = System.nanoTime();
+        if (this.scrollGesture.continueScroll(scrollY, now)) return true;
+        if (this.structureGuiPreview.contains(mouseX, mouseY)) {
+            return this.scrollGesture.begin(scrollY, now, delta -> true);
+        }
         boolean onOverlay = this.zoomSlider.contains(mouseX, mouseY) || this.zoomSlider.dragging();
         double contentX = mouseX * this.scale, contentY = mouseY * this.scale;
         if (!onOverlay && this.mouseInContentRange(contentX, contentY)
             && !this.contentScrollbar.contains(contentX - this.leftPos, contentY - this.topPos)
             && !this.contentScrollbar.dragging()) {
             ComponentMouseHit hit = this.getComponentHitAtContentPosition(contentX, contentY);
-            if (hit != null && hit.component().mouseScrolled(this.minecraft, hit.mouseX(), hit.mouseY(), scrollY, this.getContentWidth())) return true;
+            if (hit != null && this.scrollGesture.begin(scrollY, now,
+                hit.component().scrollHandler(this.minecraft, hit.mouseX(), hit.mouseY(), this.getContentWidth()))) return true;
         }
         if (control) {
-            this.zoomSlider.show();
-            this.applyZoom(GuideScale.scroll(this.zoom, scrollY, shift));
-            return true;
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                this.zoomSlider.show();
+                this.applyZoom(GuideScale.scroll(this.zoom, delta, shift));
+                return true;
+            });
         }
-        if (onOverlay) return true;
-        mouseX = mouseX * this.scale;
-        mouseY = mouseY * this.scale;
-        if (this.mouseInLabelRange(mouseX, mouseY)) {
-            // Alt/Shift 加速标签栏翻滚（3倍速度）；Ctrl 已交给页面缩放。
-            double acceleratedScrollY = scrollY;
-            if (shift || hasAltDown()) {
-                acceleratedScrollY *= 3.0;
-            }
-            int rowDelta = this.consumeLabelScrollRows(acceleratedScrollY);
-            if (rowDelta != 0) {
-                this.scrollLabelsBy(rowDelta);
-            }
-            return true;
+        if (onOverlay) return this.scrollGesture.begin(scrollY, now, delta -> true);
+        // 卷轴覆盖了标签装饰的部分，输入优先级必须与绘制顺序一致。
+        if (this.mouseInPageRange(contentX, contentY)) {
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                this.scrollBy((float) (-delta * this.layout.number("interaction.scroll_step", SCROLL_STEP)));
+                return true;
+            });
         }
-        if (this.mouseInBookmarkRange(mouseX, mouseY)) {
-            this.bookmarkScrollRemainder -= scrollY;
-            int rowDelta = (int) Math.copySign(Math.floor(Math.abs(this.bookmarkScrollRemainder) + 0.5d), this.bookmarkScrollRemainder);
-            if (rowDelta != 0) {
-                this.bookmarkScrollRemainder -= rowDelta;
-                this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows + rowDelta, 0, this.maxBookmarkScrollRows);
-            }
-            return true;
+        if (this.mouseInLabelRange(contentX, contentY)) {
+            double acceleration = shift || hasAltDown() ? 3 : 1;
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                int rows = this.consumeLabelScrollRows(delta * acceleration);
+                if (rows != 0) this.scrollLabelsBy(rows);
+                return true;
+            });
         }
-        if (!this.mouseInContentRange(mouseX, mouseY)) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        if (this.mouseInBookmarkRange(contentX, contentY)) {
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                this.bookmarkScrollRemainder -= delta;
+                int rows = (int) Math.copySign(Math.floor(Math.abs(this.bookmarkScrollRemainder) + 0.5d), this.bookmarkScrollRemainder);
+                if (rows != 0) {
+                    this.bookmarkScrollRemainder -= rows;
+                    this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows + rows, 0, this.maxBookmarkScrollRows);
+                }
+                return true;
+            });
         }
-
-        // scrollY 为正表示向上滚动，故取负以减小 contentScroll（内容上移）
-        this.scrollBy((float) (-scrollY * this.layout.number("interaction.scroll_step", SCROLL_STEP)));
-        return true;
+        return super.mouseScrolled(contentX, contentY, scrollX, scrollY);
     }
 
 
@@ -2790,6 +2797,13 @@ public class GuideScreen extends Screen {
     }
 
     public int getContentWidth() {
+        int width = this.getContentViewportWidth();
+        return this.layout.bool("content.scrollbar.enabled", true)
+            ? LayoutScrollbar.contentWidth(width, this.layout.integer("content.scrollbar.width", 6),
+                this.layout.integer("content.scrollbar.hit_width", 12)) : width;
+    }
+
+    protected int getContentViewportWidth() {
         if (this.layoutGeometry != null) return this.layoutGeometry.content().width();
         return Math.max(1, this.imageWidth - this.getContentStartX() - (int) Math.ceil(this.layout.integer("content.padding.right", 15) * this.getBgImageScale()));
     }
@@ -2825,7 +2839,7 @@ public class GuideScreen extends Screen {
         this.maxContentScroll = Math.max(0, totalHeight - this.getContentHeight());
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
         this.contentScrollbar.update(new LayoutGeometry.Rect(this.getContentStartX(), this.getContentStartY(),
-                this.getContentWidth(), this.getContentHeight()),
+                this.getContentViewportWidth(), this.getContentHeight()),
             this.layout.integer("content.scrollbar.width", 6), this.layout.integer("content.scrollbar.hit_width", 12),
             this.layout.integer("content.scrollbar.min_thumb_height", 12),
             this.layout.bool("content.scrollbar.enabled", true) ? this.maxContentScroll : 0, this.contentScroll);
@@ -2848,6 +2862,7 @@ public class GuideScreen extends Screen {
 
     @Override
     public void removed() {
+        this.scrollGesture.reset();
         this.structureGuiPreview.clear();
         this.contentScrollbar.cancel();
         this.zoomSlider.cancel();
@@ -2865,16 +2880,25 @@ public class GuideScreen extends Screen {
     }
 
     /**
-     * 判断鼠标是否位于内容区域（屏幕绝对坐标）。
+     * 判断鼠标是否位于卷轴纸面（屏幕绝对坐标）。
      *
      * @param mouseX 鼠标屏幕 X
      * @param mouseY 鼠标屏幕 Y
      * @return 在内容区域内返回 {@code true}
      */
+    private boolean mouseInPageRange(double mouseX, double mouseY) {
+        if (this.layoutGeometry != null) {
+            return this.layoutGeometry.contentBackground().contains(mouseX - this.leftPos, mouseY - this.topPos);
+        }
+        return mouseX >= this.leftPos && mouseX <= this.leftPos + this.imageWidth
+            && mouseY >= this.topPos && mouseY <= this.topPos + this.imageHeight;
+    }
+
+    /** 正文视口的命中区域。 */
     private boolean mouseInContentRange(double mouseX, double mouseY) {
         int contentLeft = this.leftPos + this.getContentStartX();
         int contentTop = this.topPos + this.getContentStartY();
-        int contentRight = contentLeft + this.getContentWidth();
+        int contentRight = contentLeft + this.getContentViewportWidth();
         int contentBottom = contentTop + this.getContentHeight();
         return mouseX >= contentLeft && mouseX <= contentRight && mouseY >= contentTop && mouseY <= contentBottom;
     }

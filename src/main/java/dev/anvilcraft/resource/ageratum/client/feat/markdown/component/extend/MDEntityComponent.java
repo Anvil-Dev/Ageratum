@@ -12,6 +12,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -28,7 +30,6 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.storage.TagValueInput;
-import org.joml.Matrix3x2fStack;
 import org.joml.Quaternionf;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -58,7 +59,6 @@ public final class MDEntityComponent extends MDComponent {
     @Override
     public void extractRenderState(MDRenderContext context) {
         GuiGraphicsExtractor graphics = context.graphics();
-        Minecraft minecraft = context.minecraft();
 
         Entity entity = this.getEntity();
         if (entity == null) {
@@ -80,32 +80,28 @@ public final class MDEntityComponent extends MDComponent {
         if (this.showText) {
             Component hoverName = entity.getType().getDescription();
             int nameWidth = GuideFont.get().width(hoverName);
-            GuideFont.get().draw(graphics, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, 0x000000, false);
+            GuideFont.get().draw(graphics, hoverName, drawX + contentWidth / 2 - nameWidth / 2, contentHeight + 2, context.layout().color("colors.content_text", 0xFF202020), false);
         }
 
-//        context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
-        Matrix3x2fStack pose = graphics.pose();
-        pose.pushMatrix();
-        MDEntityComponent.renderEntity(context, graphics, x1, y1, x2, y2, this.getScale(entity, context.scale()), entity);
-        pose.popMatrix();
-//        context.disableScissor();
+        context.enableScissor(drawX + 1, 1, drawX + contentWidth - 1, contentHeight - 1);
+        try {
+            MDEntityComponent.renderEntity(context, graphics, x1, y1, x2, y2, entity);
+        } finally {
+            context.disableScissor();
+        }
     }
 
     private int getContentWidth(int maxX) {
-        return Math.clamp(Math.round(this.entityBbSize.x), 64, maxX);
+        return Math.max(1, Math.min(Math.max(Math.round(this.entityBbSize.x), 64), maxX));
     }
 
     private int getContentHeight() {
         return Math.max(Math.round(this.entityBbSize.y), 72);
     }
 
-    private float getScale(Entity entity, float contextScale) {
-        return 30F / (entity instanceof LivingEntity living ? living.getScale() : (0.55F * contextScale));
-    }
-
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        Entity entity = this.cachedEntity;
+        Entity entity = this.getEntity();
         if (entity == null) return super.getPreferredWidth(minecraft, maxX, maxY);
         int textWidth = this.showText ? GuideFont.get().width(entity.getName()) : 0;
         return Math.max(this.getContentWidth(maxX), textWidth);
@@ -113,122 +109,38 @@ public final class MDEntityComponent extends MDComponent {
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        Entity entity = this.cachedEntity;
+        Entity entity = this.getEntity();
         if (entity == null) return super.getHeight(minecraft, maxX, maxY);
         int textHeight = this.showText ? GuideFont.get().lineHeight : 0;
         return this.getContentHeight() + textHeight + 2;
     }
 
     private static void renderEntity(
-        MDRenderContext context,
-        GuiGraphicsExtractor graphics,
-        int x1,
-        int y1,
-        int x2,
-        int y2,
-        float scale,
-        Entity entity
+        MDRenderContext context, GuiGraphicsExtractor graphics, int x1, int y1, int x2, int y2, Entity entity
     ) {
-        float centerX = (float) (x1 + x2) / 2.0F;
-        float centerY = (float) (y1 + y2) / 2.0F;
-        float f2 = (float) Math.atan((centerX - context.mouseX()) / 40.0F);
-        float f3 = (float) Math.atan((centerY - context.mouseY()) / 40.0F);
-        Quaternionf pose = new Quaternionf().rotateZ((float) Math.PI);
-        Quaternionf cameraOrientation = new Quaternionf().rotateX(f3 * 20.0F * (float) (Math.PI / 180.0));
-        pose.mul(cameraOrientation);
-        pose.mul(new Quaternionf().rotateY((float) Math.PI));
-        float yRot = entity.getYRot();
-        float xRot = entity.getXRot();
-        entity.setYRot(180.0F - f2 * 40.0F);
-        entity.setXRot(-f3 * 20.0F);
-        float yBodyRot = 0F;
-        float yHeadRot = 0F;
-        float yHeadRotO = 0F;
+        if (x2 <= x1 || y2 <= y1) return;
+        // entity 的画中画接口接收屏幕坐标，不会应用当前 GUI pose。
+        ScreenRectangle bounds = new ScreenRectangle(x1, y1, x2 - x1, y2 - y1).transformMaxBounds(graphics.pose());
+        Vector2f mouse = graphics.pose().transformPosition(context.mouseX(), context.mouseY(), new Vector2f());
+        float parentScale = (float) Math.hypot(graphics.pose().m00(), graphics.pose().m01());
         if (entity instanceof LivingEntity living) {
-            yBodyRot = living.yBodyRot;
-            yHeadRot = living.yHeadRot;
-            yHeadRotO = living.yHeadRotO;
-            living.yBodyRot = 180.0F - f2 * 20.0F;
-            living.yHeadRot = living.getYRot();
-            living.yHeadRotO = living.getYRot();
-        }
-        Vector3f translate = new Vector3f(0.0F, entity.getBbHeight() / 2.0F, entity.getBbWidth() / -2.0F);
-        EntityRenderState entityRenderState = context.minecraft().getEntityRenderDispatcher().extractEntity(entity, 0);
-        int offsetY = context.offsetY();
-        graphics.entity(
-            entityRenderState,
-            scale,
-            translate,
-            pose,
-            new Quaternionf(),
-            (int) centerX,
-            offsetY + (int) centerY,
-            (int) (200 + centerX),
-            offsetY + (int) centerY + 200
-        );
-        /*TODO
-        MDEntityComponent.renderEntity(
-            graphics,
-            centerX,
-            centerY,
-            scale,
-            translate,
-            pose,
-            cameraOrientation,
-            entity
-        );
-        */
-        entity.setYRot(yRot);
-        entity.setXRot(xRot);
-        if (entity instanceof LivingEntity living) {
-            living.yBodyRot = yBodyRot;
-            living.yHeadRotO = yHeadRotO;
-            living.yHeadRot = yHeadRot;
+            InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, bounds.left(), bounds.top(), bounds.right(), bounds.bottom(),
+                Math.max(1, Math.round(30 * parentScale)), 0, mouse.x, mouse.y, living);
+        } else {
+            float centerX = (x1 + x2) / 2f;
+            float centerY = (y1 + y2) / 2f;
+            float yaw = (float) Math.atan((centerX - context.mouseX()) / 40f);
+            float pitch = (float) Math.atan((centerY - context.mouseY()) / 40f);
+            Quaternionf camera = new Quaternionf().rotateX(pitch * 20 * (float) Math.PI / 180);
+            Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).mul(camera).rotateY(yaw);
+            EntityRenderState state = context.minecraft().getEntityRenderDispatcher().extractEntity(entity, 0);
+            state.shadowPieces.clear();
+            state.outlineColor = 0;
+            graphics.entity(state, 30 * parentScale,
+                new Vector3f(0, entity.getBbHeight() / 2, 0), rotation, camera,
+                bounds.left(), bounds.top(), bounds.right(), bounds.bottom());
         }
     }
-
-    /*TODO
-    private static void renderEntity(
-        GuiGraphicsExtractor guiGraphics,
-        float x,
-        float y,
-        float scale,
-        Vector3f translate,
-        Matrix3x2fc pose,
-        @Nullable Quaternionf cameraOrientation,
-        Entity entity
-    ) {
-        Matrix3x2fStack poseStack = guiGraphics.pose();
-        poseStack.pushMatrix();
-        poseStack.translate(x, y);
-        poseStack.scale(scale, scale);
-        poseStack.translate(translate.x, translate.y);
-        poseStack.mul(pose);
-        Lighting.setupForEntityInInventory();
-        EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-        if (cameraOrientation != null) {
-            entityrenderdispatcher.overrideCameraOrientation(cameraOrientation.conjugate(new Quaternionf()).rotateY((float) Math.PI));
-        }
-
-        entityrenderdispatcher.setRenderShadow(false);
-        // noinspection deprecation
-        RenderSystem.runAsFancy(() -> entityrenderdispatcher.render(
-            entity,
-            0.0,
-            0.0,
-            0.0,
-            0.0F,
-            1.0F,
-            poseStack,
-            guiGraphics.bufferSource(),
-            15728880
-        ));
-        guiGraphics.flush();
-        entityrenderdispatcher.setRenderShadow(true);
-        poseStack.popMatrix();
-        Lighting.setupFor3DItems();
-    }
-    */
 
     private @Nullable Entity getEntity() {
         if (this.cachedEntity != null && this.cachedLevel != null) {
