@@ -53,7 +53,11 @@ public final class StructureTest {
     public StructureTest(IEventBus bus) {
         bus.addListener((ModelEvent.BakingCompleted event) -> this.ready = true);
         NeoForge.EVENT_BUS.addListener(this::tick);
-        NeoForge.EVENT_BUS.addListener(this::render);
+        if (Boolean.getBoolean("ageratum.scrollEntityTest")) {
+            NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderFrameEvent.Post event) -> this.scrollFrame());
+        } else {
+            NeoForge.EVENT_BUS.addListener(this::render);
+        }
     }
 
     private void tick(ClientTickEvent.Post event) {
@@ -75,6 +79,20 @@ public final class StructureTest {
             new WorldOptions(17, false, false),
             access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT)
                 .value().createWorldDimensions(), mc.screen);
+    }
+
+    private void scrollFrame() {
+        Minecraft mc = Minecraft.getInstance();
+        if (this.stage == 5 || mc.level == null || mc.player == null || mc.getOverlay() != null) return;
+        try {
+            if (ScrollEntityClientTest.tick(mc)) {
+                LogUtils.getLogger().info("AGERATUM_STRUCTURE_TEST PASS: scroll ownership, idle release and entity viewport");
+                this.stage = 5;
+                mc.stop();
+            }
+        } catch (Throwable exception) {
+            this.fail(exception);
+        }
     }
 
     private void render(RenderLevelStageEvent event) {

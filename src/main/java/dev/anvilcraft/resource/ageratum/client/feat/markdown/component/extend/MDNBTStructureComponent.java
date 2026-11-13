@@ -282,7 +282,7 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseScrolled(Minecraft minecraft, double mouseX, double mouseY, double scrollY, int maxX) {
-        if (!Screen.hasControlDown() || scrollY == 0.0d) {
+        if (scrollY == 0.0d) {
             return false;
         }
 

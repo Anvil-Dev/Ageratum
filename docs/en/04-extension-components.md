@@ -374,6 +374,8 @@ This is a danger box (red).
 
 ### Row Component — `<row>` / `::: row`
 
+Horizontal rows wrap whole components to the available width, keeping recipe proportions and applying alignment per line. Height and hit areas follow the wrapped layout, so guide zoom does not hide recipes on the right.
+
 Renders child components side by side in a horizontal layout.
 
 **Smart Width Allocation:**
@@ -462,10 +464,16 @@ Blocks without a corresponding item (technical blocks) will not render.
 > **Note:** Unlike `<item>`, `<block>` looks up the **block** registry and automatically finds the
 > matching block item. You do not need to know the block item's ID separately.
 
+### Key Binding — `<key>`
+
+`<key id="key.anvilcraft.switch_phase"/>` shows the currently bound key in paragraphs and lists. Rebinding updates the displayed name without editing the document.
+
 ### Entity Display — `<entity>`
 
 Renders an entity preview with `InventoryScreen.renderEntityInInventoryFollowsMouse`.
 The entity rotates to follow the cursor.
+
+The entity follows its row and guide transforms and is clipped to its preview frame. Its size is measured before the first layout to keep following content in place.
 
 ```markdown
 <entity id="minecraft:zombie"/>

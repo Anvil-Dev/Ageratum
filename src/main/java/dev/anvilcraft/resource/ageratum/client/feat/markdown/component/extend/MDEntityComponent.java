@@ -101,7 +101,7 @@ public final class MDEntityComponent extends MDComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        Entity entity = this.cachedEntity;
+        Entity entity = this.getEntity();
         if (entity == null) return super.getPreferredWidth(minecraft, maxX, maxY);
         int textWidth = this.showText ? minecraft.font.width(entity.getName()) : 0;
         return Math.max(this.getContentWidth(maxX), textWidth);
@@ -109,7 +109,7 @@ public final class MDEntityComponent extends MDComponent {
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        Entity entity = this.cachedEntity;
+        Entity entity = this.getEntity();
         if (entity == null) return super.getHeight(minecraft, maxX, maxY);
         int textHeight = this.showText ? minecraft.font.lineHeight : 0;
         return this.getContentHeight() + textHeight + 2;

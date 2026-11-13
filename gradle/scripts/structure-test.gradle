@@ -12,6 +12,7 @@ neoForge {
     runs {
         structureTest {
             client()
+            systemProperty 'ageratum.scrollEntityTest', providers.gradleProperty('scrollEntityTest').isPresent().toString()
             systemProperty 'ageratum.structureGuiReview', providers.gradleProperty('structureGuiReview').isPresent().toString()
             systemProperty 'ageratum.structureGuiTest', providers.gradleProperty('structureGuiTest').isPresent().toString()
             systemProperty 'ageratum.blockDetailsTest', providers.gradleProperty('blockDetailsTest').isPresent().toString()
