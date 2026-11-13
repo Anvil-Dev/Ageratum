@@ -46,10 +46,9 @@ public final class GuideFont {
         SdfGlyphAtlas atlas = this.atlases[mask];
         if (atlas == null) this.atlases[mask] = atlas = SdfGlyphAtlas.getOrCreate(mask == 0 ? this.font : this.font.deriveFont(mask)).join();
         float scale = this.lineHeight / (float) atlas.awtHeight();
-        var glyph = atlas.glyph(codePoint, ignored -> { });
-        // Match SdfTextLayout's per-glyph rounding and temporary missing-glyph advance exactly.
-        return glyph == null ? Math.round(Math.max(6, atlas.font().getSize() / 2) * scale)
-            : Math.max(1, Math.round(glyph.advance() * scale));
+        // Layout needs font metrics, not a rasterized glyph. Keep line breaks and
+        // hit positions stable while AnvilLib generates visible glyphs in the background.
+        return Math.max(1, Math.round(atlas.measureCodepoint(codePoint) * scale));
     }
 
     public int width(String text) { return (int) Math.ceil(this.splitter.stringWidth(text)); }
