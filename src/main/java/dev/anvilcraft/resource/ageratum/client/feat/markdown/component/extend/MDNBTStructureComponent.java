@@ -366,15 +366,15 @@ public final class MDNBTStructureComponent extends MDComponent {
             dragY = distanceY;
         }
 
-        if (button == 0) {
+        if (button == 1) {
             this.panOffsetX += (float) (dragX * PAN_SENSITIVITY);
             this.panOffsetY -= (float) (dragY * PAN_SENSITIVITY);
             return true;
         }
 
-        if (button == 1) {
+        if (button == 0) {
             this.cameraRig.setRotationY(this.cameraRig.getRotationY() + (float) (dragX * ROTATE_YAW_SENSITIVITY));
-            float nextPitch = this.cameraRig.getRotationX() - (float) (dragY * ROTATE_PITCH_SENSITIVITY);
+            float nextPitch = this.cameraRig.getRotationX() + (float) (dragY * ROTATE_PITCH_SENSITIVITY);
             this.cameraRig.setRotationX(clamp(nextPitch, -89.9f, 89.9f));
             return true;
         }
