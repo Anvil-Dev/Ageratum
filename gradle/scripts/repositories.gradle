@@ -2,13 +2,19 @@ repositories {
     mavenLocal {
         content { excludeGroup "dev.anvilcraft.lib" }
     }
-    mavenCentral()
-    maven { // Anvil Lib
+    def central = mavenCentral()
+    def anvilLibRepository = maven {
         name = "Cjsah Maven"
         url = "https://server.cjsah.net:1002/maven/releases/"
         content {
             includeGroup "dev.anvilcraft.lib"
             includeGroup "dev.dubhe"
+        }
+    }
+    exclusiveContent {
+        forRepositories(central, anvilLibRepository)
+        filter {
+            includeGroup "dev.anvilcraft.lib"
         }
     }
     maven { // Registrate Fork
