@@ -2,89 +2,175 @@ package dev.anvilcraft.resource.ageratum.client.gui;
 
 import dev.anvilcraft.resource.ageratum.client.layout.GuideLayout;
 import dev.anvilcraft.resource.ageratum.client.layout.LayoutGeometry.Rect;
-import dev.anvilcraft.resource.ageratum.client.layout.LayoutScrollbar;
 import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Util;
 
-/** A stable GUI-coordinate control, independent of the zoomed document's coordinate system. */
+import java.util.function.LongSupplier;
+
+/** A transient horizontal zoom control fitted to the blank top edge of the guide. */
 public final class GuideZoomSlider {
     private static final LayoutTexture TRACK = new LayoutTexture(Identifier.parse("ageratum:textures/gui/guide/light/scrollbar_track.png"),
         6, 6, 6, 6, 2, 2, 2, 2, -1);
     private static final LayoutTexture THUMB = new LayoutTexture(TRACK.location().withPath("textures/gui/guide/light/scrollbar_thumb.png"),
-        6, 6, 6, 6, 2, 2, 2, 2, 0xFFE8D3A8);
-    private final LayoutScrollbar slider = new LayoutScrollbar();
+        6, 6, 6, 6, 2, 2, 2, 2, 0xFF8B7355);
+    private static final int FADE_IN_MS = 150, HOLD_MS = 1800, FADE_OUT_MS = 200;
+    private static final int HEIGHT = 16, TITLE_WIDTH = 38, SIGN_WIDTH = 10, VALUE_WIDTH = 28, RESET_WIDTH = 28;
+    private static final int THUMB_WIDTH = 7;
+    private final LongSupplier millis;
+    private long fadeInAt;
+    private long fadeOutAt = Long.MIN_VALUE;
+    private boolean dismissed = true;
+
     private Rect bounds = Rect.EMPTY;
+    private Rect track = Rect.EMPTY;
     private Rect reset = Rect.EMPTY;
-    private boolean visible;
-    private long dismissedAt;
+    private int titleWidth;
+    private int trackWidth;
+    private float unit;
+    private double zoom;
+    private double dragTravel;
+    private double dragStartX;
+    private double dragStartZoom;
 
-    public void show() { this.visible = true; this.dismissedAt = 0; }
-    public boolean visible() { return this.visible; }
+    public GuideZoomSlider() { this(Util::getMillis); }
 
-    /** Releasing Ctrl alone never dismisses the panel. Consume the dismissing click. */
+    public GuideZoomSlider(LongSupplier millis) { this.millis = millis; }
+
+    public void show() {
+        long now = this.millis.getAsLong();
+        this.fadeInAt = now - Math.round(this.opacity(now) * FADE_IN_MS);
+        this.fadeOutAt = now + HOLD_MS;
+        this.dismissed = false;
+    }
+
+    public boolean visible() {
+        return !this.dismissed && this.bounds.width() > 0 && this.bounds.height() > 0
+            && (this.dragging() || this.millis.getAsLong() < this.fadeOutAt + FADE_OUT_MS);
+    }
+
+    public float opacity() { return this.opacity(this.millis.getAsLong()); }
+
+    private float opacity(long now) {
+        if (this.fadeOutAt == Long.MIN_VALUE) return 0;
+        float enter = Math.clamp((now - this.fadeInAt) / (float) FADE_IN_MS, 0, 1);
+        float exit = this.dragging() ? 1 : Math.clamp(1 - (now - this.fadeOutAt) / (float) FADE_OUT_MS, 0, 1);
+        return Math.min(enter, exit);
+    }
+
     public boolean dismiss(boolean controlDown) {
-        if (!this.visible || controlDown || this.dragging()) return false;
-        this.visible = false;
-        this.dismissedAt = System.nanoTime();
+        if (!this.visible() || controlDown || this.dragging()) return false;
+        long now = this.millis.getAsLong();
+        this.fadeOutAt = now - Math.round((1 - this.opacity(now)) * FADE_OUT_MS);
+        this.dismissed = true;
         return true;
     }
 
-    public void update(int guiWidth, int guiHeight, double zoom) {
-        int width = Math.min(42, Math.max(0, guiWidth / 3));
-        int height = Math.min(196, Math.max(0, guiHeight - 8));
-        Rect next = new Rect(guiWidth - width, (guiHeight - height) / 2, width, height);
-        if (!next.equals(this.bounds)) this.slider.cancel();
-        this.bounds = next;
-        this.reset = new Rect(next.x() + 2, next.bottom() - 19, Math.max(0, width - 4), 16);
-        int trackWidth = Math.min(20, width);
-        Rect track = new Rect(Math.max(next.x(), next.x() + (width + Math.min(8, trackWidth)) / 2 - trackWidth), next.y() + Math.min(30, height / 3),
-            trackWidth, Math.max(0, height - Math.min(80, height * 2 / 3)));
-        this.slider.updateSlider(track, 8, trackWidth, 14, GuideScale.MAX - GuideScale.MIN, GuideScale.MAX - GuideScale.clamp(zoom));
+    /** The header and pointer positions are both in vanilla GUI coordinates. */
+    public void update(Rect header, double zoom) {
+        this.zoom = GuideScale.clamp(zoom);
+        this.unit = Math.min(header.height() / (float) HEIGHT, header.width() / 128f);
+        if (this.unit <= 0) {
+            this.bounds = this.track = this.reset = Rect.EMPTY;
+            return;
+        }
+        int available = (int) (header.width() / this.unit) - 16;
+        this.titleWidth = available >= 180 ? TITLE_WIDTH : 0;
+        int fixedWidth = this.titleWidth + 2 * SIGN_WIDTH + VALUE_WIDTH + 4 + RESET_WIDTH;
+        this.trackWidth = Math.min(84, available - fixedWidth);
+        int width = Math.round((fixedWidth + this.trackWidth) * this.unit);
+        int height = Math.round(HEIGHT * this.unit);
+        this.bounds = new Rect(header.x() + (header.width() - width) / 2,
+            header.y() + (header.height() - height) / 2, width, height);
+        this.track = this.toGui(this.titleWidth + SIGN_WIDTH, 6, this.trackWidth, 4);
+        this.reset = this.toGui(this.titleWidth + 2 * SIGN_WIDTH + this.trackWidth + VALUE_WIDTH + 4, 2, RESET_WIDTH, 13);
     }
 
-    public boolean contains(double x, double y) { return this.visible && this.bounds.contains(x, y); }
-    public boolean resetContains(double x, double y) { return this.visible && this.reset.contains(x, y); }
+    private Rect toGui(int x, int y, int width, int height) {
+        int left = Math.round(x * this.unit), top = Math.round(y * this.unit);
+        return new Rect(this.bounds.x() + left, this.bounds.y() + top,
+            Math.round((x + width) * this.unit) - left, Math.round((y + height) * this.unit) - top);
+    }
+
+    public Rect track() { return this.track; }
     public Rect resetButton() { return this.reset; }
-    public boolean press(double x, double y) { return this.visible && this.slider.press(x, y); }
-    public boolean dragging() { return this.slider.dragging(); }
-    public double zoom() { return GuideScale.clamp(GuideScale.MAX - this.slider.position()); }
-    public double drag(double y) { return GuideScale.clamp(GuideScale.MAX - this.slider.drag(y)); }
-    public void cancel() { this.slider.cancel(); }
-    public Rect track() { return this.slider.track(); }
-    public Rect thumb() { return this.slider.thumb(); }
-
-    public void render(GuiGraphicsExtractor graphics, GuideLayout layout, double zoom) {
-        if (this.bounds.width() == 0 || this.bounds.height() == 0) return;
-        if (!this.visible && this.dismissedAt == 0) return;
-        double progress = this.visible ? 0 : (System.nanoTime() - this.dismissedAt) / 180_000_000.0;
-        if (progress >= 1) return;
-        // A short ease-out exit towards the edge; reopening immediately cancels the exit.
-        float offset = this.visible ? 0 : (float) (this.bounds.width() * Math.sin(progress * Math.PI / 2));
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(offset, 0);
-        Rect r = this.bounds;
-        graphics.fill(r.x(), r.y(), r.right(), r.bottom(), 0xD0202228);
-        graphics.enableScissor(r.x(), r.y(), r.right(), r.bottom());
-        this.label(graphics, Component.translatable("ageratum.configuration.scale").getString(), r.y() + 5);
-        this.label(graphics, "+", this.slider.track().y() - 12);
-        this.part(graphics, layout.texture("textures.zoom_track", TRACK), this.slider.track());
-        this.part(graphics, layout.texture("textures.zoom_thumb", THUMB), this.slider.thumb());
-        this.label(graphics, "−", this.slider.track().bottom() + 3);
-        this.label(graphics, Math.round(GuideScale.clamp(zoom) * 100) + "%", r.bottom() - 34);
-        graphics.fill(this.reset.x(), this.reset.y(), this.reset.right(), this.reset.bottom(), 0xFF535861);
-        this.label(graphics, Component.translatable("ageratum.guide.zoom.default").getString(), this.reset.y() + 3);
-        graphics.disableScissor();
-        graphics.pose().popMatrix();
+    public Rect thumb() {
+        int width = Math.min(this.track.width(), Math.max(1, Math.round(THUMB_WIDTH * this.unit)));
+        double fraction = (this.zoom - GuideScale.MIN) / (GuideScale.MAX - GuideScale.MIN);
+        int x = this.track.x() + (int) Math.round(fraction * (this.track.width() - width));
+        int height = Math.round(8 * this.unit);
+        return new Rect(x, this.bounds.y() + (this.bounds.height() - height) / 2, width, height);
     }
 
-    private void label(GuiGraphicsExtractor graphics, String text, int y) {
+    public boolean contains(double x, double y) { return this.visible() && this.bounds.contains(x, y); }
+    public boolean resetContains(double x, double y) { return this.visible() && this.reset.contains(x, y); }
+    public boolean dragging() { return this.dragTravel > 0; }
+    public double zoom() { return this.zoom; }
+
+    public boolean press(double x, double y) {
+        if (!this.contains(x, y) || x < this.track.x() || x >= this.track.right()) return false;
+        Rect thumb = this.thumb();
+        int travel = this.track.width() - thumb.width();
+        if (travel <= 0) return false;
+        this.show();
+        this.dragTravel = travel;
+        if (x < thumb.x() || x >= thumb.right()) {
+            double fraction = (x - this.track.x() - thumb.width() / 2.0) / this.dragTravel;
+            this.zoom = GuideScale.clamp(GuideScale.MIN + fraction * (GuideScale.MAX - GuideScale.MIN));
+        }
+        // Reflow can move the book while dragging. Keep the pointer's original reference frame until release.
+        this.dragStartX = x;
+        this.dragStartZoom = this.zoom;
+        return true;
+    }
+
+    public double drag(double x) {
+        if (this.dragging()) {
+            this.zoom = GuideScale.clamp(this.dragStartZoom + (x - this.dragStartX) / this.dragTravel * (GuideScale.MAX - GuideScale.MIN));
+        }
+        return this.zoom;
+    }
+
+    public void cancel() {
+        if (this.dragging()) this.show();
+        this.dragTravel = 0;
+    }
+
+    public void render(GuiGraphicsExtractor graphics, GuideLayout layout, int mouseX, int mouseY) {
+        float opacity = this.opacity();
+        if (opacity <= 0 || this.bounds.width() == 0 || this.bounds.height() == 0) return;
+        int ink = LayoutTexture.withOpacity(layout.color("colors.label_text_clickable", 0xFF5D4630), opacity);
+        if (this.titleWidth > 0) {
+            this.label(graphics, Component.translatable("ageratum.configuration.scale").getString(),
+                this.toGui(0, 2, this.titleWidth, 12), ink);
+        }
+        this.label(graphics, "−", this.toGui(this.titleWidth, 2, SIGN_WIDTH, 12), ink);
+        layout.texture("textures.zoom_track", TRACK).draw(graphics, this.track.x(), this.track.y(),
+            this.track.width(), this.track.height(), false, opacity);
+        Rect thumb = this.thumb();
+        layout.texture("textures.zoom_thumb", THUMB).draw(graphics,
+            thumb.x(), thumb.y(), thumb.width(), thumb.height(), false, opacity);
+        int plusX = this.titleWidth + SIGN_WIDTH + this.trackWidth;
+        this.label(graphics, "+", this.toGui(plusX, 2, SIGN_WIDTH, 12), ink);
+        this.label(graphics, Math.round(this.zoom * 100) + "%", this.toGui(plusX + SIGN_WIDTH, 2, VALUE_WIDTH, 12), ink);
+        layout.controlTexture("button_empty").draw(graphics, this.reset.x(), this.reset.y(), this.reset.width(),
+            this.reset.height(), this.resetContains(mouseX, mouseY), opacity);
+        this.label(graphics, Component.translatable("ageratum.guide.zoom.default").getString(),
+            this.toGui(plusX + SIGN_WIDTH + VALUE_WIDTH + 6, 2, RESET_WIDTH - 4, 11), LayoutTexture.withOpacity(0xFFFFF4DE, opacity));
+    }
+
+    private void label(GuiGraphicsExtractor graphics, String text, Rect area, int color) {
+        if (area.width() == 0 || area.height() == 0) return;
         GuideFont font = GuideFont.get();
-        font.draw(graphics, text, this.bounds.x() + (this.bounds.width() - font.width(text)) / 2, y, 0xFFF0E8D8, false);
-    }
-
-    private void part(GuiGraphicsExtractor graphics, LayoutTexture texture, Rect rect) {
-        texture.draw(graphics, rect.x(), rect.y(), rect.width(), rect.height(), false);
+        int width = Math.max(1, font.width(text));
+        float scale = Math.min(this.unit, Math.min(area.width() / (float) width, area.height() / (float) font.lineHeight));
+        var pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(area.x() + (area.width() - width * scale) / 2, area.y() + (area.height() - font.lineHeight * scale) / 2);
+        pose.scale(scale, scale);
+        font.draw(graphics, text, 0, 0, color, false);
+        pose.popMatrix();
     }
 }

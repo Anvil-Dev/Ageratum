@@ -78,7 +78,9 @@ layout: ageratum:fullscreen
 
 ### 滚动条
 
-**缩放浮层**仅在 Ctrl＋滚轮调整页面缩放时出现，每格 2 个百分点，Ctrl＋Shift＋滚轮每格 10 个百分点，范围 50%～400%。结构预览优先接收滚轮。浮层使用原版 GUI 坐标覆盖页面，不占用布局宽度；支持拖动轨道和“默认”按钮，后者恢复 config 的 scale，缩放按命名空间持久化到 `config/ageratum/zoom.json`，不改写全局默认配置；Ctrl＋0（含小键盘 0）与默认按钮一样清除当前命名空间的覆盖记录并恢复配置值。松开 Ctrl 后点击框外才向屏幕边缘收回。通过 `textures.zoom_track` 和 `textures.zoom_thumb` 更换轨道与滑块，默认均为 6×6 单帧、2 像素九宫格边框。
+**缩放滑条**在日间卷轴或夜间石板的顶部横向淡入，拖动期间保持显示，停止缩放片刻后自动淡出。Ctrl＋滚轮每格调整 2 个百分点，同时按住 Shift 时每格调整 10 个百分点，范围为 50%～400%。结构预览优先接收滚轮。点击轨道或拖动滑块都可以调整比例。“默认”按钮和 Ctrl＋0（含小键盘 0）都会清除 `config/ageratum/zoom.json` 里当前命名空间的缩放记录，恢复配置中的比例。松开 Ctrl 后点击滑条外可提前收起，本次点击不会触发下方的内容。
+
+通过 `textures.zoom_track` 和 `textures.zoom_thumb` 更换轨道与滑块，默认均为 6×6 单帧，带 2 像素九宫格边框。“默认”按钮使用当前主题的 `textures.button_empty`。这张 32×32 贴图包含两个纵向排列的 32×16 帧，上帧为常态，下帧为悬停态。手册在选中的帧上居中绘制本地化按钮文字。
 
 书本和全屏布局的可滚动正文页面都会在内容右边缘叠加滚动条。拖动滑块，或按下轨道立即定位后继续拖动，均可快速翻页。隐藏状态也接受首次按下，包括转为主指针事件的触屏输入；移出轨道后仍保持拖动，直到松手。不包含正文区域的滑动手势。
 
@@ -130,7 +132,7 @@ layout: ageratum:fullscreen
 
 `width/height` 是源帧尺寸，`texture_size` 是正方形图集尺寸，也可分别设置 `texture_width/texture_height`。显示尺寸由布局分配。`nine_slice: {"border": 8}` 设置四边，`nine_slice: null` 清除继承的九宫格；按钮是竖向两帧，先选常态/悬停帧再切九宫格。
 
-控件纹理键：`label_primary`、`label_secondary`、`label_bookmark`、`button_close`、`button_share`、`button_return`、`button_add`、`button_up`、`button_down`。放在 `textures` 下。
+`textures` 下的控件纹理键包括 `label_primary`、`label_secondary`、`label_bookmark`、`button_close`、`button_share`、`button_return`、`button_add`、`button_empty`、`button_up`、`button_down`。
 
 `textures.components` 支持 `item_slot`、`recipe_<贴图名称>`、`structure_button_projection`。内置明暗布局为 `anvil`、`arrow`、`crafting_table`、`ember_smithing_table`、`furnace`、`jewelcrafting_table`、`plus`、`slot`、`slots_1n`、`slots_2n`、`slots_3n`、`smithing_table`、`stonecutter` 提供对应原始贴图。组件保持自己的逻辑尺寸及槽位坐标；更换源图片规格不会移动物品和悬停区域，也不会把配方变成任意自由布局。
 

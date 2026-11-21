@@ -38,7 +38,8 @@ public final class LayoutDefaults {
 
     public static JsonObject dark() {
         JsonObject layout = GuideLayoutManager.merge(light(), JsonParser.parseString("""
-            {"textures":{"scrollbar_thumb":{"tint":"#FFE8E0D0"},"scrollbar_track":{"tint":"#FF606A78"}},
+            {"textures":{"scrollbar_thumb":{"tint":"#FFE8E0D0"},"scrollbar_track":{"tint":"#FF606A78"},
+              "zoom_track":{"tint":"#FF837D87"},"zoom_thumb":{"tint":"#FFE8E0D0"}},
              "colors":{"content_text":"#E8E0D0","label_text_active":"#FFD75F",
               "label_text_clickable":"#E8E0D0","label_text_disabled":"#A0A0A0","bookmark_text":"#E8E0D0",
               "components":{"info":{"background":"#FF172B3A"},"tip":{"background":"#FF17382F"},
@@ -54,11 +55,11 @@ public final class LayoutDefaults {
         layout.getAsJsonObject("content").getAsJsonObject("background").addProperty("location", directory + "guide");
         JsonObject textures = layout.getAsJsonObject("textures");
         for (String name : new String[]{"label_primary", "label_secondary", "label_bookmark", "button_close",
-            "button_share", "button_return", "button_add", "button_up", "button_down", "button_dark", "button_import",
+            "button_share", "button_return", "button_add", "button_empty", "button_up", "button_down", "button_dark", "button_import",
             "scrollbar_track", "scrollbar_thumb", "zoom_track", "zoom_thumb"}) {
             String resource = switch (name) {
                 case "button_return" -> "button_back";
-                case "zoom_track" -> "scrollbar_track";
+                case "zoom_track" -> theme.equals("dark") ? "scrollbar_thumb" : "scrollbar_track";
                 case "zoom_thumb" -> "scrollbar_thumb";
                 default -> name;
             };

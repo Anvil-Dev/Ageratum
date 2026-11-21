@@ -28,6 +28,9 @@
     "button_add": {
       "location": "ageratum:gui/guide/dark/button_add"
     },
+    "button_empty": {
+      "location": "ageratum:gui/guide/dark/button_empty"
+    },
     "button_up": {
       "location": "ageratum:gui/guide/dark/button_up"
     },
@@ -91,9 +94,11 @@
       "location": "ageratum:gui/guide/dark/scrollbar_thumb"
     },
     "zoom_track": {
-      "location": "ageratum:gui/guide/dark/scrollbar_track"
+      "tint": "#FF837D87",
+      "location": "ageratum:gui/guide/dark/scrollbar_thumb"
     },
     "zoom_thumb": {
+      "tint": "#FFE8E0D0",
       "location": "ageratum:gui/guide/dark/scrollbar_thumb"
     },
     "button_import": {

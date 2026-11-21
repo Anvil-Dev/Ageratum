@@ -78,7 +78,9 @@ Tree and bookmarks share `marquee`: `enabled=true`, `speed=30` logical px/s, `pa
 
 ### Scrollbar
 
-A **zoom overlay** appears only when Ctrl+wheel changes page zoom: 2 percentage points per notch, or 10 with Ctrl+Shift, bounded to 50%–400%. Structure previews receive wheel input first. The overlay uses vanilla GUI coordinates above the page and reserves no layout space. Drag or seek on the slider, or press Default to restore the configured scale; zoom is persisted per namespace in `config/ageratum/zoom.json` without changing the global default. Ctrl+0 (including keypad 0) performs the same reset, clearing that namespace override. Release Ctrl and then click outside to retract the overlay to the screen edge. Customize `textures.zoom_track` and `textures.zoom_thumb`; both default to single 6×6 frames with 2-pixel nine-slice borders.
+The **zoom slider** fades in horizontally across the top roll of the guide, or the top of the stone tablet in dark mode. It stays visible during a drag and fades out shortly after zooming stops. Ctrl+wheel adjusts the zoom by 2 percentage points per notch (10 with Shift), between 50% and 400%. Structure previews receive wheel input first. Click the track or drag the thumb to adjust the zoom. Default and Ctrl+0 (including keypad 0) clear the current namespace override in `config/ageratum/zoom.json` and restore the configured scale. With Ctrl released, clicking outside dismisses the slider early and consumes the click.
+
+The track and thumb use `textures.zoom_track` and `textures.zoom_thumb`, both single 6×6 frames with 2-pixel nine-slice borders by default. The Default button uses `textures.button_empty` from the active theme. Its 32×32 texture contains two 32×16 frames stacked vertically, with the normal frame on top and the hover frame below. The guide centers the localized label over the selected frame.
 
 Scrollable document pages have an overlay scrollbar at the right edge in book and fullscreen layouts. Drag the thumb or press the track to seek immediately, then keep dragging. A hidden bar accepts the first press, including touch input delivered as primary-pointer events. Dragging remains captured outside the track until release. Body swipe gestures are not added.
 
@@ -130,7 +132,7 @@ Texture locations accept `mymod:gui/guide/paper` or `mymod:textures/gui/guide/pa
 
 `width/height` describe a source frame. `texture_size` describes a square atlas; `texture_width/texture_height` support rectangular atlases. The layout determines destination size. `nine_slice: {"border":8}` sets all borders; `nine_slice:null` clears inherited slicing. Buttons contain two vertical frames; slicing happens after selecting the normal/hover frame.
 
-UI keys under `textures`: `label_primary`, `label_secondary`, `label_bookmark`, `button_close`, `button_share`, `button_return`, `button_add`, `button_up`, `button_down`.
+UI keys under `textures` include `label_primary`, `label_secondary`, `label_bookmark`, `button_close`, `button_share`, `button_return`, `button_add`, `button_empty`, `button_up` and `button_down`.
 
 Keys under `textures.components`: `item_slot`, `recipe_<texture name>`, `structure_button_projection`. The bundled light and dark layouts provide original textures for `anvil`, `arrow`, `crafting_table`, `ember_smithing_table`, `furnace`, `jewelcrafting_table`, `plus`, `slot`, `slots_1n`, `slots_2n`, `slots_3n`, `smithing_table` and `stonecutter`. Components retain their logical sizes, item coordinates and hover regions when source image dimensions change. Skinning does not introduce arbitrary recipe slot positioning.
 

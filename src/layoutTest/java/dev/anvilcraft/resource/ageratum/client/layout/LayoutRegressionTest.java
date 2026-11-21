@@ -2,6 +2,8 @@ package dev.anvilcraft.resource.ageratum.client.layout;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideScale;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideZoomSlider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -9,6 +11,7 @@ import net.minecraft.network.chat.Style;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Executed by Gradle check; assertions are explicit and do not require -ea. */
 public final class LayoutRegressionTest {
@@ -201,34 +204,66 @@ public final class LayoutRegressionTest {
     }
 
     private static void zoomSlider() {
-        var slider = new dev.anvilcraft.resource.ageratum.client.gui.GuideZoomSlider();
-        slider.update(800, 600, 1.0);
+        var clock = new AtomicLong(1_000);
+        var slider = new GuideZoomSlider(clock::get);
+        var header = new LayoutGeometry.Rect(100, 12, 600, 24);
+        slider.update(header, 1.0);
         var track = slider.track();
         var thumb = slider.thumb();
-        check(track.right() <= 800 && !slider.visible(), "zoom overlay starts hidden");
+        check(track.width() > track.height() && track.y() >= header.y() && track.bottom() <= header.bottom(),
+            "horizontal zoom track fits the header");
+        check(!slider.visible() && slider.opacity() == 0, "zoom overlay starts hidden");
         check(!slider.press(track.x() + 2, track.y() + 2), "hidden overlay cannot capture input");
         slider.show();
+        check(slider.opacity() == 0, "zoom overlay starts fading in from transparent");
+        clock.addAndGet(60);
+        check(slider.opacity() > 0 && slider.opacity() < 1, "zoom overlay fades in");
+        clock.addAndGet(240);
+        check(slider.opacity() == 1, "zoom overlay reaches full opacity");
         check(!slider.dismiss(true) && slider.visible(), "Ctrl outside click keeps overlay");
         check(slider.dismiss(false) && !slider.visible(), "outside click after Ctrl retracts overlay");
+        clock.addAndGet(60);
+        float exitOpacity = slider.opacity();
+        check(exitOpacity > 0 && exitOpacity < 1, "dismissed control fades out");
         slider.show();
+        check(Math.abs(slider.opacity() - exitOpacity) < 0.001, "zooming again reverses a partial fade continuously");
+        clock.addAndGet(300);
         check(slider.resetContains(slider.resetButton().x() + 1, slider.resetButton().y() + 1), "default button hit target");
-        check(dev.anvilcraft.resource.ageratum.client.gui.GuideScale.scroll(1, 1, false) == 1.02, "wheel adds 2 percentage points");
-        check(dev.anvilcraft.resource.ageratum.client.gui.GuideScale.scroll(1, -1, true) == 0.9, "shift wheel subtracts 10 points");
-        check(dev.anvilcraft.resource.ageratum.client.gui.GuideScale.scroll(4, 1, true) == 4, "wheel upper clamp");
-        check(dev.anvilcraft.resource.ageratum.client.gui.GuideScale.scroll(0.5, -1, false) == 0.5, "wheel lower clamp");
-        check(slider.press(thumb.x() + 2, thumb.y() + 3) && slider.zoom() == 1, "zoom thumb grab never jumps");
-        check(slider.drag(track.y() - 100) == 4, "upward zoom clamps at 400 percent");
-        slider.update(800, 600, 4);
-        check(slider.dragging() && slider.track().equals(track), "live zoom does not move or release slider");
-        check(slider.drag(track.bottom() + 100) == 0.5, "downward zoom clamps at 50 percent");
+        check(GuideScale.scroll(1, 1, false) == 1.02, "wheel adds 2 percentage points");
+        check(GuideScale.scroll(1, -1, true) == 0.9, "shift wheel subtracts 10 points");
+        check(GuideScale.scroll(4, 1, true) == 4, "wheel upper clamp");
+        check(GuideScale.scroll(0.5, -1, false) == 0.5, "wheel lower clamp");
+        double grabX = thumb.x() + thumb.width() / 2.0;
+        check(slider.press(grabX, thumb.y() + thumb.height() / 2.0) && slider.zoom() == 1,
+            "zoom thumb grab never jumps");
+        clock.addAndGet(3_000);
+        check(slider.visible() && slider.opacity() == 1, "dragging keeps the control visible");
+        double halfway = grabX + (track.width() - thumb.width()) / 2.0;
+        check(Math.abs(slider.drag(halfway) - 2.75) < 0.00001, "half a track adds 175 percentage points");
+        slider.update(new LayoutGeometry.Rect(320, 6, 440, 18), slider.zoom());
+        check(slider.dragging() && !slider.track().equals(track), "live zoom moves the displayed track with the header");
+        check(Math.abs(slider.drag(halfway) - 2.75) < 0.00001, "stationary pointer retains the same zoom after reflow");
+        check(slider.drag(track.right() + 100) == 4, "rightward zoom clamps at 400 percent");
+        check(slider.drag(track.x() - 100) == 0.5, "leftward drag still reaches 50 percent after reflow");
         slider.cancel();
-        slider.update(800, 600, 1);
-        check(slider.press(track.x() + 2, track.y() + track.height() / 2.0), "zoom track click");
+        slider.update(header, 1);
+        slider.show();
+        check(slider.press(track.x() + track.width() / 2.0, track.y() + track.height() / 2.0), "zoom track click");
         check(Math.abs(slider.zoom() - 2.25) < 0.00001, "zoom track midpoint represents 225 percent");
-        slider.update(400, 300, slider.zoom());
-        check(!slider.dragging(), "window resize releases capture");
+        slider.cancel();
+        slider.show();
+        clock.addAndGet(1_960);
+        float idleOpacity = slider.opacity();
+        check(idleOpacity > 0 && idleOpacity < 1, "idle zoom overlay fades out");
+        thumb = slider.thumb();
+        check(slider.press(thumb.x() + thumb.width() / 2.0, thumb.y() + thumb.height() / 2.0)
+            && Math.abs(slider.opacity() - idleOpacity) < 0.005, "grabbing during the idle fade preserves opacity");
+        slider.cancel();
+        clock.addAndGet(3_000);
+        check(!slider.visible() && slider.opacity() == 0 && !slider.resetContains(slider.resetButton().x() + 1, slider.resetButton().y() + 1),
+            "idle zoom overlay disappears and releases its hit targets");
         for (int size : new int[]{1, 8, 32, 128}) {
-            slider.update(size, size, 4);
+            slider.update(new LayoutGeometry.Rect(0, 0, size, Math.min(size, 16)), 4);
             check(slider.track().x() >= 0 && slider.track().right() <= size
                 && slider.thumb().bottom() <= size, "zoom slider stays within tiny viewport " + size);
         }
