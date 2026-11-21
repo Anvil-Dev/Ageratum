@@ -6,21 +6,21 @@ This guide will help you integrate Ageratum into your NeoForge mod in under 5 mi
 
 ## 1. Add the Dependency
 
-Add Ageratum to your `build.gradle`:
+Set `ageratum_version` in `gradle.properties` to the Ageratum build for Minecraft 26.3, then add the dependency to `build.gradle`.
 
 ```groovy
 repositories {
     maven {
         name = "Ageratum"
-        url = "https://server.cjsah.net:1002/maven"
+        url = "https://server.cjsah.net:1002/maven/releases/"
     }
 }
 
 dependencies {
     // API-only dependency (not bundled in your jar)
-    compileOnly "dev.anvilcraft.resource:ageratum-neoforge-1.21.1:0.0.1"
+    compileOnly "dev.anvilcraft.resource:ageratum-neoforge-26.3:${ageratum_version}"
     // Also add runtimeOnly if you need it during local testing
-    runtimeOnly "dev.anvilcraft.resource:ageratum-neoforge-1.21.1:0.0.1"
+    runtimeOnly "dev.anvilcraft.resource:ageratum-neoforge-26.3:${ageratum_version}"
 }
 ```
 
@@ -89,12 +89,12 @@ If your mod needs to trigger the guide from the server (or the server thread in 
 
 ```java
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 // Call this from an event handler or command
 public void onPlayerAction(ServerPlayer player) {
-    ResourceLocation docLocation = ResourceLocation.fromNamespaceAndPath(
+    Identifier docLocation = Identifier.fromNamespaceAndPath(
         "mymod", "ageratum/en_us/getting_started.md"
     );
     Ageratum.openGuide(player, docLocation);

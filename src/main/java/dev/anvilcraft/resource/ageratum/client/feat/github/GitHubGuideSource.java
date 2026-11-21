@@ -113,7 +113,7 @@ public final class GitHubGuideSource {
         MDDocument document = new MarkdownParser().parseDocument(indexLocation, markdown);
         GitHubRepoCache.registerActiveState(indexLocation, state);
         GuideScreen screen = new GuideScreen(indexLocation, document, List.of(), false);
-        minecraft.setScreen(screen);
+        minecraft.gui.setScreen(screen);
         return true;
     }
 
@@ -138,7 +138,7 @@ public final class GitHubGuideSource {
     private static void showFailure() {
         Minecraft minecraft = Minecraft.getInstance();
         minecraft.execute(() -> {
-            if (minecraft.screen instanceof GitHubLoadingScreen loadingScreen) {
+            if (minecraft.gui.screen() instanceof GitHubLoadingScreen loadingScreen) {
                 loadingScreen.markFailed();
                 return;
             }

@@ -12,6 +12,7 @@ import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
 import dev.anvilcraft.resource.ageratum.util.ReferenceHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
@@ -25,7 +26,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
@@ -102,7 +102,7 @@ public final class StructureProjectionManager {
         if (projection == null || scrollDeltaY == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
-        if (minecraft.screen != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
+        if (minecraft.gui.screen() != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
             return false;
         }
         if (!projection.canMoveWith(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
@@ -133,7 +133,7 @@ public final class StructureProjectionManager {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen != null) {
+        if (minecraft.gui.screen() != null) {
             return;
         }
         if (!event.isUseItem() && !event.isAttack()) {
@@ -160,7 +160,7 @@ public final class StructureProjectionManager {
             clearProjection();
             return;
         }
-        if (minecraft.screen != null) {
+        if (minecraft.gui.screen() != null) {
             return;
         }
 
@@ -184,24 +184,17 @@ public final class StructureProjectionManager {
         }
     }
 
-    @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void renderProjection(CameraRenderState camera) {
         ActiveProjection projection = activeProjection;
         Minecraft minecraft = Minecraft.getInstance();
         if (projection == null || minecraft.level == null || projection.isNotInLevel(minecraft.level)) {
             return;
         }
-        PoseStack poseStack = event.getPoseStack();
         projection.ensureMesh();
-        Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
-        poseStack.pushPose();
-        try {
-            poseStack.translate(projection.origin.getX() - camera.x, projection.origin.getY() - camera.y,
-                projection.origin.getZ() - camera.z);
-            projection.renderer.render(poseStack, event.getLevelRenderState().cameraRenderState);
-        } finally {
-            poseStack.popPose();
-        }
+        var pose = new PoseStack();
+        pose.translate(projection.origin.getX() - camera.pos.x, projection.origin.getY() - camera.pos.y,
+            projection.origin.getZ() - camera.pos.z);
+        projection.renderer.render(pose, camera);
     }
 
     private static final class ActiveProjection {

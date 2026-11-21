@@ -47,6 +47,11 @@ public class SectionOffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
+    public VertexConsumer setUv3(float u, float v) {
+        return delegate.setUv3(u, v);
+    }
+
+    @Override
     public VertexConsumer setNormal(float v, float v1, float v2) {
         return delegate.setNormal(v, v1, v2);
     }

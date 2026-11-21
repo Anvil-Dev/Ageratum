@@ -45,6 +45,11 @@ public class OffsetVertexConsumer implements VertexConsumer {
     }
 
     @Override
+    public VertexConsumer setUv3(float u, float v) {
+        return this.delegate.setUv3(u, v);
+    }
+
+    @Override
     public VertexConsumer setNormal(float x, float y, float z) {
         return this.delegate.setNormal(x, y, z);
     }

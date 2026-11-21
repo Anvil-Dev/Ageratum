@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 final class BlockDetailsClientTest {
     static void run(Minecraft mc) throws Exception {
         CompoundTag data = TagParser.parseCompoundFully("""
-            {size:[1,1,1],palette:[{Name:"minecraft:chest"}],blocks:[{pos:[0,0,0],state:0,
+            {size:[1,1,1],palette:[{id:"minecraft:chest"}],blocks:[{pos:[0,0,0],state:0,
             nbt:{id:"minecraft:chest",ExtraData:{StartMode:2b,WaitingTime:17,SignalDuration:41},
             Items:[{Slot:0b,id:"minecraft:diamond",count:23}]}}],entities:[]}
             """);

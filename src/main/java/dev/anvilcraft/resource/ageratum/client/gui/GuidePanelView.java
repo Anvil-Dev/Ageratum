@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
 import dev.anvilcraft.resource.ageratum.client.layout.LayoutGeometry.Rect;
@@ -192,7 +193,7 @@ final class GuidePanelView {
     boolean click(double x, double y, int button, boolean control) {
         for (int index = this.hits.size() - 1; index >= 0; index--) {
             Hit hit = this.hits.get(index);
-            if (hit.rectangle.contains(x, y) && (hit.rightClick ? button == 1 && control : button == 0)) {
+            if (hit.rectangle.contains(x, y) && (hit.rightClick ? button == InputConstants.MOUSE_BUTTON_RIGHT && control : button == InputConstants.MOUSE_BUTTON_LEFT)) {
                 hit.action.run(); return true;
             }
         }

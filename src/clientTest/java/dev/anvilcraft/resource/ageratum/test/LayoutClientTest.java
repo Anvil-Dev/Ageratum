@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.test;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
@@ -21,6 +22,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import org.lwjgl.sdl.SDLKeycode;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -46,7 +48,7 @@ final class LayoutClientTest {
         mc.options.pauseOnLostFocus = false;
         if (this.stage == 99) return;
         if (System.currentTimeMillis() - this.started > 180000) this.fail(new AssertionError("timeout at " + this.stage));
-        if (!this.ready || mc.getOverlay() != null || this.stage != 0) return;
+        if (!this.ready || mc.gui.overlay() != null || this.stage != 0) return;
         mc.options.guiScale().set(1); mc.resizeGui();
         var resources = mc.getResourceManager();
         var inherited = new dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument(
@@ -64,7 +66,7 @@ final class LayoutClientTest {
 
     private void frame(RenderFrameEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (this.stage == 0 || this.stage == 99 || mc.getOverlay() != null || System.currentTimeMillis() < this.next) return;
+        if (this.stage == 0 || this.stage == 99 || mc.gui.overlay() != null || System.currentTimeMillis() < this.next) return;
         try {
             switch (this.stage) {
                 case 1 -> { this.screen.verifyZoomControl(); this.screen.verifyScrollbar(); this.screen.verifyText(); this.verifyFont(); this.capture("book-light"); this.open("ageratum:light", true); }
@@ -90,8 +92,8 @@ final class LayoutClientTest {
                     var actions = this.screen.geometry().section("actions");
                     double x = (this.screen.originX() + actions.x() + 96) / this.screen.getScale();
                     double y = (this.screen.originY() + actions.y() + 8) / this.screen.getScale();
-                    check(this.screen.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0)), false), "scaled close click consumed");
-                    check(mc.screen != this.screen, "close action closes screen");
+                    check(this.screen.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false), "scaled close click consumed");
+                    check(mc.gui.screen() != this.screen, "close action closes screen");
                     this.open("ageratum:fullscreen", true);
                     this.reload = mc.reloadResourcePacks();
                 }
@@ -114,12 +116,12 @@ final class LayoutClientTest {
                 }
                 case 13 -> {
                     this.capture("zoom-1.375");
-                    this.screen.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(0, 0)), false);
+                    this.screen.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false);
                     var actions = this.screen.geometry().section("actions");
                     double x = (this.screen.originX() + actions.x() + 96) / this.screen.getScale();
                     double y = (this.screen.originY() + actions.y() + 8) / this.screen.getScale();
-                    check(this.screen.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0)), false), "fractional zoom close input");
-                    check(mc.screen != this.screen, "fractional zoom close target");
+                    check(this.screen.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false), "fractional zoom close input");
+                    check(mc.gui.screen() != this.screen, "fractional zoom close target");
                     AgeratumClient.CONFIG.scale = 1.0;
                     this.open("ageratum:fullscreen", true);
                 }
@@ -179,47 +181,47 @@ final class LayoutClientTest {
     private void verifyThemePersistence() {
         var mc = Minecraft.getInstance();
         var linked = new TestScreen("# Theme persistence");
-        mc.setScreen(linked);
+        mc.gui.setScreen(linked);
         check(!AgeratumClient.CONFIG.darkMode && linked.getLayout().id().getPath().equals("light"),
             "navigation retains the light mode selected by the fullscreen button");
         linked.verifyThemeButton();
         check(AgeratumClient.CONFIG.darkMode, "book theme button updates global config");
-        mc.setScreen(null);
+        mc.gui.setScreen(null);
         var reopened = new TestScreen("# Reopened dark page");
-        mc.setScreen(reopened);
+        mc.gui.setScreen(reopened);
         check(reopened.getLayout().id().getPath().equals("dark"), "reopening retains saved dark mode");
         AgeratumClient.CONFIG.setDarkMode(false);
         reopened.tick();
         check(reopened.getLayout().id().getPath().equals("light"), "external preference change updates the open page");
-        mc.setScreen(null);
+        mc.gui.setScreen(null);
     }
 
     private void verifyZoomPersistence() {
         var mc = Minecraft.getInstance();
         double original = AgeratumClient.CONFIG.scale;
-        var reset = new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_0, 0,
-            org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL);
-        var keypadReset = new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_KP_0, 0,
-            org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL);
+        var reset = new net.minecraft.client.input.KeyEvent(InputConstants.KEY_0, SDLKeycode.SDLK_0,
+            InputConstants.MOD_CONTROL);
+        var keypadReset = new net.minecraft.client.input.KeyEvent(InputConstants.KEY_NUMPAD0, SDLKeycode.SDLK_KP_0,
+            InputConstants.MOD_CONTROL);
         try {
             var first = new TestScreen("# First", "ageratum_zoom_test_a");
-            mc.setScreen(first);
+            mc.gui.setScreen(first);
             first.keyPressed(reset);
             first.adjustZoom();
             double saved = first.getZoom();
             var linked = new TestScreen("# Another page", "ageratum_zoom_test_a");
-            mc.setScreen(linked);
+            mc.gui.setScreen(linked);
             check(linked.getZoom() == saved, "same namespace navigation inherits zoom before previous screen closes");
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             var disk = new dev.anvilcraft.resource.ageratum.client.GuideZoomStore(mc.gameDirectory.toPath().resolve("config/ageratum/zoom.json"));
             check(disk.get("ageratum_zoom_test_a", original) == saved, "closing flushes zoom to disk");
             var other = new TestScreen("# Different namespace", "ageratum_zoom_test_b");
-            mc.setScreen(other);
+            mc.gui.setScreen(other);
             check(other.getZoom() == original, "different namespace uses its own zoom");
             var reopened = new TestScreen("# Reopened", "ageratum_zoom_test_a");
-            mc.setScreen(reopened);
+            mc.gui.setScreen(reopened);
             check(reopened.getZoom() == saved, "reopening restores namespace zoom");
-            reopened.keyPressed(new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_0, 0, 0));
+            reopened.keyPressed(new net.minecraft.client.input.KeyEvent(InputConstants.KEY_0, SDLKeycode.SDLK_0, 0));
             check(reopened.getZoom() == saved, "unmodified zero does not reset zoom");
             AgeratumClient.CONFIG.scale = 1.375;
             reopened.tick();
@@ -227,14 +229,14 @@ final class LayoutClientTest {
             check(reopened.keyPressed(reset) && reopened.getZoom() == 1.375, "Ctrl zero restores current config default");
             reopened.adjustZoom();
             check(reopened.keyPressed(keypadReset) && reopened.getZoom() == 1.375, "Ctrl keypad zero shares reset behavior");
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             check(new dev.anvilcraft.resource.ageratum.client.GuideZoomStore(mc.gameDirectory.toPath().resolve("config/ageratum/zoom.json"))
                 .get("ageratum_zoom_test_a", 1.5) == 1.5, "reset persists removal of namespace override");
             var afterReset = new TestScreen("# After reset", "ageratum_zoom_test_a");
-            mc.setScreen(afterReset);
+            mc.gui.setScreen(afterReset);
             check(afterReset.getZoom() == 1.375, "reopen after reset uses configured default");
         } finally {
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             AgeratumClient.CONFIG.scale = original;
         }
     }
@@ -285,11 +287,11 @@ final class LayoutClientTest {
             + "| Header | Value |\n| --- | --- |\n| Theme | Ready |\n\n- A list item\n\n> A quote\n\n"
             + "Body text for scrolling.\n\n".repeat(70);
         this.screen = new TestScreen(markdown);
-        Minecraft.getInstance().setScreen(this.screen);
+        Minecraft.getInstance().gui.setScreen(this.screen);
     }
     private void capture(String name) {
         var mc = Minecraft.getInstance();
-        Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), 1, message -> { });
+        Screenshot.grab(mc.gameDirectory, name + ".png", mc.gameRenderer.mainRenderTarget(), 1, message -> { });
     }
     private void advance() { this.stage++; this.next = System.currentTimeMillis() + 1200; }
     private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
@@ -324,6 +326,12 @@ final class LayoutClientTest {
         @Override
         public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             check(graphics.guiWidth() == this.width && graphics.guiHeight() == this.height, "graphics viewport matches fractional guide viewport");
+            var window = Minecraft.getInstance().getWindow();
+            int windowWidth = window.getGuiScaledWidth();
+            int windowHeight = window.getGuiScaledHeight();
+            graphics.enableScissor(0, 0, windowWidth, windowHeight);
+            check(graphics.containsPointInScissor(windowWidth - 1, windowHeight - 1), "guide scissor reaches the window edge at every zoom");
+            graphics.disableScissor();
             // Keep the overlay visible in captured fixtures without moving the OS pointer.
             int probeX = (int) Math.round((this.leftPos + this.getContentStartX() + this.getContentWidth() - 3) / this.scale);
             int probeY = (int) Math.round((this.topPos + this.getContentStartY() + 10) / this.scale);
@@ -347,7 +355,7 @@ final class LayoutClientTest {
                 boolean folded = this.collapsedLabelGroups.contains(index);
                 double x = (this.leftPos + tree.x() + indent + 3) / this.scale;
                 double y = (this.topPos + tree.y() + (row - this.labelScrollRows) * rowHeight + 8) / this.scale;
-                check(this.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0)), false), "directory disclosure click consumed");
+                check(this.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false), "directory disclosure click consumed");
                 check(this.collapsedLabelGroups.contains(index) != folded, "directory disclosure matches displayed side");
                 return;
             }
@@ -368,13 +376,13 @@ final class LayoutClientTest {
             double x = (this.leftPos + this.getContentStartX() + this.getContentViewportWidth() - 2) / this.scale;
             double top = (this.topPos + this.getContentStartY()) / this.scale;
             double bottom = (this.topPos + this.getContentStartY() + this.getContentHeight()) / this.scale;
-            var click = new MouseButtonEvent(x, (top + bottom) / 2, new MouseButtonInfo(0, 0));
+            var click = new MouseButtonEvent(x, (top + bottom) / 2, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
             check(this.mouseClicked(click, false), "hidden track accepts first touch");
             check(Math.abs(this.contentScroll - this.maxContentScroll / 2) < 1, "track touch seeks middle");
-            var end = new MouseButtonEvent(x + 200, bottom + 200, new MouseButtonInfo(0, 0));
+            var end = new MouseButtonEvent(x + 200, bottom + 200, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
             check(this.mouseDragged(end, 200, 200) && this.contentScroll == this.maxContentScroll, "captured drag reaches end outside track");
-            check(!this.mouseReleased(new MouseButtonEvent(x, top, new MouseButtonInfo(1, 0))), "other button cannot release capture");
-            var start = new MouseButtonEvent(x - 200, top - 200, new MouseButtonInfo(0, 0));
+            check(!this.mouseReleased(new MouseButtonEvent(x, top, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_RIGHT, 0))), "other button cannot release capture");
+            var start = new MouseButtonEvent(x - 200, top - 200, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
             check(this.mouseDragged(start, -400, -400) && this.contentScroll == 0, "captured drag reaches start");
             check(this.mouseReleased(start), "primary release consumed");
             this.mouseDragged(end, 400, 400);
@@ -397,7 +405,7 @@ final class LayoutClientTest {
                 x = (this.leftPos + this.imageWidth + 15) / this.scale;
                 y = (this.topPos + this.getContentStartY() + 3 * 26 + 5) / this.scale;
             }
-            var click = new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0));
+            var click = new MouseButtonEvent(x, y, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
             check(this.mouseClicked(click, false), "theme button click consumed");
             check(!this.layout.id().getPath().equals(initial), "new theme texture switches theme");
             check(AgeratumClient.CONFIG.darkMode != originalMode, "theme button changes global preference");
@@ -414,8 +422,8 @@ final class LayoutClientTest {
         void showZoomOverlay() {
             this.mouseScrolled(0, 0, 0, 1, true, false);
             this.mouseScrolled(0, 0, 0, -1, true, false);
-            this.keyPressed(new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_0, 0,
-                org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL));
+            this.keyPressed(new net.minecraft.client.input.KeyEvent(InputConstants.KEY_0, SDLKeycode.SDLK_0,
+                InputConstants.MOD_CONTROL));
         }
 
         void prepareZoomCapture(boolean hoverReset) {
@@ -469,7 +477,7 @@ final class LayoutClientTest {
             }
             check(this.mouseClicked(center, false), "revealed slider accepts click after Ctrl release");
             check(Math.abs(this.getZoom() - 2.25) < 0.00001, "track midpoint sets 225 percent");
-            var right = new MouseButtonEvent(track.right() + 100, center.y() - 100, new MouseButtonInfo(0, 0));
+            var right = new MouseButtonEvent(track.right() + 100, center.y() - 100, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
             check(this.mouseDragged(right, right.x() - center.x(), -100) && this.getZoom() == 4,
                 "dragging right outside the header reaches 400 percent");
             int minimumTextWidth = dev.anvilcraft.resource.ageratum.client.layout.LayoutScrollbar.contentWidth(32,
@@ -477,19 +485,19 @@ final class LayoutClientTest {
             check(this.getContentViewportWidth() >= 32 && this.getContentWidth() >= minimumTextWidth && this.getContentHeight() >= 32,
                 "400 percent zoom retains the reading viewport including its scrollbar gutter; viewport="
                     + this.getContentViewportWidth() + "x" + this.getContentHeight() + ", text width=" + this.getContentWidth());
-            check(this.mouseReleased(new MouseButtonEvent(right.x(), right.y(), new MouseButtonInfo(1, 0))), "other button cannot release zoom");
-            var left = new MouseButtonEvent(track.x() - 100, center.y() + 100, new MouseButtonInfo(0, 0));
+            check(this.mouseReleased(new MouseButtonEvent(right.x(), right.y(), new MouseButtonInfo(InputConstants.MOUSE_BUTTON_RIGHT, 0))), "other button cannot release zoom");
+            var left = new MouseButtonEvent(track.x() - 100, center.y() + 100, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
             check(this.mouseDragged(left, left.x() - right.x(), 200) && this.getZoom() == 0.5,
                 "dragging left outside the header reaches 50 percent after reflow");
             check(this.mouseReleased(left), "primary release ends capture");
             check(this.mouseClicked(middle(this.zoomSlider.resetButton()), false), "default click consumed");
             check(this.getZoom() == original && AgeratumClient.CONFIG.scale == original, "default restores configured fractional scale");
-            this.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(0, org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL)), false);
+            this.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, InputConstants.MOD_CONTROL)), false);
             center = middle(this.zoomSlider.track());
             check(this.mouseClicked(center, false) && Math.abs(this.getZoom() - 2.25) < 0.00001, "Ctrl outside click does not dismiss overlay");
             this.mouseReleased(center);
             this.mouseClicked(middle(this.zoomSlider.resetButton()), false);
-            check(this.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(0, 0)), false), "outside click after Ctrl release dismisses");
+            check(this.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0)), false), "outside click after Ctrl release dismisses");
             this.mouseClicked(center, false);
             check(this.getZoom() == original, "dismissed rail cannot change zoom");
             this.contentScroll = 0;
@@ -497,7 +505,7 @@ final class LayoutClientTest {
         }
 
         private static MouseButtonEvent middle(LayoutGeometry.Rect rect) {
-            return new MouseButtonEvent(rect.x() + rect.width() / 2.0, rect.y() + rect.height() / 2.0, new MouseButtonInfo(0, 0));
+            return new MouseButtonEvent(rect.x() + rect.width() / 2.0, rect.y() + rect.height() / 2.0, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
         }
 
         private int readingComponent() {

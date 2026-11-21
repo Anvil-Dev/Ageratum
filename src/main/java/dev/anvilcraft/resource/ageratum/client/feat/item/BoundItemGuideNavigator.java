@@ -69,7 +69,7 @@ public final class BoundItemGuideNavigator {
         hoveredDocumentLocation = documentLocation;
         hoverSeenAtMs = now;
 
-        double progress = getCurrentProgressPercent(now, documentLocation, isWDown(minecraft));
+        double progress = getCurrentProgressPercent(now, documentLocation, isWDown());
         List<Either<FormattedText, TooltipComponent>> tooltipElements = event.getTooltipElements();
         if (progress <= 0) {
             tooltipElements.add(Either.left(
@@ -107,7 +107,7 @@ public final class BoundItemGuideNavigator {
             return;
         }
 
-        if (!isWDown(minecraft)) {
+        if (!isWDown()) {
             resetHoldState();
             return;
         }
@@ -136,8 +136,8 @@ public final class BoundItemGuideNavigator {
         return Math.min(100L, (double) elapsed / HOLD_DURATION_MS);
     }
 
-    private static boolean isWDown(Minecraft minecraft) {
-        return InputConstants.isKeyDown(minecraft.getWindow(), AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue());
+    private static boolean isWDown() {
+        return InputConstants.isKeyDown(AgeratumKeyMappings.W_KEY_MAPPING.getKey().getValue());
     }
 
     private static void resetHoldState() {

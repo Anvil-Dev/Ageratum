@@ -191,7 +191,7 @@ public class AgeratumClient {
 
         int inheritedLabelScrollRows = 0;
         double inheritedLabelScrollRemainder = 0.0d;
-        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+        if (minecraft.gui.screen() instanceof GuideScreen currentGuideScreen) {
             inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
             inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
         }
@@ -232,7 +232,7 @@ public class AgeratumClient {
 
         int inheritedLabelScrollRows = 0;
         double inheritedLabelScrollRemainder = 0.0d;
-        if (minecraft.screen instanceof GuideScreen currentGuideScreen) {
+        if (minecraft.gui.screen() instanceof GuideScreen currentGuideScreen) {
             inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
             inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
         }
@@ -279,7 +279,7 @@ public class AgeratumClient {
         if (minecraft.player != null && minecraft.player.containerMenu != minecraft.player.inventoryMenu) {
             minecraft.player.closeContainer();
         }
-        minecraft.setScreen(screen);
+        minecraft.gui.setScreen(screen);
     }
 
     public static boolean isPreviewLocation(Identifier location) {

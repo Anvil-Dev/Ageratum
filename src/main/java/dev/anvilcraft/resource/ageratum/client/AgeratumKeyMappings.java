@@ -1,32 +1,32 @@
 package dev.anvilcraft.resource.ageratum.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = Ageratum.MOD_ID, value = Dist.CLIENT)
 public class AgeratumKeyMappings {
     public static final KeyMapping.Category CATEGORY = new KeyMapping.Category(Ageratum.location("key"));
 
-    public static final KeyMapping W_KEY_MAPPING = new KeyMapping("key.ageratum.more_info", GLFW.GLFW_KEY_W, AgeratumKeyMappings.CATEGORY);
+    public static final KeyMapping W_KEY_MAPPING = new KeyMapping("key.ageratum.more_info", InputConstants.KEY_W, AgeratumKeyMappings.CATEGORY);
 
     public static final KeyMapping LAYER_UP_KEY = new KeyMapping(
         "key.ageratum.structure_projection.layer_up",
-        GLFW.GLFW_KEY_PAGE_UP,
+        InputConstants.KEY_PAGEUP,
         CATEGORY
     );
     public static final KeyMapping LAYER_DOWN_KEY = new KeyMapping(
         "key.ageratum.structure_projection.layer_down",
-        GLFW.GLFW_KEY_PAGE_DOWN,
+        InputConstants.KEY_PAGEDOWN,
         CATEGORY
     );
     public static final KeyMapping REMOVE_KEY = new KeyMapping(
         "key.ageratum.structure_projection.remove",
-        GLFW.GLFW_KEY_END,
+        InputConstants.KEY_END,
         AgeratumKeyMappings.CATEGORY
     );
 

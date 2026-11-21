@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import com.mojang.brigadier.StringReader;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
@@ -8,6 +9,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.StructureProjectionApi;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
@@ -29,6 +31,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.TagParser;
@@ -42,7 +45,6 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import net.minecraft.world.phys.BlockHitResult;
 import org.joml.Vector2f;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -66,6 +68,8 @@ import java.util.Set;
  */
 @Slf4j
 public final class MDNBTStructureComponent extends MDComponent {
+    // Vanilla NbtUtils uses this data version for the Name/Properties to id/properties migration.
+    private static final int BLOCK_STATE_FIELD_RENAME_VERSION = 5006;
     private static final int MAX_SNBT_BYTES = 8 * 1024 * 1024;
     private static final float MIN_ZOOM = AgeratumConstants.Structure.Camera.MIN_ZOOM;
     private static final float MAX_ZOOM = AgeratumConstants.Structure.Camera.MAX_ZOOM;
@@ -228,12 +232,12 @@ public final class MDNBTStructureComponent extends MDComponent {
         }
 
         this.ensureLayerPreviewInitialized();
-        if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN) {
+        if (keyCode == InputConstants.KEYCODE_PAGEDOWN) {
             this.visibleLayerCount = Math.max(1, this.visibleLayerCount - 1);
             return true;
         }
 
-        if (keyCode == GLFW.GLFW_KEY_PAGE_UP) {
+        if (keyCode == InputConstants.KEYCODE_PAGEUP) {
             this.visibleLayerCount = Math.min(this.totalLayerCount, this.visibleLayerCount + 1);
             return true;
         }
@@ -251,7 +255,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         int modifiers,
         int maxX
     ) {
-        return this.previewLevel != null && (keyCode == GLFW.GLFW_KEY_PAGE_UP || keyCode == GLFW.GLFW_KEY_PAGE_DOWN);
+        return this.previewLevel != null && (keyCode == InputConstants.KEYCODE_PAGEUP || keyCode == InputConstants.KEYCODE_PAGEDOWN);
     }
 
     @Override
@@ -267,10 +271,10 @@ public final class MDNBTStructureComponent extends MDComponent {
 
     @Override
     public boolean mouseClicked(Minecraft minecraft, double mouseX, double mouseY, int button, int maxX) {
-        if (button != 0 && button != 1) {
+        if (button != InputConstants.MOUSE_BUTTON_LEFT && button != InputConstants.MOUSE_BUTTON_RIGHT) {
             return false;
         }
-        if (button == 0 && this.previewLevel != null) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && this.previewLevel != null) {
             int padding = AgeratumConstants.GuideScreenUI.Positions.LAYER_INDICATOR_PADDING;
             String layerLabel = "层数: " + this.visibleLayerCount + "/" + this.totalLayerCount;
             int labelWidth = GuideFont.get().width(layerLabel);
@@ -289,7 +293,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                 return true;
             }
         }
-        if (button == 0 && this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && this.isHoverProjectionButton(maxX, (float) mouseX, (float) mouseY)) {
             if (this.structureTemplateCache != null && minecraft.getCameraEntity() != null) {
                 BlockPos blockPos;
                 if (minecraft.hitResult instanceof BlockHitResult hitResult) {
@@ -298,7 +302,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                     blockPos = minecraft.getCameraEntity().getOnPos().above();
                 }
                 StructureProjectionApi.showFloating(this.structureTemplateCache, blockPos);
-                minecraft.setScreen(null);
+                minecraft.gui.setScreen(null);
             }
             return true;
         }
@@ -325,13 +329,13 @@ public final class MDNBTStructureComponent extends MDComponent {
             dragY = totalY;
         }
 
-        if (button == 1) {
+        if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
             this.panOffsetX += (float) (dragX * PAN_SENSITIVITY);
             this.panOffsetY -= (float) (dragY * PAN_SENSITIVITY);
             return true;
         }
 
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             this.cameraRig.setRotationY(this.cameraRig.getRotationY() + (float) (dragX * ROTATE_YAW_SENSITIVITY));
             float nextPitch = this.cameraRig.getRotationX() + (float) (dragY * ROTATE_PITCH_SENSITIVITY);
             this.cameraRig.setRotationX(clamp(nextPitch, -89.9f, 89.9f));
@@ -348,7 +352,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         }
         double deltaX = mouseX - this.dragStartX;
         double deltaY = mouseY - this.dragStartY;
-        if ((button == 0 || button == 1) && !this.dragging && deltaX * deltaX + deltaY * deltaY <= this.clickThresholdSquared
+        if ((button == InputConstants.MOUSE_BUTTON_LEFT || button == InputConstants.MOUSE_BUTTON_RIGHT) && !this.dragging && deltaX * deltaX + deltaY * deltaY <= this.clickThresholdSquared
             && this.previewLevel != null
             && isHover(1, 1, maxX - 2, this.contentHeight - 2, (float) mouseX, (float) mouseY)
             && !this.isHoverControls(maxX, (float) mouseX, (float) mouseY)) {
@@ -358,11 +362,11 @@ public final class MDNBTStructureComponent extends MDComponent {
                 this.panOffsetX, this.panOffsetY + this.bottomHeight / 2.0f - this.contentHeight / 2.0f
             );
             this.unavailableMenu = false;
-            if (button == 0) {
+            if (button == InputConstants.MOUSE_BUTTON_LEFT) {
                 this.selectedBlock = clickedBlock;
                 this.selectedBlockTooltip = clickedBlock == null ? List.of()
                     : StructurePreviewPicker.tooltip(this.previewLevel, clickedBlock, this.placementPos);
-            } else if (clickedBlock != null && this.structureTemplateCache != null && minecraft.screen instanceof GuideScreen guide) {
+            } else if (clickedBlock != null && this.structureTemplateCache != null && minecraft.gui.screen() instanceof GuideScreen guide) {
                 Vector2f anchor = this.blockScreenCenter(clickedBlock, maxX);
                 this.unavailableMenu = !guide.structureGuiPreview().open(this, this.structureTemplateCache, clickedBlock, anchor.x, anchor.y);
             }
@@ -380,7 +384,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void updateGuiAnchor(MDRenderContext context) {
-        if (!(context.minecraft().screen instanceof GuideScreen guide)) return;
+        if (!(context.minecraft().gui.screen() instanceof GuideScreen guide)) return;
         BlockPos pos = guide.structureGuiPreview().blockFor(this);
         if (pos == null) return;
         Vector2f anchor = this.blockScreenCenter(pos, context.maxX());
@@ -479,14 +483,13 @@ public final class MDNBTStructureComponent extends MDComponent {
     private @Nullable SandboxRenderLevel prepare(@Nullable Level clientLevel, StructureTarget target) {
         if (clientLevel == null) return null;
         try {
-            StructureTemplate template = new StructureTemplate();
             HolderLookup.RegistryLookup<Block> blocks = clientLevel.registryAccess().lookupOrThrow(Registries.BLOCK);
             CompoundTag root = readStructureRoot(target);
             if (root == null) {
                 return null;
             }
             root = normalizeStructureRoot(root);
-            template.load(blocks, root);
+            StructureTemplate template = AgeratumStructureTemplateManager.loadTemplate(blocks, root);
             Vec3i size = template.getSize();
             BlockPos pos = StructureSandboxFactory.centeredPlacement(template);
             this.placementPos = pos;
@@ -607,7 +610,7 @@ public final class MDNBTStructureComponent extends MDComponent {
      *   data: [{pos:[0,0,0], state:"minecraft:stone"}, ...]
      * }
      * </pre>
-     * This method converts it to {@code palette: [{Name:"...", Properties:{...}}, ...]} and
+     * This method converts it to {@code palette: [{id:"...", properties:{...}}, ...]} and
      * {@code blocks: [{pos:[...], state:<index>}, ...]}.
      */
     private static CompoundTag normalizeStructureRoot(CompoundTag root) {
@@ -621,6 +624,8 @@ public final class MDNBTStructureComponent extends MDComponent {
         }
 
         CompoundTag converted = root.copy();
+        int version = NbtUtils.getDataVersion(root);
+        boolean legacyKeys = version >= 0 && version < BLOCK_STATE_FIELD_RENAME_VERSION;
 
         // Build palette entries in a deterministic order.
         List<String> paletteStates = new ArrayList<>();
@@ -652,7 +657,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         Map<String, Integer> paletteIndex = new LinkedHashMap<>();
         for (String state : paletteStates) {
             paletteIndex.put(state, palette.size());
-            palette.add(toStructurePaletteEntry(state));
+            palette.add(toStructurePaletteEntry(state, legacyKeys));
         }
         converted.put("palette", palette);
 
@@ -666,7 +671,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                 if (index == null) {
                     index = palette.size();
                     paletteIndex.put(state, index);
-                    palette.add(toStructurePaletteEntry(state));
+                    palette.add(toStructurePaletteEntry(state, legacyKeys));
                 }
 
                 CompoundTag block = new CompoundTag();
@@ -686,10 +691,24 @@ public final class MDNBTStructureComponent extends MDComponent {
             converted.put("blocks", blocks);
         }
 
+        // Vanilla's packed SNBT represents each alternative palette as a map of state strings.
+        ListTag variations = converted.getListOrEmpty("palettes");
+        if (!variations.isEmpty() && variations.getFirst() instanceof CompoundTag) {
+            ListTag palettes = new ListTag();
+            variations.compoundStream().forEach(variation -> {
+                ListTag states = new ListTag();
+                for (String state : paletteIndex.keySet()) {
+                    states.add(toStructurePaletteEntry(variation.getStringOr(state, state), legacyKeys));
+                }
+                palettes.add(states);
+            });
+            converted.put("palettes", palettes);
+            converted.remove("palette");
+        }
         return converted;
     }
 
-    private static CompoundTag toStructurePaletteEntry(String stateString) {
+    private static CompoundTag toStructurePaletteEntry(String stateString, boolean legacyKeys) {
         String raw = stateString.trim();
         String name = raw;
         String props = "";
@@ -701,7 +720,7 @@ public final class MDNBTStructureComponent extends MDComponent {
         }
 
         CompoundTag entry = new CompoundTag();
-        entry.putString("Name", name);
+        entry.putString(legacyKeys ? "Name" : "id", name);
 
         if (!props.isEmpty()) {
             CompoundTag properties = new CompoundTag();
@@ -718,7 +737,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                 }
             }
             if (!properties.isEmpty()) {
-                entry.put("Properties", properties);
+                entry.put(legacyKeys ? "Properties" : "properties", properties);
             }
         }
         return entry;

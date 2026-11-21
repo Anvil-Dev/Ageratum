@@ -20,7 +20,7 @@ sourceSets.test {
 // Verify the unpublished renderer port without replacing unrelated library modules.
 if (providers.gradleProperty('anvillibRenderingJar').isPresent()) {
     configurations.configureEach {
-        exclude group: 'dev.anvilcraft.lib', module: 'anvillib-rendering-neoforge-26.1'
+        exclude group: 'dev.anvilcraft.lib', module: 'anvillib-rendering-neoforge-26.3'
     }
     dependencies {
         implementation files(providers.gradleProperty('anvillibRenderingJar').get())

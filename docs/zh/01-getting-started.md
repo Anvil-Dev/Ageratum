@@ -6,21 +6,21 @@
 
 ## 1. 添加依赖
 
-在你的 `build.gradle` 中引入 Ageratum：
+在 `gradle.properties` 中将 `ageratum_version` 设为适用于 Minecraft 26.3 的藿香构建版本，然后在 `build.gradle` 中引入依赖。
 
 ```groovy
 repositories {
     maven {
         name = "Ageratum"
-        url = "https://server.cjsah.net:1002/maven"
+        url = "https://server.cjsah.net:1002/maven/releases/"
     }
 }
 
 dependencies {
     // 仅作为 API 依赖（不打包进你的 jar）
-    compileOnly "dev.anvilcraft.resource:ageratum-neoforge-1.21.1:0.0.1"
+    compileOnly "dev.anvilcraft.resource:ageratum-neoforge-26.3:${ageratum_version}"
     // 如果需要运行时测试，也可以加 runtimeOnly
-    runtimeOnly "dev.anvilcraft.resource:ageratum-neoforge-1.21.1:0.0.1"
+    runtimeOnly "dev.anvilcraft.resource:ageratum-neoforge-26.3:${ageratum_version}"
 }
 ```
 
@@ -89,12 +89,12 @@ Ageratum 会自动根据客户端当前语言寻找对应的文档文件，找�
 
 ```java
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 // 在你的事件处理器或命令中调用
 public void onPlayerAction(ServerPlayer player) {
-    ResourceLocation docLocation = ResourceLocation.fromNamespaceAndPath(
+    Identifier docLocation = Identifier.fromNamespaceAndPath(
         "mymod", "ageratum/en_us/getting_started.md"
     );
     Ageratum.openGuide(player, docLocation);

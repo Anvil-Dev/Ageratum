@@ -36,26 +36,26 @@ public final class ScrollEntityClientTest {
                 mc.options.guiScale().set(1);
                 mc.resizeGui();
                 guide = new ScrollScreen();
-                mc.setScreen(guide);
+                mc.gui.setScreen(guide);
             }
             case 1 -> guide.pageBurst();
             case 2 -> guide.structureBurst();
             case 3 -> {
                 guide.pageAfterPause();
-                mc.setScreen(new EntityScreen());
+                mc.gui.setScreen(new EntityScreen());
             }
             case 4 -> {
                 check(probes >= 3, "all entity previews submitted");
                 check(exportProbes >= 2, "both export themes drawn through the real button renderer");
-                Screenshot.grab(mc.gameDirectory, "entity-scroll-regression.png", mc.getMainRenderTarget(), 1, message -> {});
-                mc.setScreen(new ScrollbarScreen());
+                Screenshot.grab(mc.gameDirectory, "entity-scroll-regression.png", mc.gameRenderer.mainRenderTarget(), 1, message -> {});
+                mc.gui.setScreen(new ScrollbarScreen());
             }
             case 5 -> {
-                Screenshot.grab(mc.gameDirectory, "scrollbar-gutter-regression.png", mc.getMainRenderTarget(), 1, message -> {});
-                mc.setScreen(new ListRecipeClientScreen());
+                Screenshot.grab(mc.gameDirectory, "scrollbar-gutter-regression.png", mc.gameRenderer.mainRenderTarget(), 1, message -> {});
+                mc.gui.setScreen(new ListRecipeClientScreen());
             }
             default -> {
-                Screenshot.grab(mc.gameDirectory, "list-recipe-regression.png", mc.getMainRenderTarget(), 1, message -> {});
+                Screenshot.grab(mc.gameDirectory, "list-recipe-regression.png", mc.gameRenderer.mainRenderTarget(), 1, message -> {});
                 return true;
             }
         }

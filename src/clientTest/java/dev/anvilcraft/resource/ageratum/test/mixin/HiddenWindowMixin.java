@@ -1,17 +1,15 @@
 package dev.anvilcraft.resource.ageratum.test.mixin;
 
-import com.mojang.blaze3d.platform.Window;
-import org.lwjgl.glfw.GLFW;
+import net.neoforged.neoforge.client.loading.earlydisplay.EarlyWindowHandoff;
+import org.lwjgl.sdl.SDLVideo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(Window.class)
+@Mixin(EarlyWindowHandoff.class)
 abstract class HiddenWindowMixin {
-    @Inject(method = "<init>", at = @At(value = "INVOKE",
-        target = "Lorg/lwjgl/glfw/GLFW;glfwDefaultWindowHints()V", shift = At.Shift.AFTER))
-    private void hide(CallbackInfo ci) {
-        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_FALSE);
+    @Redirect(method = "completeWindowHandoff", at = @At(value = "INVOKE", target = "Lorg/lwjgl/sdl/SDLVideo;SDL_ShowWindow(J)Z"))
+    private static boolean showReviewWindow(long window) {
+        return Boolean.getBoolean("ageratum.structureGuiReview") ? SDLVideo.SDL_ShowWindow(window) : SDLVideo.SDL_HideWindow(window);
     }
 }

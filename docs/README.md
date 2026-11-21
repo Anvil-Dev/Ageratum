@@ -3,8 +3,8 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](../LICENSE)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-green.svg)](https://www.minecraft.net)
-[![NeoForge](https://img.shields.io/badge/NeoForge-21.1.220-orange.svg)](https://neoforged.net)
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.3-green.svg)](https://www.minecraft.net)
+[![NeoForge](https://img.shields.io/badge/NeoForge-26.3.0.100-orange.svg)](https://neoforged.net)
 
 </div>
 
@@ -49,8 +49,8 @@
 ## 版本信息 | Version Info
 
 - **Mod Version**: 0.0.1
-- **Minecraft**: 1.21.1
-- **NeoForge**: 21.1.220+
-- **Java**: 21+
+- **Minecraft**: 26.3
+- **NeoForge**: 26.3.0.100+
+- **Java**: 25+
 - **作者 / Author**: Gugle
 

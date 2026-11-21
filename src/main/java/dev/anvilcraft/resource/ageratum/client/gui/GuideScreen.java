@@ -46,7 +46,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Matrix3x2fStack;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -719,11 +718,11 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (this.structureGuiPreview.mouseClicked(event.x(), event.y(), event.button())) return true;
+        if (this.structureGuiPreview.mouseClicked(event.x(), event.y(), previewButton(event))) return true;
         if (this.zoomSlider.contains(event.x(), event.y())) {
-            if (event.button() == 0 && this.zoomSlider.resetContains(event.x(), event.y())) {
+            if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && this.zoomSlider.resetContains(event.x(), event.y())) {
                 this.resetZoom();
-            } else if (event.button() == 0 && this.zoomSlider.press(event.x(), event.y())) {
+            } else if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && this.zoomSlider.press(event.x(), event.y())) {
                 this.activeMouseComponent = null;
                 this.activeMouseButton = -1;
                 this.contentScrollbar.cancel();
@@ -731,30 +730,30 @@ public class GuideScreen extends Screen {
             }
             return true;
         }
-        if (this.zoomSlider.dismiss(event.hasControlDown())) return true;
+        if (this.zoomSlider.dismiss(event.hasControlDownWithQuirk())) return true;
         double mouseX = event.x() * this.scale;
         double mouseY = event.y() * this.scale;
         int button = event.button();
         this.updateScrollBounds();
-        if (button == 0 && this.contentScrollbar.press(mouseX - this.leftPos, mouseY - this.topPos)) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && this.contentScrollbar.press(mouseX - this.leftPos, mouseY - this.topPos)) {
             this.contentScroll = (float) this.contentScrollbar.position();
             return true;
         }
-        if (this.panelView != null && this.panelView.click(mouseX - this.leftPos, mouseY - this.topPos, button, event.hasControlDown())) return true;
-        if (this.panelView == null && button == 0 && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
+        if (this.panelView != null && this.panelView.click(mouseX - this.leftPos, mouseY - this.topPos, button, event.hasControlDownWithQuirk())) return true;
+        if (this.panelView == null && button == InputConstants.MOUSE_BUTTON_LEFT && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
             return true;
         }
-        if (this.panelView == null && button == 0 && this.mouseInLabelRange(mouseX, mouseY)) {
+        if (this.panelView == null && button == InputConstants.MOUSE_BUTTON_LEFT && this.mouseInLabelRange(mouseX, mouseY)) {
             if (this.tryOpenLabelAt(mouseX, mouseY)) {
                 return true;
             }
         }
-        if (this.panelView == null && button == 0 && this.mouseInBookmarkRange(mouseX, mouseY)) {
+        if (this.panelView == null && button == InputConstants.MOUSE_BUTTON_LEFT && this.mouseInBookmarkRange(mouseX, mouseY)) {
             if (this.tryOpenBookmarkAt(mouseX, mouseY)) {
                 return true;
             }
         }
-        if (this.panelView == null && button == 1 && event.hasControlDown() && this.mouseInBookmarkRange(mouseX, mouseY)) {
+        if (this.panelView == null && button == InputConstants.MOUSE_BUTTON_RIGHT && event.hasControlDownWithQuirk() && this.mouseInBookmarkRange(mouseX, mouseY)) {
             if (this.tryRemoveBookmarkAt(mouseX, mouseY)) {
                 return true;
             }
@@ -771,7 +770,7 @@ public class GuideScreen extends Screen {
         }
 
         // 左键点击时尝试触发 ClickEvent
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             Style style = this.getStyleAtContentPosition(mouseX, mouseY);
             if (style != null) {
                 ClickEvent clickEvent = style.getClickEvent();
@@ -790,9 +789,9 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        if (this.structureGuiPreview.mouseDragged(event.x(), event.y(), event.button())) return true;
+        if (this.structureGuiPreview.mouseDragged(event.x(), event.y(), previewButton(event))) return true;
         if (this.zoomSlider.dragging()) {
-            if (event.button() == 0) this.applyZoom(this.zoomSlider.drag(event.x()));
+            if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) this.applyZoom(this.zoomSlider.drag(event.x()));
             return true;
         }
         double mouseX = event.x() * this.scale;
@@ -800,7 +799,7 @@ public class GuideScreen extends Screen {
         int button = event.button();
         dragX = dragX * this.scale;
         dragY = dragY * this.scale;
-        if (button == 0 && this.contentScrollbar.dragging()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && this.contentScrollbar.dragging()) {
             this.contentScroll = (float) this.contentScrollbar.drag(mouseY - this.topPos);
             return true;
         }
@@ -825,9 +824,9 @@ public class GuideScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (this.structureGuiPreview.mouseReleased(event.button())) return true;
+        if (this.structureGuiPreview.mouseReleased(previewButton(event))) return true;
         if (this.zoomSlider.dragging()) {
-            if (event.button() == 0) {
+            if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
                 this.applyZoom(this.zoomSlider.drag(event.x()));
                 this.zoomSlider.cancel();
                 GuideZoomStore.instance().flush();
@@ -837,7 +836,7 @@ public class GuideScreen extends Screen {
         double mouseX = event.x() * this.scale;
         double mouseY = event.y() * this.scale;
         int button = event.button();
-        if (button == 0 && this.contentScrollbar.dragging()) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && this.contentScrollbar.dragging()) {
             this.contentScroll = (float) this.contentScrollbar.drag(mouseY - this.topPos);
             this.contentScrollbar.cancel();
             return true;
@@ -866,23 +865,28 @@ public class GuideScreen extends Screen {
         return super.mouseReleased(new MouseButtonEvent(mouseX, mouseY, event.buttonInfo()));
     }
 
+    // AnvilLib 2.0.0's floating preview uses 0 for left and 1 for right.
+    private static int previewButton(MouseButtonEvent event) {
+        return switch (event.button()) {
+            case InputConstants.MOUSE_BUTTON_LEFT -> 0;
+            case InputConstants.MOUSE_BUTTON_RIGHT -> 1;
+            default -> event.button();
+        };
+    }
+
     public static boolean hasControlDown() {
         if (Util.getPlatform() == Util.OS.OSX) {
-            return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_SUPER)
-                   || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_SUPER);
+            return InputConstants.isKeyDown(InputConstants.KEY_LGUI) || InputConstants.isKeyDown(InputConstants.KEY_RGUI);
         }
-        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL)
-               || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_CONTROL);
+        return Minecraft.getInstance().hasControlDown();
     }
 
     public static boolean hasShiftDown() {
-        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT)
-               || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT);
+        return Minecraft.getInstance().hasShiftDown();
     }
 
     public static boolean hasAltDown() {
-        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT)
-               || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_ALT);
+        return Minecraft.getInstance().hasAltDown();
     }
 
     /**
@@ -907,7 +911,8 @@ public class GuideScreen extends Screen {
                 mouseX,
                 mouseY,
                 DefaultTooltipPositioner.INSTANCE,
-                null
+                null,
+                true
             );
         }
     }
@@ -973,12 +978,12 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean keyPressed(KeyEvent event) {
-        int keyCode = event.key();
-        if (event.hasControlDown() && (keyCode == GLFW.GLFW_KEY_0 || keyCode == GLFW.GLFW_KEY_KP_0)) {
+        int keyCode = event.keycode();
+        if (event.hasControlDownWithQuirk() && (event.key() == InputConstants.KEY_0 || event.key() == InputConstants.KEY_NUMPAD0)) {
             this.resetZoom();
             return true;
         }
-        int scanCode = event.scancode();
+        int scanCode = event.key();
         int modifiers = event.modifiers();
         if (this.mouseInContentRange(this.lastMouseX, this.lastMouseY)) {
             ComponentMouseHit hit = this.getComponentHitAtContentPosition(this.lastMouseX, this.lastMouseY);
@@ -1004,27 +1009,27 @@ public class GuideScreen extends Screen {
         }
 
         float pageStep = this.getContentHeight() / 2.0f;
-        if (keyCode == GLFW.GLFW_KEY_UP) {
+        if (keyCode == InputConstants.KEYCODE_UP) {
             this.scrollBy(-SCROLL_STEP);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_DOWN) {
+        if (keyCode == InputConstants.KEYCODE_DOWN) {
             this.scrollBy(SCROLL_STEP);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_PAGE_UP) {
+        if (keyCode == InputConstants.KEYCODE_PAGEUP) {
             this.scrollBy(-pageStep);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN) {
+        if (keyCode == InputConstants.KEYCODE_PAGEDOWN) {
             this.scrollBy(pageStep);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_HOME) {
+        if (keyCode == InputConstants.KEYCODE_HOME) {
             this.contentScroll = 0.0f;
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_END) {
+        if (keyCode == InputConstants.KEYCODE_END) {
             this.contentScroll = this.maxContentScroll;
             return true;
         }
@@ -1551,7 +1556,8 @@ public class GuideScreen extends Screen {
             this.leftPos + mouseX,
             this.topPos + mouseY,
             DefaultTooltipPositioner.INSTANCE,
-            null
+            null,
+            true
         );
     }
 
@@ -1589,7 +1595,8 @@ public class GuideScreen extends Screen {
                     this.leftPos + mouseX,
                     this.topPos + mouseY,
                     DefaultTooltipPositioner.INSTANCE,
-                    null
+                    null,
+                    true
                 );
                 return;
             }
@@ -2446,7 +2453,7 @@ public class GuideScreen extends Screen {
             breadCrumbs.add(this.documentLocation);
             GuideScreen screen = new GuideScreen(targetLocation, parsed, List.copyOf(breadCrumbs), false);
             screen.setAnchor(anchor);
-            this.minecraft.setScreen(screen);
+            this.minecraft.gui.setScreen(screen);
             return true;
         } catch (Exception exception) {
             return false;

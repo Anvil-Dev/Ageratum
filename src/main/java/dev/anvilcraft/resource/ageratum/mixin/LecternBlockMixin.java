@@ -4,7 +4,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.anvilcraft.resource.ageratum.Ageratum;
-import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.init.AgeratumDataComponents;
 import dev.anvilcraft.resource.ageratum.init.AgeratumItems;
@@ -19,7 +18,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LecternBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -52,10 +50,9 @@ public class LecternBlockMixin {
         BlockPos pos,
         Player player,
         CallbackInfo ci,
-        @Local(name = "blockEntity") BlockEntity blockEntity
+        @Local LecternBlockEntity lectern
     ) {
-        LecternBlockEntity be = (LecternBlockEntity) blockEntity;
-        ItemStack book = be.getBook();
+        ItemStack book = lectern.getBook();
         if (!(book.getItem() instanceof GuideBookItem)) return;
         if (!level.isClientSide()) {
             Doc doc = book.getOrDefault(

@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.test;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
@@ -50,13 +51,13 @@ final class DirectoryClientTest extends GuideScreen {
 
     static void verify(MDDocument document) {
         Minecraft minecraft = Minecraft.getInstance();
-        var previous = minecraft.screen;
+        var previous = minecraft.gui.screen();
         var screen = new DirectoryClientTest(document);
-        minecraft.setScreen(screen);
+        minecraft.gui.setScreen(screen);
         try {
             screen.clickDirectoryEntry();
         } finally {
-            minecraft.setScreen(previous);
+            minecraft.gui.setScreen(previous);
         }
     }
 
@@ -115,7 +116,7 @@ final class DirectoryClientTest extends GuideScreen {
                 this.contentScroll = Math.max(0, Math.min(this.maxContentScroll, top + y - this.getContentHeight() / 2));
                 double clickX = (this.leftPos + this.getContentStartX() + x) / this.scale;
                 double clickY = (this.topPos + this.getContentStartY() + top + y - this.contentScroll) / this.scale;
-                var click = new MouseButtonEvent(clickX, clickY, new MouseButtonInfo(0, 0));
+                var click = new MouseButtonEvent(clickX, clickY, new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0));
                 if (!this.mouseClicked(click, false)) throw new AssertionError("Guide did not handle " + target);
                 return true;
             }

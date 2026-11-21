@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "dev.anvilcraft.resource.ageratum.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "mixins": [
     "LecternBlockMixin",
     "accessor.SmithingTransformRecipeAccessor",
@@ -11,7 +11,9 @@
   "client": [
     "GlDebugMixin",
     "GuiGraphicsExtractorMixin",
+    "LevelRendererMixin",
     "MouseHandlerMixin",
+    "PreviewEntityIdMixin",
     "accessor.StringSplitterAccessor"
   ],
   "injectors": {

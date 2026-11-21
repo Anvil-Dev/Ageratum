@@ -6,12 +6,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
+import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -88,15 +92,41 @@ public final class AgeratumStructureTemplateManager {
         }
 
         try {
-            StructureTemplate template = new StructureTemplate();
             HolderLookup.RegistryLookup<Block> blockLookup = level.registryAccess().lookupOrThrow(Registries.BLOCK);
-            template.load(blockLookup, nbt);
+            StructureTemplate template = loadTemplate(blockLookup, nbt.copy());
             templateCache.put(location, template);
             return Optional.of(template);
         } catch (Exception e) {
             LOGGER.warn("Failed to compile structure template {}: {}", location, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /** Load freshly read handbook data using the same versioned structure fixes as vanilla. */
+    public static StructureTemplate loadTemplate(HolderLookup.RegistryLookup<Block> blocks, CompoundTag root) {
+        int version = NbtUtils.getDataVersion(root);
+        if (version >= 0) {
+            root = DataFixTypes.STRUCTURE.updateToCurrentVersion(DataFixers.getDataFixer(), root, version);
+        }
+        upgradePaletteKeys(root);
+        StructureTemplate template = new StructureTemplate();
+        template.load(blocks, root);
+        return template;
+    }
+
+    /** Upgrade 26.1/26.2 block states in freshly read handbook assets before 26.3 decodes them. */
+    static void upgradePaletteKeys(CompoundTag root) {
+        upgradePalette(root.getListOrEmpty("palette"));
+        for (var variant : root.getListOrEmpty("palettes")) {
+            if (variant instanceof ListTag palette) upgradePalette(palette);
+        }
+    }
+
+    private static void upgradePalette(ListTag palette) {
+        palette.compoundStream().forEach(state -> {
+            if (!state.contains("id")) state.getString("Name").ifPresent(name -> state.putString("id", name));
+            if (!state.contains("properties")) state.getCompound("Properties").ifPresent(props -> state.put("properties", props));
+        });
     }
 
     /**
