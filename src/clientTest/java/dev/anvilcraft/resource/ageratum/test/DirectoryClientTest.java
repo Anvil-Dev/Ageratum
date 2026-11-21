@@ -59,7 +59,7 @@ final class DirectoryClientTest extends GuideScreen {
     }
 
     private void clickDirectoryEntry() {
-        int margin = CONTENT_ROWS_MARGIN;
+        int margin = this.layout.integer("content.rows_margin", CONTENT_ROWS_MARGIN);
         int top = 0;
         int directoryTop = 0;
         MDListComponent links = null;
