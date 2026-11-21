@@ -1,9 +1,9 @@
 package dev.anvilcraft.resource.ageratum.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayout;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
 import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,9 +21,10 @@ public final class GuideZoomSlider {
         }
     }
 
-    private static final ResourceLocation TRACK = ResourceLocation.parse("ageratum:textures/gui/guide/scrollbar_track.png");
-    private static final ResourceLocation THUMB = ResourceLocation.parse("ageratum:textures/gui/guide/scrollbar_thumb.png");
-    private static final ResourceLocation RESET = ResourceLocation.parse("ageratum:textures/gui/guide/button_empty.png");
+    private static final LayoutTexture TRACK = new LayoutTexture(ResourceLocation.parse("ageratum:textures/gui/guide/light/scrollbar_track.png"),
+        6, 6, 6, 6, 2, 2, 2, 2, -1);
+    private static final LayoutTexture THUMB = new LayoutTexture(TRACK.location().withPath("textures/gui/guide/light/scrollbar_thumb.png"),
+        6, 6, 6, 6, 2, 2, 2, 2, 0xFF8B7355);
     private static final int FADE_IN_MS = 150, HOLD_MS = 1800, FADE_OUT_MS = 200;
     private static final int HEIGHT = 16, TITLE_WIDTH = 38, SIGN_WIDTH = 10, VALUE_WIDTH = 28, RESET_WIDTH = 28;
     private static final int THUMB_WIDTH = 7;
@@ -147,62 +148,42 @@ public final class GuideZoomSlider {
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY) {
+        render(graphics, GuideLayoutManager.defaults(), mouseX, mouseY);
+    }
+
+    public void render(GuiGraphics graphics, GuideLayout layout, int mouseX, int mouseY) {
         float opacity = this.opacity();
         if (opacity <= 0 || this.bounds.width() == 0 || this.bounds.height() == 0) return;
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        this.drawSliderPart(graphics, GuideTheme.isDark() ? THUMB : TRACK, this.track, GuideTheme.color(0xFFFFFF, 0x837D87), opacity);
-        this.drawSliderPart(graphics, THUMB, this.thumb(), GuideTheme.color(0x8B7355, 0xE8E0D0), opacity);
-        graphics.setColor(1, 1, 1, opacity);
-        graphics.blit(GuideTheme.texture(RESET), this.reset.x(), this.reset.y(), this.reset.width(), this.reset.height(),
-            0, this.resetContains(mouseX, mouseY) ? 16 : 0, 32, 16, 32, 32);
-        graphics.setColor(1, 1, 1, 1);
-        RenderSystem.disableBlend();
-
-        int alpha = Math.round(opacity * 255);
-        // Vanilla Font treats alpha values from 0 through 3 as fully opaque.
-        if (alpha < 4) return;
-        int ink = alpha << 24 | GuideTheme.color(0x5D4630, 0xE8E0D0);
+        int ink = LayoutTexture.withOpacity(layout.color("colors.label_text_clickable", 0xFF5D4630), opacity);
         if (this.titleWidth > 0) {
             this.label(graphics, Component.translatable("ageratum.configuration.scale").getString(),
                 this.toGui(0, 2, this.titleWidth, 12), ink);
         }
         this.label(graphics, "−", this.toGui(this.titleWidth, 2, SIGN_WIDTH, 12), ink);
+        layout.texture("textures.zoom_track", TRACK).draw(graphics, this.track.x(), this.track.y(),
+            this.track.width(), this.track.height(), false, opacity);
+        Rect thumb = this.thumb();
+        layout.texture("textures.zoom_thumb", THUMB).draw(graphics,
+            thumb.x(), thumb.y(), thumb.width(), thumb.height(), false, opacity);
         int plusX = this.titleWidth + SIGN_WIDTH + this.trackWidth;
         this.label(graphics, "+", this.toGui(plusX, 2, SIGN_WIDTH, 12), ink);
         this.label(graphics, Math.round(this.zoom * 100) + "%", this.toGui(plusX + SIGN_WIDTH, 2, VALUE_WIDTH, 12), ink);
+        layout.controlTexture("button_empty").draw(graphics, this.reset.x(), this.reset.y(), this.reset.width(),
+            this.reset.height(), this.resetContains(mouseX, mouseY), opacity);
         this.label(graphics, Component.translatable("ageratum.guide.zoom.default").getString(),
-            this.toGui(plusX + SIGN_WIDTH + VALUE_WIDTH + 6, 2, RESET_WIDTH - 4, 11), alpha << 24 | 0xFFF4DE);
-    }
-
-    /** Preserve the two-pixel borders of each 6×6 slider texture as the header changes size. */
-    private void drawSliderPart(GuiGraphics graphics, ResourceLocation texture, Rect area, int color, float opacity) {
-        int left = Math.min(2, area.width() / 2), right = Math.min(2, area.width() - left);
-        int top = Math.min(2, area.height() / 2), bottom = Math.min(2, area.height() - top);
-        int[] xs = {area.x(), area.x() + left, area.right() - right, area.right()};
-        int[] ys = {area.y(), area.y() + top, area.bottom() - bottom, area.bottom()};
-        graphics.setColor((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f, opacity);
-        ResourceLocation themed = GuideTheme.texture(texture);
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
-                int width = xs[x + 1] - xs[x], height = ys[y + 1] - ys[y];
-                if (width > 0 && height > 0) {
-                    graphics.blit(themed, xs[x], ys[y], width, height, x * 2, y * 2, 2, 2, 6, 6);
-                }
-            }
-        }
+            this.toGui(plusX + SIGN_WIDTH + VALUE_WIDTH + 6, 2, RESET_WIDTH - 4, 11), LayoutTexture.withOpacity(0xFFFFF4DE, opacity));
     }
 
     private void label(GuiGraphics graphics, String text, Rect area, int color) {
-        if (area.width() == 0 || area.height() == 0) return;
-        Font font = Minecraft.getInstance().font;
+        if ((color >>> 24) < 4 || area.width() == 0 || area.height() == 0) return;
+        GuideFont font = GuideFont.get();
         int width = Math.max(1, font.width(text));
         float scale = Math.min(this.unit, Math.min(area.width() / (float) width, area.height() / (float) font.lineHeight));
         var pose = graphics.pose();
         pose.pushPose();
         pose.translate(area.x() + (area.width() - width * scale) / 2, area.y() + (area.height() - font.lineHeight * scale) / 2, 0);
         pose.scale(scale, scale, 1);
-        graphics.drawString(font, text, 0, 0, color, false);
+        font.draw(graphics, text, 0, 0, color, false);
         pose.popPose();
     }
 }

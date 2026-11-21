@@ -4,15 +4,15 @@ import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
 import dev.anvilcraft.lib.v2.rendering.preview.ViewportCameraRig;
 import dev.anvilcraft.lib.v2.rendering.preview.level.SandboxRenderLevel;
 import dev.anvilcraft.lib.v2.rendering.preview.level.StructurePreviewRenderer;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -70,7 +70,9 @@ private @Nullable SandboxRenderLevel sandboxRenderLevel;
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphics graphics = context.graphics();
-        this.innerBlit(graphics, this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
+        LayoutTexture slot = LayoutTexture.of(this.getImageLocation(), SLOT_SIZE, SLOT_SIZE, size.width(), size.height());
+        context.layout().componentTexture(ResourceLocation.parse("ageratum:item_slot"), slot)
+            .draw(graphics, 0, 0, SLOT_SIZE, SLOT_SIZE, false);
         this.renderBlock(context, mouseX, mouseY);
     }
 
@@ -81,7 +83,6 @@ private @Nullable SandboxRenderLevel sandboxRenderLevel;
         
         this.hoveredDocLink = null;  // 每帧重置
 GuiGraphics graphics = context.graphics();
-        Font font = context.minecraft().font;
 
         SandboxRenderLevel level = this.getSandboxRenderLevel(state);
         if (level != null) {
@@ -99,8 +100,8 @@ GuiGraphics graphics = context.graphics();
         
         if (this.showText) {
             Component hoverName = state.getBlock().getName();
-            int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, GuideTheme.textColor(), false);
+            int width = GuideFont.get().width(hoverName);
+            GuideFont.get().draw(graphics, hoverName, 16 - width / 2, 32, context.layout().color("colors.content_text", 0xFF202020), false);
         }
     }
 
@@ -179,13 +180,13 @@ GuiGraphics graphics = context.graphics();
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        int textWidth = this.showText ? this.blockState != null ? minecraft.font.width(this.blockState.getBlock().getName()) : 0 : 0;
+        int textWidth = this.showText ? this.blockState != null ? GuideFont.get().width(this.blockState.getBlock().getName()) : 0 : 0;
         return Math.max(32, textWidth);
     }
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        int textHeight = this.showText ? GuideFont.get().lineHeight : 0;
         Size size = new Size(SLOT_SIZE, SLOT_SIZE + textHeight, 1.0f);
         return this.computeRenderSize(size, maxX, maxY).height();
     }

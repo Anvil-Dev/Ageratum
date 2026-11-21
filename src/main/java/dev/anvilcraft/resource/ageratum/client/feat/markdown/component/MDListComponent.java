@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -72,6 +73,11 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
     }
 
     @Override
+    protected void renderDecoration(MDRenderContext context, CachedItem<ListItem> item, int y, int height, int maxX) {
+        this.drawMarker(context.graphics(), item, y, context.layout().color("colors.content_text", 0xFF202020));
+    }
+
+    @Override
     protected void renderDecoration(
         GuiGraphics guiGraphics,
         Minecraft minecraft,
@@ -80,16 +86,19 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         int lineHeight,
         int maxX
     ) {
+        this.drawMarker(guiGraphics, cachedItem, y, 0xFF202020);
+    }
+
+    private void drawMarker(GuiGraphics guiGraphics, CachedItem<ListItem> cachedItem, int y, int color) {
         ListItem item = cachedItem.item();
         int right = this.getTextX(cachedItem) - MARKER_GAP;
-        int color = GuideTheme.textColor();
         if (item.kind() == ListKind.ORDERED) {
             String text = item.index() + ".";
-            guiGraphics.drawString(minecraft.font, text, right - minecraft.font.width(text), y, color, false);
+            GuideFont.get().draw(guiGraphics, text, right - GuideFont.get().width(text), y, color, false);
             return;
         }
         int centerX = right - this.markerWidth(cachedItem.level()) / 2;
-        int centerY = y + minecraft.font.lineHeight / 2;
+        int centerY = y + GuideFont.get().lineHeight / 2;
         if (item.kind() == ListKind.TASK) {
             guiGraphics.renderOutline(centerX - 3, centerY - 3, 7, 7, color);
             if (item.checked()) {
@@ -120,9 +129,9 @@ public class MDListComponent extends MDBlockComponent<MDListComponent.ListItem> 
         if (digits == 0) return MIN_MARKER_WIDTH;
         int digitWidth = 0;
         for (char digit = '0'; digit <= '9'; digit++) {
-            digitWidth = Math.max(digitWidth, Minecraft.getInstance().font.width(String.valueOf(digit)));
+            digitWidth = Math.max(digitWidth, GuideFont.get().width(String.valueOf(digit)));
         }
-        return Math.max(MIN_MARKER_WIDTH, digits * digitWidth + Minecraft.getInstance().font.width("."));
+        return Math.max(MIN_MARKER_WIDTH, digits * digitWidth + GuideFont.get().width("."));
     }
 
     private static PreparedData prepare(List<ListItem> sourceItems) {

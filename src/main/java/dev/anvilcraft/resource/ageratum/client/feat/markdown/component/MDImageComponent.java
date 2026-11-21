@@ -11,7 +11,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
@@ -162,6 +162,17 @@ public class MDImageComponent extends MDComponent {
 
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphics guiGraphics = context.graphics();
+        ResourceLocation image = this.getImageLocation();
+        String prefix = "textures/gui/component/";
+        if (image.getNamespace().equals("ageratum") && image.getPath().startsWith(prefix)
+            && image.getPath().endsWith(".png")) {
+            String name = image.getPath().substring(prefix.length(), image.getPath().length() - 4);
+            context.layout().componentTexture(ResourceLocation.fromNamespaceAndPath("ageratum", "recipe_" + name),
+                LayoutTexture.of(
+                    image, size.width(), size.height(), size.width(), size.height()))
+                .draw(guiGraphics, 0, 0, size.width(), size.height(), false);
+            return;
+        }
         this.innerBlit(guiGraphics, this.getImageLocation(), size.width(), size.height(), size.width(), size.height());
     }
 
@@ -178,7 +189,7 @@ public class MDImageComponent extends MDComponent {
         float minV = (0.0F + 0.0F) / (float) textureHeight;
         float maxV = (0.0F + (float) height) / (float) textureHeight;
         RenderSystem.enableBlend();
-        RenderSystem.setShaderTexture(0, GuideTheme.texture(atlasLocation));
+        RenderSystem.setShaderTexture(0, atlasLocation);
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
         BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);

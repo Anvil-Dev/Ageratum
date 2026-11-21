@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -163,12 +164,12 @@ public class MDTableComponent extends MDComponent {
                 pose.translate(cellX, y + PADDING_V, 0);
                 for (FormattedCharSequence seq : lines) {
                     int drawX = switch (this.alignments[col]) {
-                        case CENTER -> Math.max(0, (colWidth - minecraft.font.width(seq)) / 2);
-                        case RIGHT -> Math.max(0, colWidth - minecraft.font.width(seq));
+                        case CENTER -> Math.max(0, (colWidth - GuideFont.get().width(seq)) / 2);
+                        case RIGHT -> Math.max(0, colWidth - GuideFont.get().width(seq));
                         default -> 0;
                     };
-                    guiGraphics.drawString(minecraft.font, GuideTheme.text(seq), drawX, 0, GuideTheme.textColor(), false);
-                    pose.translate(0, minecraft.font.lineHeight, 0);
+                    GuideFont.get().draw(guiGraphics, context.layout().text(seq), drawX, 0, 0xFF000000, false);
+                    pose.translate(0, GuideFont.get().lineHeight, 0);
                 }
                 pose.popPose();
             }
@@ -220,7 +221,7 @@ public class MDTableComponent extends MDComponent {
                     return null;
                 }
 
-                int lineIndex = (int) Math.floor(rowMouseY / minecraft.font.lineHeight);
+                int lineIndex = (int) Math.floor(rowMouseY / GuideFont.get().lineHeight);
                 for (int col = 0; col < this.columnCount; col++) {
                     int cellX = PADDING_H + col * (colWidth + PADDING_H * 2);
                     if (mouseX < cellX || mouseX >= cellX + colWidth) {
@@ -235,14 +236,11 @@ public class MDTableComponent extends MDComponent {
 
                     FormattedCharSequence line = lines.get(lineIndex);
                     int drawX = switch (this.alignments[col]) {
-                        case CENTER -> Math.max(0, (colWidth - minecraft.font.width(line)) / 2);
-                        case RIGHT -> Math.max(0, colWidth - minecraft.font.width(line));
+                        case CENTER -> Math.max(0, (colWidth - GuideFont.get().width(line)) / 2);
+                        case RIGHT -> Math.max(0, colWidth - GuideFont.get().width(line));
                         default -> 0;
                     };
-                    return minecraft.font.getSplitter().componentStyleAtWidth(
-                        line,
-                        (int) Math.floor(mouseX - cellX - drawX)
-                    );
+                    return GuideFont.get().styleAt(line, mouseX - cellX - drawX);
                 }
                 return null;
             }
@@ -268,14 +266,14 @@ public class MDTableComponent extends MDComponent {
             CachedCell cell = col < row.size() ? row.get(col) : EMPTY_CELL;
             maxLines = Math.max(maxLines, Math.max(1, splitCellLines(minecraft, cell, colWidth, isHeader).size()));
         }
-        return maxLines * minecraft.font.lineHeight + PADDING_V * 2;
+        return maxLines * GuideFont.get().lineHeight + PADDING_V * 2;
     }
 
     /**
      * 使用与渲染一致的样式规则拆分单元格行，避免测量与绘制不一致。
      */
     private List<FormattedCharSequence> splitCellLines(Minecraft minecraft, CachedCell cell, int colWidth, boolean isHeader) {
-        return minecraft.font.split(isHeader ? cell.headerText() : cell.bodyText(), colWidth);
+        return GuideFont.get().split(isHeader ? cell.headerText() : cell.bodyText(), colWidth);
     }
 
     private static PreparedData prepareRows(List<String[]> parsedRows) {

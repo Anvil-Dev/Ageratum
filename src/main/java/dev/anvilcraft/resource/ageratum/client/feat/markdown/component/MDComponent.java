@@ -1,7 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -72,18 +72,17 @@ public abstract class MDComponent {
      * 在给定区域内渲染组件内容。
      */
     public void render(MDRenderContext context) {
-        Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
         GuiGraphics guiGraphics = context.graphics();
-        FormattedText textToRender = this.getEffectiveText();
-        List<FormattedCharSequence> split = minecraft.font.split(textToRender, maxX);
+        FormattedText textToRender = context.layout().text(this.getEffectiveText());
+        List<FormattedCharSequence> split = GuideFont.get().split(textToRender, maxX);
         int line = 0;
         for (FormattedCharSequence sequence : split) {
-            if (maxY < minecraft.font.lineHeight) return;
-            guiGraphics.drawString(minecraft.font, GuideTheme.text(sequence), 0, minecraft.font.lineHeight * line, GuideTheme.textColor(), false);
+            if (maxY < GuideFont.get().lineHeight) return;
+            GuideFont.get().draw(guiGraphics, sequence, 0, GuideFont.get().lineHeight * line, 0xFF000000, false);
             line++;
-            maxY -= minecraft.font.lineHeight;
+            maxY -= GuideFont.get().lineHeight;
         }
     }
 
@@ -110,7 +109,7 @@ public abstract class MDComponent {
      */
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         FormattedText textToRender = this.getEffectiveText();
-        return minecraft.font.split(textToRender, maxX).size() * minecraft.font.lineHeight;
+        return GuideFont.get().split(textToRender, maxX).size() * GuideFont.get().lineHeight;
     }
 
     /**
@@ -219,14 +218,14 @@ public abstract class MDComponent {
             return null;
         }
 
-        List<FormattedCharSequence> lines = minecraft.font.split(text, maxX);
-        int lineIndex = (int) Math.floor(mouseY / minecraft.font.lineHeight);
+        List<FormattedCharSequence> lines = GuideFont.get().split(text, maxX);
+        int lineIndex = (int) Math.floor(mouseY / GuideFont.get().lineHeight);
         if (lineIndex < 0 || lineIndex >= lines.size()) {
             return null;
         }
 
         FormattedCharSequence line = lines.get(lineIndex);
-        return minecraft.font.getSplitter().componentStyleAtWidth(line, (int) Math.floor(mouseX));
+        return GuideFont.get().styleAt(line, mouseX);
     }
 
     /**

@@ -1,8 +1,8 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import net.minecraft.resources.ResourceLocation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Style;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import javax.annotation.Nullable;
 
 /**
@@ -36,10 +37,12 @@ public class MDNoticeBoxComponent extends MDComponent {
         WARNING(0xFFF59E0B, 0xAAFEF3C7),   // 橙色
         DANGER(0xFFEF4444, 0xAAFEE2E2);    // 红色
 
+        private final ResourceLocation layoutKey;
         private final int borderColor;
         private final int backgroundColor;
 
         NoticeType(int borderColor, int backgroundColor) {
+            this.layoutKey = ResourceLocation.fromNamespaceAndPath("ageratum", this.name().toLowerCase(Locale.ROOT));
             this.borderColor = borderColor;
             this.backgroundColor = backgroundColor;
         }
@@ -85,10 +88,10 @@ public class MDNoticeBoxComponent extends MDComponent {
         int contentWidth = Math.max(1, maxX - PADDING * 2 - BORDER_WIDTH);
 
         // 绘制背景
-        guiGraphics.fill(0, 0, maxX, boxHeight, GuideTheme.noticeBackground(this.type.getBackgroundColor()));
+        guiGraphics.fill(0, 0, maxX, boxHeight, context.layout().componentColor(this.type.getLayoutKey(), "background", this.type.getBackgroundColor()));
 
         // 绘制左侧边框
-        guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, this.type.getBorderColor());
+        guiGraphics.fill(0, 0, BORDER_WIDTH, boxHeight, context.layout().componentColor(this.type.getLayoutKey(), "border", this.type.getBorderColor()));
 
         // 绘制内容
         PoseStack pose = guiGraphics.pose();

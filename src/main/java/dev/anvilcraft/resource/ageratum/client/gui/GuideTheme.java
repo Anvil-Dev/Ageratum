@@ -2,7 +2,6 @@ package dev.anvilcraft.resource.ageratum.client.gui;
 
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
-import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
@@ -96,15 +95,7 @@ public final class GuideTheme {
     }
 
     public static FormattedCharSequence text(FormattedCharSequence text) {
-        FormattedCharSequence line = isDark() ? sink -> text.accept((index, style, codePoint) -> {
-            Style themed = style;
-            if (style.getClickEvent() != null && style.getColor() != null
-                && style.getColor().getValue() == AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR) {
-                themed = style.withColor(0x66CCFF);
-            }
-            return sink.accept(index, themed, codePoint);
-        }) : text;
-        return sink -> sink instanceof GuideTextSink output ? output.ageratum$acceptGuideText(line) : line.accept(sink);
+        return sink -> sink instanceof GuideTextSink output ? output.ageratum$acceptGuideText(text) : text.accept(sink);
     }
 
     /** 代码块的颜色由语法高亮器生成，在深色背景上替换其中的深色默认值。 */

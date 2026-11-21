@@ -3,6 +3,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -114,7 +115,7 @@ public class MDHeaderComponent extends MDComponent {
         int height = super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY));
         pose.translate(0, height, 0);
         if (this.level == 1) {
-            int y = minecraft.font.lineHeight / 2;
+            int y = GuideFont.get().lineHeight / 2;
             guiGraphics.hLine(0, Math.max(0, maxX - 1), y, GuideTheme.color(0x88000000, 0x88777777));
         }
         pose.popPose();
@@ -127,7 +128,7 @@ public class MDHeaderComponent extends MDComponent {
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         int height = this.scale(super.getHeight(minecraft, this.unscale(maxX), this.unscale(maxY)));
         if (this.level == 1) {
-            height += minecraft.font.lineHeight;
+            height += GuideFont.get().lineHeight;
         }
         return height;
     }

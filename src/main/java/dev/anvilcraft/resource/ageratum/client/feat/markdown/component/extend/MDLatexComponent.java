@@ -8,6 +8,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -76,7 +77,7 @@ public class MDLatexComponent extends MDImageComponent {
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
         LatexTextureState state = this.ensureTextureState(minecraft);
         if (state.status != LatexStatus.READY) {
-            return minecraft.font.lineHeight;
+            return GuideFont.get().lineHeight;
         }
         return super.getHeight(minecraft, maxX, maxY);
     }
@@ -103,7 +104,7 @@ public class MDLatexComponent extends MDImageComponent {
     }
 
     private static void renderPlaceholder(GuiGraphics graphics, String text, int color) {
-        graphics.drawString(Minecraft.getInstance().font, text, 0, 0, color, false);
+        GuideFont.get().draw(graphics, text, 0, 0, color, false);
     }
 
     private LatexTextureState ensureTextureState(Minecraft minecraft) {

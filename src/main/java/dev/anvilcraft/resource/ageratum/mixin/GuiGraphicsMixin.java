@@ -19,7 +19,7 @@ public class GuiGraphicsMixin {
     public int guiWidth(Window instance, Operation<Integer> original) {
         int call = original.call(instance);
         if (Minecraft.getInstance().screen instanceof GuideScreen guideScreen) {
-            call = (int) Math.round(call * guideScreen.getScale());
+            call = guideScreen.width;
         }
         return call;
     }
@@ -31,7 +31,7 @@ public class GuiGraphicsMixin {
     public int guiHeight(Window instance, Operation<Integer> original) {
         int call = original.call(instance);
         if (Minecraft.getInstance().screen instanceof GuideScreen guideScreen) {
-            call = (int) Math.round(call * guideScreen.getScale());
+            call = guideScreen.height;
         }
         return call;
     }
