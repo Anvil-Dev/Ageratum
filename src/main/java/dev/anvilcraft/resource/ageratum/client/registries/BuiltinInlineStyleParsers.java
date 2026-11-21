@@ -6,11 +6,13 @@ import com.mojang.serialization.JsonOps;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDInlineStyleParser;
+import dev.anvilcraft.resource.ageratum.client.util.GuideColors;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.TextColor;
 import net.neoforged.neoforge.registries.DeferredHolder;
 
 import java.net.URI;
@@ -216,18 +218,15 @@ public final class BuiltinInlineStyleParsers {
     public static int parseColor(String value) {
         if (value.startsWith("#")) {
             return Integer.parseInt(value.substring(1), 16);
-        } else {
-            ChatFormatting formatting;
-            if (value.length() == 1) {
-                formatting = ChatFormatting.getByCode(value.charAt(0));
-            } else {
-                formatting = ChatFormatting.getByName(value);
-            }
-            if (formatting == null || formatting.getColor() == null) {
-                return 0;
-            }
-            return formatting.getColor();
         }
+        TextColor color;
+        if (value.length() == 1) {
+            ChatFormatting format = ChatFormatting.getByCode(value.charAt(0));
+            color = format == null ? null : TextColor.fromLegacyFormat(format);
+        } else {
+            color = GuideColors.byName(value);
+        }
+        return color == null ? 0 : color.getValue();
     }
 }
 

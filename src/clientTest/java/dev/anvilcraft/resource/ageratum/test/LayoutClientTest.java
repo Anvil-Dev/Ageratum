@@ -46,7 +46,7 @@ final class LayoutClientTest {
         mc.options.pauseOnLostFocus = false;
         if (this.stage == 99) return;
         if (System.currentTimeMillis() - this.started > 180000) this.fail(new AssertionError("timeout at " + this.stage));
-        if (!this.ready || mc.getOverlay() != null || this.stage != 0) return;
+        if (!this.ready || mc.gui.overlay() != null || this.stage != 0) return;
         mc.options.guiScale().set(1); mc.resizeGui();
         var resources = mc.getResourceManager();
         var inherited = new dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument(
@@ -64,7 +64,7 @@ final class LayoutClientTest {
 
     private void frame(RenderFrameEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (this.stage == 0 || this.stage == 99 || mc.getOverlay() != null || System.currentTimeMillis() < this.next) return;
+        if (this.stage == 0 || this.stage == 99 || mc.gui.overlay() != null || System.currentTimeMillis() < this.next) return;
         try {
             switch (this.stage) {
                 case 1 -> { this.screen.verifyZoomControl(); this.screen.verifyScrollbar(); this.screen.verifyText(); this.verifyFont(); this.capture("book-light"); this.open("ageratum:light", true); }
@@ -91,7 +91,7 @@ final class LayoutClientTest {
                     double x = (this.screen.originX() + actions.x() + 96) / this.screen.getScale();
                     double y = (this.screen.originY() + actions.y() + 8) / this.screen.getScale();
                     check(this.screen.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0)), false), "scaled close click consumed");
-                    check(mc.screen != this.screen, "close action closes screen");
+                    check(mc.gui.screen() != this.screen, "close action closes screen");
                     this.open("ageratum:fullscreen", true);
                     this.reload = mc.reloadResourcePacks();
                 }
@@ -119,7 +119,7 @@ final class LayoutClientTest {
                     double x = (this.screen.originX() + actions.x() + 96) / this.screen.getScale();
                     double y = (this.screen.originY() + actions.y() + 8) / this.screen.getScale();
                     check(this.screen.mouseClicked(new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0)), false), "fractional zoom close input");
-                    check(mc.screen != this.screen, "fractional zoom close target");
+                    check(mc.gui.screen() != this.screen, "fractional zoom close target");
                     AgeratumClient.CONFIG.scale = 1.0;
                     this.open("ageratum:fullscreen", true);
                 }
@@ -179,19 +179,19 @@ final class LayoutClientTest {
     private void verifyThemePersistence() {
         var mc = Minecraft.getInstance();
         var linked = new TestScreen("# Theme persistence");
-        mc.setScreen(linked);
+        mc.gui.setScreen(linked);
         check(!AgeratumClient.CONFIG.darkMode && linked.getLayout().id().getPath().equals("light"),
             "navigation retains the light mode selected by the fullscreen button");
         linked.verifyThemeButton();
         check(AgeratumClient.CONFIG.darkMode, "book theme button updates global config");
-        mc.setScreen(null);
+        mc.gui.setScreen(null);
         var reopened = new TestScreen("# Reopened dark page");
-        mc.setScreen(reopened);
+        mc.gui.setScreen(reopened);
         check(reopened.getLayout().id().getPath().equals("dark"), "reopening retains saved dark mode");
         AgeratumClient.CONFIG.setDarkMode(false);
         reopened.tick();
         check(reopened.getLayout().id().getPath().equals("light"), "external preference change updates the open page");
-        mc.setScreen(null);
+        mc.gui.setScreen(null);
     }
 
     private void verifyZoomPersistence() {
@@ -203,21 +203,21 @@ final class LayoutClientTest {
             org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL);
         try {
             var first = new TestScreen("# First", "ageratum_zoom_test_a");
-            mc.setScreen(first);
+            mc.gui.setScreen(first);
             first.keyPressed(reset);
             first.adjustZoom();
             double saved = first.getZoom();
             var linked = new TestScreen("# Another page", "ageratum_zoom_test_a");
-            mc.setScreen(linked);
+            mc.gui.setScreen(linked);
             check(linked.getZoom() == saved, "same namespace navigation inherits zoom before previous screen closes");
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             var disk = new dev.anvilcraft.resource.ageratum.client.GuideZoomStore(mc.gameDirectory.toPath().resolve("config/ageratum/zoom.json"));
             check(disk.get("ageratum_zoom_test_a", original) == saved, "closing flushes zoom to disk");
             var other = new TestScreen("# Different namespace", "ageratum_zoom_test_b");
-            mc.setScreen(other);
+            mc.gui.setScreen(other);
             check(other.getZoom() == original, "different namespace uses its own zoom");
             var reopened = new TestScreen("# Reopened", "ageratum_zoom_test_a");
-            mc.setScreen(reopened);
+            mc.gui.setScreen(reopened);
             check(reopened.getZoom() == saved, "reopening restores namespace zoom");
             reopened.keyPressed(new net.minecraft.client.input.KeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_0, 0, 0));
             check(reopened.getZoom() == saved, "unmodified zero does not reset zoom");
@@ -227,14 +227,14 @@ final class LayoutClientTest {
             check(reopened.keyPressed(reset) && reopened.getZoom() == 1.375, "Ctrl zero restores current config default");
             reopened.adjustZoom();
             check(reopened.keyPressed(keypadReset) && reopened.getZoom() == 1.375, "Ctrl keypad zero shares reset behavior");
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             check(new dev.anvilcraft.resource.ageratum.client.GuideZoomStore(mc.gameDirectory.toPath().resolve("config/ageratum/zoom.json"))
                 .get("ageratum_zoom_test_a", 1.5) == 1.5, "reset persists removal of namespace override");
             var afterReset = new TestScreen("# After reset", "ageratum_zoom_test_a");
-            mc.setScreen(afterReset);
+            mc.gui.setScreen(afterReset);
             check(afterReset.getZoom() == 1.375, "reopen after reset uses configured default");
         } finally {
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             AgeratumClient.CONFIG.scale = original;
         }
     }
@@ -285,11 +285,11 @@ final class LayoutClientTest {
             + "| Header | Value |\n| --- | --- |\n| Theme | Ready |\n\n- A list item\n\n> A quote\n\n"
             + "Body text for scrolling.\n\n".repeat(70);
         this.screen = new TestScreen(markdown);
-        Minecraft.getInstance().setScreen(this.screen);
+        Minecraft.getInstance().gui.setScreen(this.screen);
     }
     private void capture(String name) {
         var mc = Minecraft.getInstance();
-        Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), 1, message -> { });
+        Screenshot.grab(mc.gameDirectory, name + ".png", mc.gameRenderer.mainRenderTarget(), 1, message -> { });
     }
     private void advance() { this.stage++; this.next = System.currentTimeMillis() + 1200; }
     private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
@@ -324,6 +324,12 @@ final class LayoutClientTest {
         @Override
         public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             check(graphics.guiWidth() == this.width && graphics.guiHeight() == this.height, "graphics viewport matches fractional guide viewport");
+            var window = Minecraft.getInstance().getWindow();
+            int windowWidth = window.getGuiScaledWidth();
+            int windowHeight = window.getGuiScaledHeight();
+            graphics.enableScissor(0, 0, windowWidth, windowHeight);
+            check(graphics.containsPointInScissor(windowWidth - 1, windowHeight - 1), "guide scissor reaches the window edge at every zoom");
+            graphics.disableScissor();
             // Keep the overlay visible in captured fixtures without moving the OS pointer.
             int probeX = (int) Math.round((this.leftPos + this.getContentStartX() + this.getContentWidth() - 3) / this.scale);
             int probeY = (int) Math.round((this.topPos + this.getContentStartY() + 10) / this.scale);

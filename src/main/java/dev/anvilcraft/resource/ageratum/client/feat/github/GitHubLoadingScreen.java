@@ -55,7 +55,7 @@ public class GitHubLoadingScreen extends Screen {
      */
     public static GitHubLoadingScreen open() {
         GitHubLoadingScreen screen = new GitHubLoadingScreen();
-        Minecraft.getInstance().setScreen(screen);
+        Minecraft.getInstance().gui.setScreen(screen);
         return screen;
     }
 }

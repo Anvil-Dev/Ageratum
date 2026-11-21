@@ -103,6 +103,7 @@ public final class LayoutRegressionTest {
         check(GuideLayout.parseColor("#123456") == 0xFF123456, "RGB is opaque");
         check(GuideLayout.parseColor("#22123456") == 0x22123456, "ARGB preserved");
         check(GuideLayout.parseColor("red") == 0xFFFF5555, "Minecraft named color");
+        check(GuideLayout.parseColor("Dark-Blue") == 0xFF0000AA, "legacy color name normalization");
         GuideLayout textTheme = new GuideLayout(id("test:text"), json("{\"colors\":{\"content_text\":\"#EEEEEE\",\"components\":{\"code_block\":{\"syntax\":{\"keyword\":\"#112233\"},\"syntax_spans\":{\"java_keyword\":\"#ABCDEF\"}}}}}"));
         var token = Component.literal("class").setStyle(Style.EMPTY.withColor(0x111111).withInsertion("ageratum:syntax/java_keyword"));
         textTheme.text(token).visit((style, value) -> { check(style.getColor().getValue() == 0xABCDEF, "span override beats semantic role"); return java.util.Optional.empty(); }, Style.EMPTY);

@@ -298,7 +298,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                     blockPos = minecraft.getCameraEntity().getOnPos().above();
                 }
                 StructureProjectionApi.showFloating(this.structureTemplateCache, blockPos);
-                minecraft.setScreen(null);
+                minecraft.gui.setScreen(null);
             }
             return true;
         }
@@ -362,7 +362,7 @@ public final class MDNBTStructureComponent extends MDComponent {
                 this.selectedBlock = clickedBlock;
                 this.selectedBlockTooltip = clickedBlock == null ? List.of()
                     : StructurePreviewPicker.tooltip(this.previewLevel, clickedBlock, this.placementPos);
-            } else if (clickedBlock != null && this.structureTemplateCache != null && minecraft.screen instanceof GuideScreen guide) {
+            } else if (clickedBlock != null && this.structureTemplateCache != null && minecraft.gui.screen() instanceof GuideScreen guide) {
                 Vector2f anchor = this.blockScreenCenter(clickedBlock, maxX);
                 this.unavailableMenu = !guide.structureGuiPreview().open(this, this.structureTemplateCache, clickedBlock, anchor.x, anchor.y);
             }
@@ -380,7 +380,7 @@ public final class MDNBTStructureComponent extends MDComponent {
     }
 
     private void updateGuiAnchor(MDRenderContext context) {
-        if (!(context.minecraft().screen instanceof GuideScreen guide)) return;
+        if (!(context.minecraft().gui.screen() instanceof GuideScreen guide)) return;
         BlockPos pos = guide.structureGuiPreview().blockFor(this);
         if (pos == null) return;
         Vector2f anchor = this.blockScreenCenter(pos, context.maxX());

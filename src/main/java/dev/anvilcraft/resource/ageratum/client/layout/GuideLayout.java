@@ -2,7 +2,8 @@ package dev.anvilcraft.resource.ageratum.client.layout;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.ChatFormatting;
+import dev.anvilcraft.resource.ageratum.client.util.GuideColors;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
@@ -94,8 +95,8 @@ public final class GuideLayout {
     public static int parseColor(String value) {
         if (value.matches("#[0-9a-fA-F]{6}")) return (int) Long.parseLong(value.substring(1), 16) | 0xFF000000;
         if (value.matches("#[0-9a-fA-F]{8}")) return (int) Long.parseLong(value.substring(1), 16);
-        ChatFormatting formatting = ChatFormatting.getByName(value);
-        if (formatting != null && formatting.getColor() != null) return formatting.getColor() | 0xFF000000;
+        TextColor color = GuideColors.byName(value);
+        if (color != null) return color.getValue() | 0xFF000000;
         throw new IllegalArgumentException("Invalid color: " + value);
     }
 

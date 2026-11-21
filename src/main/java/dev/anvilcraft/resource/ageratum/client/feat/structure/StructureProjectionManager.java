@@ -102,7 +102,7 @@ public final class StructureProjectionManager {
         if (projection == null || scrollDeltaY == 0.0d || minecraft.player == null || minecraft.level == null) {
             return false;
         }
-        if (minecraft.screen != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
+        if (minecraft.gui.screen() != null || !GuideScreen.hasControlDown() || projection.isNotInLevel(minecraft.level)) {
             return false;
         }
         if (!projection.canMoveWith(minecraft.player.getMainHandItem(), minecraft.player.getOffhandItem())) {
@@ -133,7 +133,7 @@ public final class StructureProjectionManager {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.screen != null) {
+        if (minecraft.gui.screen() != null) {
             return;
         }
         if (!event.isUseItem() && !event.isAttack()) {
@@ -160,7 +160,7 @@ public final class StructureProjectionManager {
             clearProjection();
             return;
         }
-        if (minecraft.screen != null) {
+        if (minecraft.gui.screen() != null) {
             return;
         }
 

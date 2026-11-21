@@ -50,13 +50,13 @@ final class DirectoryClientTest extends GuideScreen {
 
     static void verify(MDDocument document) {
         Minecraft minecraft = Minecraft.getInstance();
-        var previous = minecraft.screen;
+        var previous = minecraft.gui.screen();
         var screen = new DirectoryClientTest(document);
-        minecraft.setScreen(screen);
+        minecraft.gui.setScreen(screen);
         try {
             screen.clickDirectoryEntry();
         } finally {
-            minecraft.setScreen(previous);
+            minecraft.gui.setScreen(previous);
         }
     }
 

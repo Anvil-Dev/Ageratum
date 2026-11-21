@@ -63,7 +63,7 @@ final class StructureGuiClientTest {
         mc.options.guiScale().set(2);
         mc.resizeGui();
         GuideScreen guide = new GuideScreen(page, document, List.of(), false);
-        mc.setScreen(guide);
+        mc.gui.setScreen(guide);
         Object component = document.components().stream().filter(value -> value instanceof
             dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent).findFirst().orElseThrow();
         check(guide.structureGuiPreview().open(component, template, origin.offset(0, 0, 2), 150, 150), "chest popup opens");

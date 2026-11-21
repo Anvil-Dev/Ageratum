@@ -22,7 +22,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
@@ -78,18 +78,18 @@ public final class StructureTest {
             fail(new IllegalStateException("Timed out at " + this.stage));
             return;
         }
-        if (mc.getOverlay() != null || this.stage != 0 || !this.ready) return;
+        if (mc.gui.overlay() != null || this.stage != 0 || !this.ready) return;
         this.stage = 1;
         String name = "structure-port-" + System.currentTimeMillis();
         mc.createWorldOpenFlows().createFreshLevel(name,
             new LevelSettings(name, GameType.CREATIVE,
                 new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT),
-            new WorldOptions(17, false, false), WorldPresets::createFlatWorldDimensions, mc.screen);
+            new WorldOptions(17, false, false), WorldPresets::createTestWorldDimensions, mc.gui.screen());
     }
 
     private void frame(RenderFrameEvent.Post event) {
         var mc = Minecraft.getInstance();
-        if (this.stage == 99 || mc.level == null || mc.player == null || mc.getOverlay() != null
+        if (this.stage == 99 || mc.level == null || mc.player == null || mc.gui.overlay() != null
             || System.currentTimeMillis() < this.next) return;
         try {
             if (Boolean.getBoolean("ageratum.scrollEntityTest")) {
@@ -119,17 +119,22 @@ public final class StructureTest {
                 return;
             }
             if (this.stage == 1) {
-                if (mc.screen != null) return;
+                if (mc.gui.screen() != null) return;
                 mc.options.guiScale().set(1);
                 mc.resizeGui();
                 this.component = MDNBTStructureComponent.parse(new MDExtensionContext(
                     Identifier.parse("ageratum:ageratum/port.md"), Identifier.parse("ageratum:structure"), "",
                     Map.of("id", "ageratum:ageratum/structure_port.snbt"), List.of(), ""));
-                mc.setScreen(new Preview());
+                mc.gui.setScreen(new Preview());
                 advance();
             } else if (this.stage == 2) {
                 this.template = (StructureTemplate) field(this.component, "structureTemplateCache");
                 check(this.template != null, "preview loads");
+                var sandbox = (SandboxRenderLevel) field(this.component, "previewLevel");
+                var mounted = java.util.stream.StreamSupport.stream(sandbox.getEntitiesForRendering().spliterator(), false)
+                    .filter(entity -> entity.isPassenger()).findFirst().orElseThrow();
+                check(sandbox.getEntity(mounted.getId()) == mounted && sandbox.getEntity(mounted.getVehicle().getId()) == mounted.getVehicle(),
+                    "template passenger and mount have distinct registered IDs");
                 check((int) field(this.component, "totalLayerCount") == 3, "all three layers are counted");
                 capture("preview-full");
                 int up = layerUp(mc);
@@ -166,7 +171,7 @@ public final class StructureTest {
             } else if (this.stage == 5) {
                 capture("preview-gui2");
                 this.component.mouseClicked(mc, 308, 12, 0, 320);
-                check(StructureProjectionApi.hasActiveProjection() && mc.screen == null, "button starts floating projection");
+                check(StructureProjectionApi.hasActiveProjection() && mc.gui.screen() == null, "button starts floating projection");
                 advance();
             } else if (this.stage == 6) {
                 this.previous = renderer();
@@ -250,7 +255,8 @@ public final class StructureTest {
         scene.put(new BlockPos(-1, 0, 0), Blocks.WATER.defaultBlockState(), null);
         scene.put(new BlockPos(0, 0, 0), Blocks.WATER.defaultBlockState(), null);
         check(scene.shifted(new BlockPos(-1, 0, 0)).getFluidState(new BlockPos(1, 0, 0)).isSource(), "fluid neighbours use local coordinates");
-        var entity = EntityType.ARMOR_STAND.create(mc.level, EntitySpawnReason.LOAD);
+        var entity = EntityTypes.ARMOR_STAND.create(mc.level, EntitySpawnReason.LOAD);
+        entity.setId(1);
         entity.setPos(0.5, 0, 0.5);
         scene.addEntity(entity);
         try (var renderer = new ProjectionRenderer()) {
@@ -259,7 +265,7 @@ public final class StructureTest {
             check(rejected, "invalid opacity is rejected");
             renderer.rebuild(scene, 115);
             check(renderer.isValid(), "independent renderer builds");
-            renderer.render(new PoseStack(), mc.gameRenderer.getGameRenderState().levelRenderState.cameraRenderState);
+            renderer.render(new PoseStack(), mc.gameRenderer.gameRenderState().levelRenderState.cameraRenderState);
             check(((List<?>) field(renderer, "entities")).size() == 1, "entity rendering is included");
             renderer.close();
             check(!renderer.isValid(), "close invalidates renderer");
@@ -272,7 +278,7 @@ public final class StructureTest {
         this.component = MDNBTStructureComponent.parse(new MDExtensionContext(
             Identifier.parse("ageratum:ageratum/port.md"), Identifier.parse("ageratum:structure"), "",
             Map.of("id", "ageratum:ageratum/" + name + ".snbt"), List.of(), ""));
-        mc.setScreen(new Preview());
+        mc.gui.setScreen(new Preview());
     }
 
     private int layerUp(Minecraft mc) throws Exception {
@@ -283,7 +289,7 @@ public final class StructureTest {
     private void advance() { this.stage++; this.next = System.currentTimeMillis() + 1200; }
     private void capture(String name) {
         var mc = Minecraft.getInstance();
-        Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), 1, message -> {});
+        Screenshot.grab(mc.gameDirectory, name + ".png", mc.gameRenderer.mainRenderTarget(), 1, message -> {});
     }
     private static Object field(Object object, String name) throws Exception {
         var field = object.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(object);

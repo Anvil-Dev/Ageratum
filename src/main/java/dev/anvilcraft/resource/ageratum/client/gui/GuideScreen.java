@@ -2446,7 +2446,7 @@ public class GuideScreen extends Screen {
             breadCrumbs.add(this.documentLocation);
             GuideScreen screen = new GuideScreen(targetLocation, parsed, List.copyOf(breadCrumbs), false);
             screen.setAnchor(anchor);
-            this.minecraft.setScreen(screen);
+            this.minecraft.gui.setScreen(screen);
             return true;
         } catch (Exception exception) {
             return false;

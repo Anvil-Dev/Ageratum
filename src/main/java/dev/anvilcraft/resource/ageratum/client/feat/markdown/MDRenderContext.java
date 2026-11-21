@@ -45,7 +45,7 @@ public record MDRenderContext(
         List<BiConsumer<GuideScreen, MDRenderContext>> onEnd) {
         this(parent, minecraft, graphics, tooltips, screenWidth, screenHeight, maxX, maxY, mouseX, mouseY,
             offsetX, offsetY, scale, leftPos, topPos, onEnd,
-            parent != null ? parent.layout() : minecraft.screen instanceof GuideScreen guide ? guide.getLayout() : GuideLayoutManager.defaults());
+            parent != null ? parent.layout() : minecraft.gui.screen() instanceof GuideScreen guide ? guide.getLayout() : GuideLayoutManager.defaults());
     }
 
     public MDRenderContext child() {

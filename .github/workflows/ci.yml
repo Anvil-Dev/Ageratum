@@ -29,7 +29,7 @@ jobs:
         uses: christian-draeger/read-properties@1.1.1
         with:
           path: gradle.properties
-          properties: 'mod_id mod_name java_version modrinth_id curseforge_id upload'
+          properties: 'mod_id mod_name minecraft_version neo_version java_version modrinth_id curseforge_id upload'
 
       - name: Setup Java ${{ steps.properties.outputs.java_version }}
         uses: actions/setup-java@v3.6.0
@@ -69,9 +69,12 @@ jobs:
         continue-on-error: true
 
       - name: gametest
-        uses: Anvil-Dev/dedicated-server-launch-test@26.1-neoforge
+        uses: Anvil-Dev/dedicated-server-launch-test@universal
         with:
-          mod: build/libs/${{ steps.properties.outputs.mod_id }}-neoforge-${{ steps.version.outputs.version }}.jar
+          minecraft_version: ${{ steps.properties.outputs.minecraft_version }}
+          mod_loader: neoforge
+          loader_version: ${{ steps.properties.outputs.neo_version }}
+          mods: build/libs/${{ steps.properties.outputs.mod_id }}-neoforge-${{ steps.version.outputs.version }}.jar
 
       - name: publish neoforge mc mod
         uses: Kir-Antipov/mc-publish@v3.3
@@ -80,9 +83,9 @@ jobs:
         with:
           name: "${{ steps.properties.outputs.mod_name }} For NeoForge v${{ steps.version.outputs.version }}"
           version: ${{ steps.version.outputs.version }}
-          game-versions: 26.1.2
+          game-versions: ${{ steps.properties.outputs.minecraft_version }}
           version-type: ${{ env.VERSION_TYPE }}
-          java: 25
+          java: ${{ steps.properties.outputs.java_version }}
           fail-mode: skip
 
           modrinth-id: ${{ steps.properties.outputs.modrinth_id }}
