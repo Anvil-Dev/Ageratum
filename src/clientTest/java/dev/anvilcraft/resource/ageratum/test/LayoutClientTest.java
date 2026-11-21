@@ -13,7 +13,6 @@ import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.resources.Identifier;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScale;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideZoomSlider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.ClickEvent;
@@ -150,6 +149,25 @@ final class LayoutClientTest {
                     this.capture("theme-button-light");
                     this.verifyThemePersistence();
                     this.verifyZoomPersistence();
+                    mc.getLanguageManager().setSelected("zh_cn");
+                    this.reload = mc.reloadResourcePacks();
+                }
+                case 19 -> {
+                    if (!this.reload.isDone()) return;
+                    this.reload.join();
+                    check(Component.translatable("ageratum.guide.zoom.default").getString().equals("默认"), "localized reset caption");
+                    this.open("ageratum:light", false);
+                    this.screen.prepareZoomCapture(false);
+                }
+                case 20 -> {
+                    if (this.screen.opaqueZoomFrames < 2) return;
+                    this.capture("book-light-zoom");
+                    this.open("ageratum:light", true);
+                    this.screen.prepareZoomCapture(true);
+                }
+                case 21 -> {
+                    if (this.screen.opaqueZoomFrames < 2) return;
+                    this.capture("book-dark-zoom");
                     LogUtils.getLogger().info("AGERATUM_LAYOUT_CLIENT_TEST PASS rendering, variants, panels, scrolling, scaled input, reload, Font metrics/styles/hit testing, continuous zoom 0.5-4.0, Ctrl wheel 2/10 point zoom, overlay capture, persisted theme buttons and navigation, namespace zoom persistence, Ctrl zero reset and outside dismissal, directory left/right, live side switching and navigation input");
                     this.stage = 99; mc.stop(); return;
                 }
@@ -280,6 +298,10 @@ final class LayoutClientTest {
     }
 
     private static final class TestScreen extends GuideScreen {
+        private boolean captureZoom;
+        private boolean hoverReset;
+        private int opaqueZoomFrames;
+
         TestScreen(String markdown) { this(markdown, "ageratum"); }
         TestScreen(String markdown, String namespace) {
             super(Identifier.parse(namespace + ":ageratum/en_us/layout_test.md"),
@@ -305,7 +327,14 @@ final class LayoutClientTest {
             // Keep the overlay visible in captured fixtures without moving the OS pointer.
             int probeX = (int) Math.round((this.leftPos + this.getContentStartX() + this.getContentWidth() - 3) / this.scale);
             int probeY = (int) Math.round((this.topPos + this.getContentStartY() + 10) / this.scale);
+            if (this.captureZoom) this.zoomSlider.show();
+            if (this.hoverReset) {
+                var reset = middle(this.zoomSlider.resetButton());
+                probeX = (int) reset.x();
+                probeY = (int) reset.y();
+            }
             super.extractRenderState(graphics, probeX, probeY, partialTick);
+            if (this.captureZoom && this.zoomSlider.opacity() >= 0.99f) this.opaqueZoomFrames++;
         }
         void verifyDirectoryInput() {
             var tree = this.layoutGeometry.section("tree");
@@ -389,6 +418,12 @@ final class LayoutClientTest {
                 org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL));
         }
 
+        void prepareZoomCapture(boolean hoverReset) {
+            this.showZoomOverlay();
+            this.captureZoom = true;
+            this.hoverReset = hoverReset;
+        }
+
         void verifyStructureWheel() {
             var structure = dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDNBTStructureComponent.parse(
                 new dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext(
@@ -411,14 +446,9 @@ final class LayoutClientTest {
         }
 
         void verifyZoomControl() {
-            var window = this.minecraft.getWindow();
             if (this.layoutGeometry == null) check(this.leftPos + this.getLabelBaseX() >= 0,
                 "new wide book tabs stay within the viewport");
             double original = AgeratumClient.CONFIG.scale;
-            var control = new GuideZoomSlider();
-            control.update(window.getGuiScaledWidth(), window.getGuiScaledHeight(), original);
-            var track = control.track();
-            double x = track.x() + track.width() / 2.0;
             this.contentScroll = this.maxContentScroll / 2;
             int reading = this.readingComponent();
             var folded = java.util.Set.copyOf(this.collapsedLabelGroups);
@@ -429,32 +459,45 @@ final class LayoutClientTest {
             check(this.mouseScrolled(0, 0, 0, -1, true, true), "Ctrl Shift wheel consumed");
             check(Math.abs(this.getZoom() - GuideScale.clamp(prior - 0.10)) < 0.000001, "Ctrl Shift subtracts 10 points");
             check(AgeratumClient.CONFIG.scale == original, "wheel leaves config default unchanged");
-            var center = new MouseButtonEvent(x, track.y() + track.height() / 2.0, new MouseButtonInfo(0, 0));
+            var track = this.zoomSlider.track();
+            var center = middle(track);
+            check(track.width() > track.height(), "zoom track runs horizontally");
+            if (this.layout.bookTabs()) {
+                double contentTop = (this.topPos + this.getContentStartY()) / this.scale;
+                check(track.bottom() <= contentTop && this.zoomSlider.resetButton().bottom() <= contentTop,
+                    "book zoom controls fit above the document");
+            }
             check(this.mouseClicked(center, false), "revealed slider accepts click after Ctrl release");
             check(Math.abs(this.getZoom() - 2.25) < 0.00001, "track midpoint sets 225 percent");
-            var up = new MouseButtonEvent(x - 150, track.y() - 100, new MouseButtonInfo(0, 0));
-            check(this.mouseDragged(up, -150, -100) && this.getZoom() == 4, "drag capture reaches upper bound");
+            var right = new MouseButtonEvent(track.right() + 100, center.y() - 100, new MouseButtonInfo(0, 0));
+            check(this.mouseDragged(right, right.x() - center.x(), -100) && this.getZoom() == 4,
+                "dragging right outside the header reaches 400 percent");
             int minimumTextWidth = dev.anvilcraft.resource.ageratum.client.layout.LayoutScrollbar.contentWidth(32,
                 this.layout.integer("content.scrollbar.width", 6), this.layout.integer("content.scrollbar.hit_width", 12));
             check(this.getContentViewportWidth() >= 32 && this.getContentWidth() >= minimumTextWidth && this.getContentHeight() >= 32,
                 "400 percent zoom retains the reading viewport including its scrollbar gutter; viewport="
                     + this.getContentViewportWidth() + "x" + this.getContentHeight() + ", text width=" + this.getContentWidth());
-            check(this.mouseReleased(new MouseButtonEvent(x, track.bottom(), new MouseButtonInfo(1, 0))), "other button cannot release zoom");
-            var down = new MouseButtonEvent(x, track.bottom() + 100, new MouseButtonInfo(0, 0));
-            check(this.mouseDragged(down, 150, 200) && this.getZoom() == 0.5, "drag capture reaches lower bound");
-            check(this.mouseReleased(down), "primary release ends capture");
-            var reset = control.resetButton();
-            check(this.mouseClicked(new MouseButtonEvent(reset.x() + 2, reset.y() + 2, new MouseButtonInfo(0, 0)), false), "default click consumed");
+            check(this.mouseReleased(new MouseButtonEvent(right.x(), right.y(), new MouseButtonInfo(1, 0))), "other button cannot release zoom");
+            var left = new MouseButtonEvent(track.x() - 100, center.y() + 100, new MouseButtonInfo(0, 0));
+            check(this.mouseDragged(left, left.x() - right.x(), 200) && this.getZoom() == 0.5,
+                "dragging left outside the header reaches 50 percent after reflow");
+            check(this.mouseReleased(left), "primary release ends capture");
+            check(this.mouseClicked(middle(this.zoomSlider.resetButton()), false), "default click consumed");
             check(this.getZoom() == original && AgeratumClient.CONFIG.scale == original, "default restores configured fractional scale");
             this.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(0, org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL)), false);
+            center = middle(this.zoomSlider.track());
             check(this.mouseClicked(center, false) && Math.abs(this.getZoom() - 2.25) < 0.00001, "Ctrl outside click does not dismiss overlay");
             this.mouseReleased(center);
-            this.mouseClicked(new MouseButtonEvent(reset.x() + 2, reset.y() + 2, new MouseButtonInfo(0, 0)), false);
+            this.mouseClicked(middle(this.zoomSlider.resetButton()), false);
             check(this.mouseClicked(new MouseButtonEvent(0, 0, new MouseButtonInfo(0, 0)), false), "outside click after Ctrl release dismisses");
             this.mouseClicked(center, false);
             check(this.getZoom() == original, "dismissed rail cannot change zoom");
             this.contentScroll = 0;
             this.verifyStructureWheel();
+        }
+
+        private static MouseButtonEvent middle(LayoutGeometry.Rect rect) {
+            return new MouseButtonEvent(rect.x() + rect.width() / 2.0, rect.y() + rect.height() / 2.0, new MouseButtonInfo(0, 0));
         }
 
         private int readingComponent() {

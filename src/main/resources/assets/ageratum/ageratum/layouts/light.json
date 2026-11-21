@@ -11,6 +11,7 @@
     "button_share": "ageratum:gui/guide/light/button_share",
     "button_return": "ageratum:gui/guide/light/button_back",
     "button_add": "ageratum:gui/guide/light/button_add",
+    "button_empty": "ageratum:gui/guide/light/button_empty",
     "button_up": "ageratum:gui/guide/light/button_up",
     "button_down": "ageratum:gui/guide/light/button_down",
     "button_dark": "ageratum:gui/guide/light/button_dark",

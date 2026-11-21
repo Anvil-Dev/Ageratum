@@ -32,7 +32,9 @@ Changes reflow the open guide while preserving the reading position. The player 
 
 ### `scale`
 
-Hold Ctrl and use the wheel to change guide zoom by 2 percentage points per notch, or 10 with Shift held as well. Scrolling over a structure changes only its preview size. Zooming reveals an overlay slider at the right edge; drag it, seek on its track, or press Default to restore this configured value. Zoom is saved per document namespace in `config/ageratum/zoom.json`, surviving page navigation, closing the guide and game restarts without changing the global configuration. Default and Ctrl+0 (including keypad 0) clear the current namespace override and restore the configured scale. Releasing Ctrl keeps the overlay open; a subsequent outside click retracts it to the screen edge and does not activate content underneath.
+Hold Ctrl and use the wheel to change guide zoom by 2 percentage points per notch, or 10 with Shift held as well. Scrolling over a structure changes only its preview size. A horizontal slider fades in on the top roll of the guide, or at the top of the stone tablet in dark mode. Click the track to set the zoom or drag the thumb. The slider stays visible during a drag and fades out after a short pause. With Ctrl released, clicking outside the slider dismisses it early and consumes the click.
+
+Zoom is saved per document namespace in `config/ageratum/zoom.json` across page changes, closing the guide and game restarts. Press Default or Ctrl+0 (including keypad 0) to clear the current namespace override and restore the configured scale.
 
 **Type**: `double`, default `1.0`, range **0.5–4.0**. Accepts arbitrary fractional values such as `0.75`, `1.25` and `1.375`, without rounding to integer steps.
 

@@ -155,7 +155,7 @@ public class GuideScreen extends Screen {
      */
     protected float contentScroll;
     private final LayoutScrollbar contentScrollbar = new LayoutScrollbar();
-    private final GuideZoomSlider zoomSlider = new GuideZoomSlider();
+    protected final GuideZoomSlider zoomSlider = new GuideZoomSlider();
     private double zoom = GuideScale.clamp(AgeratumClient.CONFIG.scale);
     private double configuredZoom = this.zoom;
     private long zoomSaveAt;
@@ -258,8 +258,23 @@ public class GuideScreen extends Screen {
     }
 
     void calculateLayoutGeometry() {
-        if (this.panelView == null) { this.layoutGeometry = null; return; }
-        this.layoutGeometry = LayoutGeometry.compute(this.layout, this.imageWidth, this.imageHeight, this.panelView::naturalHeight);
+        this.layoutGeometry = this.panelView == null ? null
+            : LayoutGeometry.compute(this.layout, this.imageWidth, this.imageHeight, this.panelView::naturalHeight);
+        var page = this.layoutGeometry == null ? new LayoutGeometry.Rect(0, 0, this.imageWidth, this.imageHeight)
+            : this.layoutGeometry.contentBackground();
+        // The centered book stretches its 16-pixel roll with the page. Nine-sliced layouts keep the top border fixed.
+        LayoutTexture background = this.backgroundTexture();
+        double rim = background.top() > 0 ? background.top() : 16.0 * page.height() / GUIDE_IMAGE_HEIGHT;
+        int paddingTop = this.getContentStartY() - page.y();
+        double headerHeight = paddingTop > 0 ? Math.min(rim, paddingTop) : rim;
+        double headerTop = this.topPos + page.y();
+        // A custom page can run text right to its edge. Use the space above it when available.
+        if (paddingTop == 0 && headerTop >= rim) headerTop -= rim;
+        int left = (int) Math.round((this.leftPos + page.x() + Math.min(background.left(), page.width() / 4)) / this.scale);
+        int top = (int) Math.round(headerTop / this.scale);
+        int right = (int) Math.round((this.leftPos + page.right() - Math.min(background.right(), page.width() / 4)) / this.scale);
+        int bottom = (int) Math.round((headerTop + headerHeight) / this.scale);
+        this.zoomSlider.update(new LayoutGeometry.Rect(left, top, right - left, bottom - top), this.zoom);
     }
 
 
@@ -433,7 +448,6 @@ public class GuideScreen extends Screen {
             this.configuredZoom = configured;
             this.zoom = GuideZoomStore.instance().get(this.documentLocation.getNamespace(), configured);
         }
-        this.zoomSlider.update(window.getGuiScaledWidth(), window.getGuiScaledHeight(), this.zoom);
         this.appliedZoom = this.zoom;
         this.appliedFont = GuideFont.get();
         double calculateScale = GuideScale.physicalScale(window.getWidth(), window.getHeight(), window.calculateScale(1, true), this.zoom);
@@ -532,6 +546,12 @@ public class GuideScreen extends Screen {
 
     public double getZoom() { return this.zoom; }
 
+    @Override
+    public void resize(int width, int height) {
+        this.zoomSlider.cancel();
+        super.resize(width, height);
+    }
+
     void toggleDarkMode() {
         AgeratumClient.CONFIG.setDarkMode(!AgeratumClient.CONFIG.darkMode);
         this.reflowPreferences();
@@ -548,6 +568,7 @@ public class GuideScreen extends Screen {
 
     private void resetZoom() {
         this.zoomSlider.cancel();
+        this.zoomSlider.show();
         GuideZoomStore.instance().reset(this.documentLocation.getNamespace());
         GuideZoomStore.instance().flush();
         this.zoomSaveAt = 0;
@@ -567,6 +588,7 @@ public class GuideScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.structureGuiPreview.beginFrame();
         if (this.structureGuiPreview.contains(mouseX, mouseY)) { mouseX = -100000; mouseY = -100000; }
+        int zoomMouseX = mouseX, zoomMouseY = mouseY;
         if (this.zoomSlider.contains(mouseX, mouseY) || this.zoomSlider.dragging()) {
             mouseX = -100000;
             mouseY = -100000;
@@ -604,7 +626,7 @@ public class GuideScreen extends Screen {
         if (this.panelView == null) this.extractLabelTooltipRenderState(guiGraphics, mouseX - i, mouseY - j);
         pose.popMatrix();
         guiGraphics.nextStratum();
-        this.zoomSlider.render(guiGraphics, this.layout, this.zoom);
+        this.zoomSlider.render(guiGraphics, this.layout, zoomMouseX, zoomMouseY);
         this.structureGuiPreview.render(guiGraphics);
     }
 
@@ -770,7 +792,7 @@ public class GuideScreen extends Screen {
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (this.structureGuiPreview.mouseDragged(event.x(), event.y(), event.button())) return true;
         if (this.zoomSlider.dragging()) {
-            if (event.button() == 0) this.applyZoom(this.zoomSlider.drag(event.y()));
+            if (event.button() == 0) this.applyZoom(this.zoomSlider.drag(event.x()));
             return true;
         }
         double mouseX = event.x() * this.scale;
@@ -806,7 +828,7 @@ public class GuideScreen extends Screen {
         if (this.structureGuiPreview.mouseReleased(event.button())) return true;
         if (this.zoomSlider.dragging()) {
             if (event.button() == 0) {
-                this.applyZoom(this.zoomSlider.drag(event.y()));
+                this.applyZoom(this.zoomSlider.drag(event.x()));
                 this.zoomSlider.cancel();
                 GuideZoomStore.instance().flush();
             }
@@ -1009,6 +1031,10 @@ public class GuideScreen extends Screen {
         return super.keyPressed(event);
     }
 
+    private LayoutTexture backgroundTexture() {
+        return this.layout.texture("content.background", LayoutTexture.of(GUIDE_LOCATION, 256, 232, 256, 256));
+    }
+
     /**
      * 绘制书页背景纹理。
      *
@@ -1019,7 +1045,7 @@ public class GuideScreen extends Screen {
      */
     private void extractBackgroundRenderState(GuiGraphicsExtractor guiGraphics, float partialTick, int mouseX, int mouseY) {
         if (this.layout.value("content.background") == null) return;
-        LayoutTexture texture = this.layout.texture("content.background", LayoutTexture.of(GUIDE_LOCATION, 256, 232, 256, 256));
+        LayoutTexture texture = this.backgroundTexture();
         if (this.layoutGeometry == null) texture.draw(guiGraphics, 0, 0, this.imageWidth, this.imageHeight, false);
         else {
             var rect = this.layoutGeometry.contentBackground();
