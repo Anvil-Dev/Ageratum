@@ -280,6 +280,20 @@ Block content here — supports Markdown syntax.
 - Parameters use `key="value"` or `key=value` format
 - Self-closing tags (`/>`) have no block content
 
+### Automatic table of contents
+
+Place `<directory />` on its own line. The guide inserts a level-two heading labeled **目录** and a list of links to the headings in the main body of the page. Entries follow source order and indent by heading level. Clicking an entry scrolls to that heading, including headings written after the directory.
+
+```markdown
+<directory />
+
+# Machines
+
+## Power supply
+```
+
+`<directory>` and `<directory/>` also work. Each spelling accepts the `ageratum:` namespace, for example `<ageratum:directory />`. Multiple directories list the same original headings. Each entry jumps to its own heading, even when headings repeat or contain only punctuation. A page with no headings displays only **目录**.
+
 ### Structure NBT Component
 
 Use the `structure` extension to render a summary, top-down block preview, and bounded NBT tree view for
@@ -314,6 +328,7 @@ structure files (`.nbt` / `.snbt`):
 | `ageratum:tip`       | `::: tip` or `<tip/>`                     | 🟢 Green tip box             |
 | `ageratum:warning`   | `::: warning` or `<warning/>`             | 🟠 Orange warning box        |
 | `ageratum:danger`    | `::: danger` or `<danger/>`               | 🔴 Red danger box            |
+| `ageratum:directory` | `<directory />` | Clickable table of contents |
 | `ageratum:recipe`    | `<recipe id="..."/>`                      | Recipe rendering             |
 | `ageratum:structure` | `<structure id="..."/>`                   | Structure NBT summary + tree |
 | `ageratum:latex`     | `<latex formula="..."/>` or `[latex:...]` | LaTeX formula image          |

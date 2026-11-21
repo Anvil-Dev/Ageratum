@@ -440,27 +440,21 @@ public abstract class MDComponent {
 
 ## `MarkdownParser`
 
-Block-level Markdown parser.
+`parseDocument` returns the front matter and the renderable body. Use `parse` for just the component list, or `parseComponent` to try the registered single-line rules.
+
+A line rule receives the source location and the line text. Return a component to accept the line, or `null` to let the next rule try it. Lower priority values run first. Rules with equal priority run in registration order.
 
 ```java
 public class MarkdownParser {
     public MarkdownParser();
-
-    /**
-     * Registers a line-level component parser.
-     *
-     * @param priority Parser priority (lower = higher precedence)
-     * @param parser   Parsing function: receives line text, returns component or null
-     */
     public void registerComponentParser(int priority, MDComponentParser parser);
 
-    /**
-     * Parses raw Markdown text into a document model.
-     *
-     * @param location Source resource location (may be null)
-     * @param markdown Raw Markdown text
-     */
-    public MDDocument parseDocument(@Nullable ResourceLocation location, String markdown);
+    public MDDocument parseDocument(Identifier sourceLocation, String markdown);
+    public List<MDComponent> parse(Identifier sourceLocation, String markdown);
+    public @Nullable MDComponent parseComponent(Identifier sourceLocation, String line);
+
+    @FunctionalInterface
+    public interface MDComponentParser extends BiFunction<Identifier, String, MDComponent> {}
 }
 ```
 

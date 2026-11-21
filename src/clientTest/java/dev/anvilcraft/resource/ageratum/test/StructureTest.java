@@ -63,6 +63,7 @@ public final class StructureTest {
     private int checks;
 
     public StructureTest(IEventBus bus) {
+        MarkdownBlockClientTest.register(bus);
         if (Boolean.getBoolean("ageratum.layoutTest")) { new LayoutClientTest(bus); return; }
         bus.addListener((ModelEvent.BakingCompleted event) -> this.ready = true);
         NeoForge.EVENT_BUS.addListener(this::tick);

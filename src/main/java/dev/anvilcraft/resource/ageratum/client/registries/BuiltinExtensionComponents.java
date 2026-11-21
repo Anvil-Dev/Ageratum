@@ -2,6 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.registries;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionComponentFactory;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDBlockComponent;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDDirectoryComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDEntityComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDItemComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend.MDLatexComponent;
@@ -54,6 +55,10 @@ public final class BuiltinExtensionComponents {
             () -> context -> new MDNoticeBoxComponent(MDNoticeBoxComponent.NoticeType.DANGER, context.renderedContent())
         );
 
+
+    /** 自动目录扩展组件注册项。 */
+    public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionComponentFactory> DIRECTORY =
+        AgeratumRegistries.EXTENSION_COMPONENT_FACTORIES.register("directory", () -> MDDirectoryComponent::parse);
 
     /**
      * 配方扩展组件注册项。

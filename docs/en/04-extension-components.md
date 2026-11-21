@@ -281,7 +281,9 @@ String raw = context.rawParams(); // "raw param string"
 `context.renderedContent()` contains the parsed `MDComponent` list from the block content, in document order. Pass it directly to container
 components for rendering.
 
-`context.rawContent()` contains the raw text of the block content, useful when you need to re-parse or further process it.
+`context.rawContent()` contains the block body as written, including nested delimiters and reference-link spellings. Line endings are normalized to `\n`. Use `renderedContent()` when you need the parsed children.
+
+Pair each opener with its own closing delimiter. A nested `::: tip` ends at the next matching `:::`, and nested tags may share a name. Delimiters inside fenced or indented code belong to the code sample. An unclosed block opener stays visible as text and parsing continues on the following lines.
 
 ---
 
@@ -351,6 +353,8 @@ This is an orange warning box with a custom icon.
 ## Built-in Extension Components
 
 Ageratum ships with several built-in extension components that you can use in any document.
+
+For a table of contents, use Ageratum's built-in `<directory />`. It links to headings on the current page. See the [Markdown syntax reference](03-markdown-syntax.md#automatic-table-of-contents).
 
 ### Notice Boxes
 

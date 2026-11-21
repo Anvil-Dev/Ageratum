@@ -72,76 +72,30 @@
 - 注册客户端命令 `/ageratum`
 - 注册文档预加载监听器（`RegisterClientReloadListenersEvent`）
 
-### 解析流水线
+### 文档解析流程
 
-```
-原始 .md 文件文本
-        │
-        ▼
-  MarkdownParser.parseDocument()
-        │
-        ├─ 提取 Front Matter（--- ... ---）
-        │
-        ├─ 收集引用链接定义（[ref]: url）
-        │
-        ├─ 块级解析（按行扫描）
-        │   ├─ 代码围栏检测
-        │   ├─ 扩展语法（::: 和 <tag>）
-        │   ├─ 列表、引用块、表格
-        │   ├─ 标题、水平线
-        │   ├─ 图片
-        │   └─ 段落（默认）
-        │
-        └─ MDDocument { frontMatter, components }
-                │
-                ▼
-         组件列表传入 GuideScreen 渲染
-```
+1. `MarkdownParser.parseDocument()` 读取 front matter，统一换行符。
+2. `MarkdownBlockSource` 标记代码围栏，配对扩展块的开始和结束标记，并收集代码之外的引用链接定义。正文因此可以引用页面后面才定义的链接。
+3. `MarkdownBlockParser` 按原文顺序读取块，将扩展块的子组件和块内原文交给注册的工厂。单行解析器按优先级从小到大尝试匹配，同一优先级按注册顺序执行。
+4. `InlineMarkdownParser` 处理行内内容。反引号内的代码保留原文，包括形似链接和扩展标签的文本。
+5. 顶层块解析完毕后，目录占位符展开为指向原文标题的链接。`GuideScreen` 处理点击时使用相同的锚点规范化规则。
+
+`parseDocument()` 返回带有来源、元数据和渲染组件的 `MDDocument`，`parse()` 返回组件列表。
 
 ### 行内解析（`MDComponent.textFormat()`）
 
-```
-原始文本
-    │
-    ├─ 预处理转义字符（\* → %%MDESC42%%）
-    │
-    ├─ 引用链接展开
-    │
-    ├─ 代码跨度提取（`code`，避免内部内容被解析）
-    │
-    ├─ 自动链接（<url>、<email>）
-    │
-    ├─ 图片（内联，目前按文本处理）
-    │
-    ├─ 普通链接（[text](url)）
-    │
-    ├─ 粗体 / 斜体 / 删除线
-    │
-    ├─ 自定义行内样式（查询 INLINE_STYLE_PARSER_REGISTRY，按优先级排序）
-    │
-    └─ 还原转义字符
+```text
+InlineMarkdownParser.format()
+  ├─ 反引号代码片段 → 按代码样式输出原文
+  └─ 代码片段之间的文本 → 保护 Markdown 转义字符
+       → 解析链接、图片、强调和删除线
+       → 恢复转义字面量，处理已注册的行内样式和标签
+  → 按原文顺序将代码和文本合并为 FormattedText
 ```
 
-### 缓存机制 (`GuideDocumentCache`)
+### 资源重载（`GuideDocumentCache`）
 
-```
-资源包加载/重载事件
-        │
-        ▼
-  RELOAD_LISTENER.prepare()
-        │
-        ├─ 扫描全部 ageratum/**/*.md
-        ├─ 并行解析为 MDDocument
-        └─ 构建 NavigationTree（目录结构）
-        │
-        ▼
-  RELOAD_LISTENER.apply()
-        │
-        ├─ 原子替换 PARSED_DOCUMENT_CACHE（volatile Map）
-        └─ 原子替换 NAVIGATION_TREE_CACHE
-```
-
-缓存使用 `volatile` 变量保证线程可见性，`Map.copyOf()` 保证不可变性。
+第一遍读取各页的 front matter，并为所有页面建立物品绑定索引。第二遍复用已分离的正文进行解析。即使目标页面在扫描顺序中靠后，`<ref>` 也可以通过索引找到它。重载监听器根据解析结果构建导航树，在 `apply()` 中发布准备好的缓存。
 
 ---
 
@@ -203,7 +157,7 @@ MDComponent.textFormat(rawText)
 
 每个类职责单一：
 
-- `MarkdownParser`：仅负责文本 → 组件列表
+- `MarkdownParser` 负责协调元数据读取、块解析和文档模型构建。
 - `GuideDocumentLoader`：仅负责路径规范化和 IO 读取
 - `GuideDocumentCache`：仅负责预加载缓存管理
 - `GuideScreen`：仅负责 GUI 渲染和用户交互
