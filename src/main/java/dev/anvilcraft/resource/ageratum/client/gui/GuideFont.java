@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.awt.Font;
@@ -88,9 +89,62 @@ public final class GuideFont {
     }
 
     public void draw(GuiGraphicsExtractor graphics, FormattedCharSequence text, int x, int y, int color, boolean shadow) {
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y);
-        graphics.anvillib$text(this.font, text, 0, 0, color, shadow);
-        graphics.pose().popMatrix();
+        var pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(x, y);
+        boolean[] hasUnderline = {false};
+        FormattedCharSequence glyphs = sink -> text.accept((index, style, cp) -> {
+            if (style.isUnderlined()) {
+                hasUnderline[0] = true;
+                style = style.withUnderlined(false);
+            }
+            return sink.accept(index, style, cp);
+        });
+        graphics.anvillib$text(this.font, glyphs, 0, 0, color, shadow);
+        if (hasUnderline[0]) {
+            // AnvilLib 2.0.0 puts its underline inside CJK glyphs. Use the bottom of the line box.
+            double pixelsPerUnit = Math.hypot(pose.m10(), pose.m11()) * Minecraft.getInstance().getWindow().getGuiScale();
+            if (pixelsPerUnit > 0) {
+                pose.translate(0, this.lineHeight);
+                pose.scale(1, Math.max(0.5f, (float) (1 / pixelsPerUnit)));
+                var runs = new UnderlineRuns(graphics, color);
+                text.accept(runs);
+                runs.flush();
+            }
+        }
+        pose.popMatrix();
+    }
+
+    /** Use the same visual order and advances as wrapping and link hit testing. */
+    private final class UnderlineRuns implements FormattedCharSink {
+        private final GuiGraphicsExtractor graphics;
+        private final int baseColor;
+        private int x;
+        private int start;
+        private int color;
+
+        private UnderlineRuns(GuiGraphicsExtractor graphics, int baseColor) {
+            this.graphics = graphics;
+            this.baseColor = baseColor;
+        }
+
+        @Override
+        public boolean accept(int index, Style style, int codePoint) {
+            int nextColor = 0;
+            if (style.isUnderlined()) {
+                nextColor = style.getColor() == null ? this.baseColor : 0xFF000000 | style.getColor().getValue();
+            }
+            if (nextColor != this.color) {
+                this.flush();
+                this.start = this.x;
+                this.color = nextColor;
+            }
+            this.x += (int) GuideFont.this.advance(codePoint, style);
+            return true;
+        }
+
+        private void flush() {
+            if (this.color != 0 && this.x > this.start) this.graphics.fill(this.start, 0, this.x, 1, this.color);
+        }
     }
 }
