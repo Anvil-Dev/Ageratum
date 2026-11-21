@@ -7,6 +7,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.FormattedCharSink;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -89,17 +90,21 @@ public final class GuideTheme {
         };
     }
 
-    /** 链接使用深色页面的默认亮蓝色，其它显式文字颜色保持不变。 */
+    /** Mark only the native font output drawing this line of handbook content. */
+    public interface GuideTextSink extends FormattedCharSink {
+        boolean ageratum$acceptGuideText(FormattedCharSequence line);
+    }
+
     public static FormattedCharSequence text(FormattedCharSequence text) {
-        if (!isDark()) return text;
-        return sink -> text.accept((index, style, codePoint) -> {
+        FormattedCharSequence line = isDark() ? sink -> text.accept((index, style, codePoint) -> {
             Style themed = style;
             if (style.getClickEvent() != null && style.getColor() != null
                 && style.getColor().getValue() == AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR) {
                 themed = style.withColor(0x66CCFF);
             }
             return sink.accept(index, themed, codePoint);
-        });
+        }) : text;
+        return sink -> sink instanceof GuideTextSink output ? output.ageratum$acceptGuideText(line) : line.accept(sink);
     }
 
     /** 代码块的颜色由语法高亮器生成，在深色背景上替换其中的深色默认值。 */
