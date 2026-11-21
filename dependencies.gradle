@@ -1,4 +1,6 @@
 dependencies {
+    implementation libs.anvillib.font
+    jarJar libs.anvillib.font
     implementation libs.anvillib.config
     jarJar libs.anvillib.config
     implementation libs.anvillib.rendering

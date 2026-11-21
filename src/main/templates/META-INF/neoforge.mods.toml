@@ -86,6 +86,13 @@ side = "BOTH"
 #openGLVersion="[3.2,)"
 
 [[dependencies."${mod_id}"]]
+modId = "anvillib_font"
+type = "required"
+versionRange = "[${anvillib_version},)"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies."${mod_id}"]]
 modId = "anvillib_rendering"
 type = "required"
 versionRange = "[${anvillib_version},)"

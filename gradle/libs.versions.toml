@@ -8,6 +8,7 @@ jhighlight = "1.1.1"
 jsoup = "1.18.3"
 
 [libraries]
+anvillib-font = { group = "dev.anvilcraft.lib", name = "anvillib-font-neoforge-1.21.1", version.ref = "anvillib" }
 anvillib-config = { group = "dev.anvilcraft.lib", name = "anvillib-config-neoforge-1.21.1", version.ref = "anvillib" }
 anvillib-rendering = { group = "dev.anvilcraft.lib", name = "anvillib-rendering-neoforge-1.21.1", version.ref = "anvillib" }
 jhighlight = { group = "org.codelibs", name = "jhighlight", version.ref = "jhighlight" }
