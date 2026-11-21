@@ -7,10 +7,11 @@ import com.mojang.serialization.JsonOps;
 import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDExtensionContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -52,7 +53,9 @@ public class MDItemComponent extends MDImageComponent {
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphics guiGraphics = context.graphics();
-        this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        LayoutTexture slot = LayoutTexture.of(this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        context.layout().componentTexture(ResourceLocation.parse("ageratum:item_slot"), slot)
+            .draw(guiGraphics, 0, 0, this.width, this.height, false);
         this.renderItem(context, mouseX, mouseY);
     }
 
@@ -68,8 +71,8 @@ public class MDItemComponent extends MDImageComponent {
 
         if (this.showText) {
             Component hoverName = itemStack.getHoverName();
-            int width = font.width(hoverName);
-            graphics.drawString(font, hoverName, 16 - width / 2, 32, GuideTheme.textColor(), false);
+            int width = GuideFont.get().width(hoverName);
+            GuideFont.get().draw(graphics, hoverName, 16 - width / 2, 32, context.layout().color("colors.content_text", 0xFF202020), false);
         }
     }
 
@@ -98,13 +101,13 @@ public class MDItemComponent extends MDImageComponent {
 
     @Override
     public int getPreferredWidth(Minecraft minecraft, int maxX, int maxY) {
-        int textWidth = this.showText ? this.itemStack != null ? minecraft.font.width(this.itemStack.getHoverName()) : 0 : 0;
+        int textWidth = this.showText ? this.itemStack != null ? GuideFont.get().width(this.itemStack.getHoverName()) : 0 : 0;
         return Math.max(32, textWidth);
     }
 
     @Override
     public int getHeight(Minecraft minecraft, int maxX, int maxY) {
-        int textHeight = this.showText ? minecraft.font.lineHeight : 0;
+        int textHeight = this.showText ? GuideFont.get().lineHeight : 0;
         Size size = new Size(this.width, this.height + textHeight, 1.0f);
         return this.computeRenderSize(size, maxX, maxY).height();
     }

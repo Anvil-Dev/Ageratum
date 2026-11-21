@@ -35,6 +35,12 @@ import javax.annotation.Nullable;
 @SuppressWarnings("unused")
 public final class GuideDocumentCache {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static volatile long generation;
+
+    public static long generation() {
+        return generation;
+    }
+
     private static final String GUIDE_ROOT = AgeratumConstants.Guide.ROOT_FOLDER;
 
     private static volatile Map<ResourceLocation, MDDocument> PARSED_DOCUMENT_CACHE = Map.of();
@@ -109,6 +115,7 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                 NAVIGATION_TREE_CACHE = Map.copyOf(prepared.navigationTrees());
                 ITEM_DOCUMENT_CACHE = Map.copyOf(prepared.itemDocuments());
                 AgeratumCommand.warmSuggestionCache(PARSED_DOCUMENT_CACHE);
+                generation++;
                 LOGGER.info("Preloaded {} guide markdown files", PARSED_DOCUMENT_CACHE.size());
             }
         };

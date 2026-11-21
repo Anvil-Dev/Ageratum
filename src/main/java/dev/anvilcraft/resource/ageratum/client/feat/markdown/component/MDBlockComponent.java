@@ -2,7 +2,7 @@ package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
-import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
+import dev.anvilcraft.resource.ageratum.client.gui.GuideFont;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
@@ -35,7 +35,6 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     public final void render(
         MDRenderContext context
     ) {
-        Minecraft minecraft = context.minecraft();
         int maxX = context.maxX();
         int maxY = context.maxY();
         GuiGraphics guiGraphics = context.graphics();
@@ -43,14 +42,14 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         for (CachedItem<E> cachedItem : this.cachedItems) {
             int textX = this.getTextX(cachedItem);
             int lineMaxX = this.getLineMaxX(maxX, textX);
-            List<FormattedCharSequence> split = minecraft.font.split(cachedItem.text(), lineMaxX);
-            int lineHeight = split.size() * minecraft.font.lineHeight;
+            List<FormattedCharSequence> split = GuideFont.get().split(context.layout().text(cachedItem.text()), lineMaxX);
+            int lineHeight = split.size() * GuideFont.get().lineHeight;
             if (lineHeight <= 0 || maxY < lineHeight) {
                 return;
             }
 
-            this.renderDecoration(guiGraphics, minecraft, cachedItem, y, lineHeight, maxX);
-            this.drawContent(guiGraphics, minecraft, split, textX, y);
+            this.renderDecoration(context, cachedItem, y, lineHeight, maxX);
+            this.drawContent(guiGraphics, split, textX, y);
             y += lineHeight;
             maxY -= lineHeight;
         }
@@ -99,10 +98,14 @@ public abstract class MDBlockComponent<E> extends MDComponent {
     }
 
     protected int getItemHeight(Minecraft minecraft, CachedItem<E> cachedItem, int maxX) {
-        return minecraft.font.wordWrapHeight(cachedItem.text(), this.getLineMaxX(maxX, this.getTextX(cachedItem)));
+        return GuideFont.get().split(cachedItem.text(), this.getLineMaxX(maxX, this.getTextX(cachedItem))).size() * GuideFont.get().lineHeight;
     }
 
     protected abstract int getTextX(CachedItem<E> cachedItem);
+
+    protected void renderDecoration(MDRenderContext context, CachedItem<E> item, int y, int height, int maxX) {
+        this.renderDecoration(context.graphics(), context.minecraft(), item, y, height, maxX);
+    }
 
     protected abstract void renderDecoration(
         GuiGraphics guiGraphics,
@@ -129,7 +132,6 @@ public abstract class MDBlockComponent<E> extends MDComponent {
 
     private void drawContent(
         GuiGraphics guiGraphics,
-        Minecraft minecraft,
         List<FormattedCharSequence> split,
         int textX,
         int y
@@ -138,8 +140,8 @@ public abstract class MDBlockComponent<E> extends MDComponent {
         pose.pushPose();
         pose.translate(textX, y, 0);
         for (FormattedCharSequence sequence : split) {
-            guiGraphics.drawString(minecraft.font, GuideTheme.text(sequence), 0, 0, GuideTheme.textColor(), false);
-            pose.translate(0, minecraft.font.lineHeight, 0);
+            GuideFont.get().draw(guiGraphics, sequence, 0, 0, 0xFF000000, false);
+            pose.translate(0, GuideFont.get().lineHeight, 0);
         }
         pose.popPose();
     }

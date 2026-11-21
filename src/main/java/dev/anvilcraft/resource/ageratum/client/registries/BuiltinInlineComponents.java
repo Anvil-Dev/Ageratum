@@ -92,7 +92,9 @@ public final class BuiltinInlineComponents {
             if (item == Items.AIR) {
                 if (!FMLLoader.isProduction()) LOGGER.debug("Ref '{}' broken: item not found in registry", itemId);
                 return Component.translatable("item." + itemId.getNamespace() + "." + itemId.getPath())
-                    .withStyle(context.baseStyle().withColor(AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR));
+                    .withStyle(context.baseStyle()
+                        .withInsertion("ageratum:broken_link")
+                        .withColor(AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR));
             }
             String componentStr = context.params().get("component");
             String itemSpec = itemIdStr.trim();
@@ -108,6 +110,7 @@ public final class BuiltinInlineComponents {
             GuideItemBinding binding = bindingOpt.orElse(null);
             AtomicReference<MutableComponent> displayText = new AtomicReference<>(Component.translatable(item.getDescriptionId()));
             AtomicReference<Style> linkStyle = new AtomicReference<>(context.baseStyle()
+                .withInsertion("ageratum:broken_link")
                 .withColor(AgeratumConstants.GuideScreenUI.Colors.BROKEN_LINK_COLOR)
                 .withUnderlined(true)
                 .withItalic(true));
@@ -133,6 +136,7 @@ public final class BuiltinInlineComponents {
                     }
                 }
                 document.ifPresent(targetDocument -> linkStyle.set(linkStyle.get()
+                    .withInsertion(context.baseStyle().getInsertion())
                     .withColor(AgeratumConstants.GuideScreenUI.Colors.LINK_COLOR)
                     .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, targetDocument.toString()))));
             }

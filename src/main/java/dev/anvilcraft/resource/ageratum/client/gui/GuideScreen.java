@@ -18,6 +18,13 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCompone
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderComponent;
 import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.network.ShareGuidePayload;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayout;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager;
+import dev.anvilcraft.resource.ageratum.client.layout.DirectorySide;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutGeometry;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutMarquee;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutScrollbar;
 import lombok.Getter;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
@@ -141,6 +148,7 @@ public class GuideScreen extends Screen {
      * 当前内容滚动偏移量（Markdown 坐标系像素，向下为正）。
      */
     protected float contentScroll;
+    private final LayoutScrollbar contentScrollbar = new LayoutScrollbar();
     protected double lastMouseX;
     protected double lastMouseY;
     private final GuideScrollGesture scrollGesture = new GuideScrollGesture();
@@ -227,7 +235,49 @@ public class GuideScreen extends Screen {
 
     protected double scaleCountDown = 1.0f;
     protected final boolean preview;
-    protected final MDDocument document;
+    protected MDDocument document;
+    protected GuideLayout layout = GuideLayoutManager.defaults();
+    protected LayoutGeometry layoutGeometry;
+    protected GuidePanelView panelView;
+    private long layoutGeneration = -1;
+    private long documentGeneration = -1;
+    private final LayoutMarquee marquee = new LayoutMarquee();
+    private boolean darkMode = AgeratumClient.CONFIG.darkMode;
+    private DirectorySide appliedDirectorySide;
+    private GuideFont appliedFont;
+
+    public GuideLayout getLayout() { return this.layout; }
+    private int rowsMargin() { return this.layout.integer("content.rows_margin", CONTENT_ROWS_MARGIN); }
+
+    private void resolveLayout() {
+        this.layoutGeometry = null;
+        this.appliedDirectorySide = AgeratumClient.CONFIG.directorySide;
+        this.layout = GuideLayoutManager.forDocument(this.document, this.minecraft.getResourceManager(), this.darkMode)
+            .withDirectorySide(this.appliedDirectorySide);
+        this.layoutGeneration = GuideLayoutManager.generation();
+        this.documentGeneration = GuideDocumentCache.generation();
+        this.panelView = this.layout.bookTabs() ? null : new GuidePanelView(this);
+    }
+
+    void calculateLayoutGeometry() {
+        this.layoutGeometry = this.panelView == null ? null
+            : LayoutGeometry.compute(this.layout, this.imageWidth, this.imageHeight, this.panelView::naturalHeight);
+        var page = this.layoutGeometry == null ? new LayoutGeometry.Rect(0, 0, this.imageWidth, this.imageHeight)
+            : this.layoutGeometry.contentBackground();
+        // The centered book stretches its 16-pixel roll with the page. Nine-sliced layouts keep the top border fixed.
+        LayoutTexture background = this.backgroundTexture();
+        double rim = background.top() > 0 ? background.top() : 16.0 * page.height() / GUIDE_IMAGE_HEIGHT;
+        int paddingTop = this.getContentStartY() - page.y();
+        double headerHeight = paddingTop > 0 ? Math.min(rim, paddingTop) : rim;
+        double headerTop = this.topPos + page.y();
+        // A custom page can run text right to its edge. Use the space above it when available.
+        if (paddingTop == 0 && headerTop >= rim) headerTop -= rim;
+        int left = (int) Math.round((this.leftPos + page.x() + Math.min(background.left(), page.width() / 4)) / this.scale);
+        int top = (int) Math.round(headerTop / this.scale);
+        int right = (int) Math.round((this.leftPos + page.right() - Math.min(background.right(), page.width() / 4)) / this.scale);
+        int bottom = (int) Math.round((headerTop + headerHeight) / this.scale);
+        this.zoomSlider.update(new GuideZoomSlider.Rect(left, top, right - left, bottom - top), this.zoom);
+    }
 
     /**
      * 使用预解析组件创建界面，避免重复解析 Markdown 文本。
@@ -259,16 +309,25 @@ public class GuideScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        this.tryRefreshPreviewDocument();
         if (this.zoomSaveAt != 0 && Util.getMillis() >= this.zoomSaveAt) {
             GuideZoomStore.instance().flush();
             this.zoomSaveAt = 0;
         }
-        double configured = GuideScale.clamp(AgeratumClient.CONFIG.scale);
-        if (configured != this.configuredZoom) {
-            this.configuredZoom = configured;
-            this.reflowZoom(GuideZoomStore.instance().get(this.documentLocation.getNamespace(), configured));
+        if (this.layoutGeneration != GuideLayoutManager.generation() || this.documentGeneration != GuideDocumentCache.generation()) {
+            if (this.documentGeneration != GuideDocumentCache.generation())
+                this.document = GuideDocumentCache.getParsedDocument(this.documentLocation).orElse(this.document);
+            this.scrollGesture.reset();
+            this.activeMouseComponent = null;
+            this.activeMouseButton = -1;
+            this.parsedComponents.clear();
+            this.parsedComponents.addAll(this.document.components());
+            this.init();
+        } else if (this.configuredZoom != GuideScale.clamp(AgeratumClient.CONFIG.scale) || this.appliedFont != GuideFont.get()
+            || this.appliedDirectorySide != AgeratumClient.CONFIG.directorySide
+            || this.darkMode != AgeratumClient.CONFIG.darkMode) {
+            this.reflowPreferences();
         }
+        this.tryRefreshPreviewDocument();
     }
 
     private void tryRefreshPreviewDocument() {
@@ -313,12 +372,10 @@ public class GuideScreen extends Screen {
         float previousScroll = this.contentScroll;
         this.scrollGesture.reset();
         this.parsedComponents.clear();
-        this.parsedComponents.addAll(this.parser.parseDocument(this.documentLocation, markdown).components());
+        this.document = this.parser.parseDocument(this.documentLocation, markdown);
+        this.parsedComponents.addAll(this.document.components());
+        this.init();
         this.recordPreviewDocumentFingerprint();
-        if (this.minecraft != null) {
-            this.rebuildLabelEntries(this.minecraft.getResourceManager());
-        }
-        this.updateScrollBounds();
         this.contentScroll = Mth.clamp(previousScroll, 0.0f, this.maxContentScroll);
     }
 
@@ -361,33 +418,33 @@ public class GuideScreen extends Screen {
      */
     @Override
     protected void init() {
-        this.updatePageGeometry();
-        if (this.minecraft != null) {
-            this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
-            this.rebuildLabelEntries(this.minecraft.getResourceManager());
-            this.updateScrollBounds();
-            this.tryScrollToPendingAnchor();
+        this.contentScrollbar.cancel();
+        this.darkMode = AgeratumClient.CONFIG.darkMode;
+        this.resolveLayout();
+        Window window = this.minecraft.getWindow();
+        double configured = GuideScale.clamp(AgeratumClient.CONFIG.scale);
+        if (this.configuredZoom != configured) {
+            this.configuredZoom = configured;
+            this.zoom = GuideZoomStore.instance().get(this.documentLocation.getNamespace(), configured);
         }
-        this.ensureBookmarksLoaded();
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
-        this.refreshBookmarkScrollState();
-    }
-
-    private void updatePageGeometry() {
-        if (this.minecraft != null) {
-            Window window = this.minecraft.getWindow();
-            double physicalScale = GuideScale.physicalScale(window.getWidth(), window.getHeight(), window.calculateScale(1, true), this.zoom);
-            this.width = GuideScale.logicalSize(window.getWidth(), physicalScale);
-            this.height = GuideScale.logicalSize(window.getHeight(), physicalScale);
-            this.scale = window.getGuiScale() / physicalScale;
-            this.scaleCountDown = 1.0d / this.scale;
+        this.appliedFont = GuideFont.get();
+        double calculateScale = GuideScale.physicalScale(window.getWidth(), window.getHeight(), window.calculateScale(1, true), this.zoom);
+        this.width = GuideScale.logicalSize(window.getWidth(), calculateScale);
+        this.height = GuideScale.logicalSize(window.getHeight(), calculateScale);
+        this.scale = window.getGuiScale() / calculateScale;
+        this.scaleCountDown = 1.0d / this.scale;
+        if (this.panelView == null) {
+            int rightMargin = this.width - this.getRightButtonBound() - this.imageWidth;
+            // Wide book tabs must not consume the entire reading area at high zoom.
+            if (this.width < this.getLabelLeftBound() + rightMargin + 64) this.panelView = new GuidePanelView(this);
         }
 
-        // Leave room for the tabs and buttons; keep a reading area even when the whole book cannot fit.
-        int rightMargin = this.width - this.getRightButtonBound() - this.imageWidth;
-        int availableWidth = this.width - this.getLabelLeftBound() - rightMargin;
-        int maxBgWidth = Math.max(Math.min(this.width, 64), Math.min(availableWidth, this.width - 2 * MIN_HORIZONTAL_MARGIN));
-        int maxBgHeight = Math.max(Math.min(this.height, 40), this.height - 2 * MIN_VERTICAL_MARGIN);
+        int maxBgWidth = Math.max(1, this.width - 2 * this.layout.integer("screen.min_margin.horizontal", MIN_HORIZONTAL_MARGIN));
+        if (this.panelView == null) {
+            int rightMargin = this.width - this.getRightButtonBound() - this.imageWidth;
+            maxBgWidth = Math.min(maxBgWidth, Math.max(1, this.width - this.getLabelLeftBound() - rightMargin));
+        }
+        int maxBgHeight = Math.max(1, this.height - 2 * this.layout.integer("screen.min_margin.vertical", MIN_VERTICAL_MARGIN));
 
         // 先尽可能放大背景，再通过 leftPos 约束保证侧栏与按钮可见。
         float imageRatio = (float) GUIDE_IMAGE_WIDTH / GUIDE_IMAGE_HEIGHT;
@@ -407,17 +464,30 @@ public class GuideScreen extends Screen {
         int maxLeftPos = this.getRightButtonBound();
         int clampMin = Math.min(minLeftPos, maxLeftPos);
         int clampMax = Math.max(minLeftPos, maxLeftPos);
-        this.leftPos = Mth.clamp(centeredLeftPos, clampMin, clampMax);
+        this.leftPos = this.panelView == null ? Mth.clamp(centeredLeftPos, clampMin, clampMax) : centeredLeftPos;
 
-        int minTopPos = MIN_VERTICAL_MARGIN;
-        int maxTopPos = this.height - MIN_VERTICAL_MARGIN - this.imageHeight;
+        int minTopPos = this.layout.integer("screen.min_margin.vertical", MIN_VERTICAL_MARGIN);
+        int maxTopPos = this.height - minTopPos - this.imageHeight;
         int centeredTopPos = (this.height - this.imageHeight) / 2;
         this.topPos = Mth.clamp(centeredTopPos, Math.min(minTopPos, maxTopPos), Math.max(minTopPos, maxTopPos));
-        int left = (int) Math.round(this.leftPos / this.scale);
-        int top = (int) Math.round(this.topPos / this.scale);
-        int right = (int) Math.round((this.leftPos + this.imageWidth) / this.scale);
-        int bottom = (int) Math.round((this.topPos + 16 * this.getBgImageScale()) / this.scale);
-        this.zoomSlider.update(new GuideZoomSlider.Rect(left, top, right - left, bottom - top), this.zoom);
+        if (this.layout.string("screen.mode", "centered").equals("fullscreen")) {
+            this.leftPos = Math.min(this.width - 1, this.layout.integer("screen.padding.left", 0));
+            this.topPos = Math.min(this.height - 1, this.layout.integer("screen.padding.top", 0));
+            this.imageWidth = Math.max(1, this.width - this.leftPos - this.layout.integer("screen.padding.right", 0));
+            this.imageHeight = Math.max(1, this.height - this.topPos - this.layout.integer("screen.padding.bottom", 0));
+        }
+        this.calculateLayoutGeometry();
+        this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
+        this.rebuildLabelEntries(this.minecraft.getResourceManager());
+        this.calculateLayoutGeometry();
+        this.updateScrollBounds();
+        this.tryScrollToPendingAnchor();
+        this.ensureBookmarksLoaded();
+        // 防止窗口缩小后滚动量超出边界
+        this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
+        this.maxLabelScrollRows = this.getMaxLabelScrollRows();
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.refreshBookmarkScrollState();
     }
 
     /** Compatibility for callers that require a whole-number scale. */
@@ -437,11 +507,18 @@ public class GuideScreen extends Screen {
         super.resize(minecraft, width, height);
     }
 
-    private void applyZoom(double zoom) {
-        if (zoom == this.zoom) return;
-        GuideZoomStore.instance().set(this.documentLocation.getNamespace(), zoom);
+    void toggleDarkMode() {
+        GuideTheme.toggle();
+        this.reflowPreferences();
+    }
+
+    private void applyZoom(double value) {
+        double next = GuideScale.clamp(value);
+        if (next == this.zoom) return;
+        GuideZoomStore.instance().set(this.documentLocation.getNamespace(), next);
         this.zoomSaveAt = Util.getMillis() + 300;
-        this.reflowZoom(zoom);
+        this.zoom = next;
+        this.reflowPreferences();
     }
 
     private void resetZoom() {
@@ -450,36 +527,38 @@ public class GuideScreen extends Screen {
         GuideZoomStore.instance().reset(this.documentLocation.getNamespace());
         GuideZoomStore.instance().flush();
         this.zoomSaveAt = 0;
-        this.reflowZoom(GuideScale.clamp(AgeratumClient.CONFIG.scale));
+        this.zoom = GuideScale.clamp(AgeratumClient.CONFIG.scale);
+        this.reflowPreferences();
     }
 
     /** Keep the component being read and its scroll offset as paragraphs rewrap. */
-    private void reflowZoom(double zoom) {
-        if (zoom == this.zoom) return;
+    private void reflowPreferences() {
         int index = 0;
-        float within = this.contentScroll;
-        int width = this.getContentWidth();
+        float top = 0;
         while (index < this.parsedComponents.size()) {
-            int height = this.parsedComponents.get(index).getHeight(this.minecraft, width, Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
-            if (within < height) break;
-            within -= height;
+            int height = this.parsedComponents.get(index).getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + this.rowsMargin();
+            if (top + height > this.contentScroll) break;
+            top += height;
             index++;
         }
-        this.zoom = zoom;
-        this.updatePageGeometry();
-        this.updateScrollBounds();
-        width = this.getContentWidth();
-        int top = 0;
-        for (int i = 0; i < index; i++) {
-            top += this.parsedComponents.get(i).getHeight(this.minecraft, width, Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
-        }
-        if (index < this.parsedComponents.size()) {
-            within = Math.min(within, this.parsedComponents.get(index).getHeight(this.minecraft, width, Integer.MAX_VALUE));
-        }
-        this.contentScroll = Mth.clamp(top + within, 0, this.maxContentScroll);
+        float within = this.contentScroll - top;
+        Set<Integer> folded = Set.copyOf(this.collapsedLabelGroups);
+        int labelRow = this.labelScrollRows;
+        int bookmarkRow = this.bookmarkScrollRows;
+        this.init();
+        this.collapsedLabelGroups.clear();
+        this.collapsedLabelGroups.addAll(folded);
+        this.rebuildVisibleLabelIndices();
+        this.calculateLayoutGeometry();
         this.maxLabelScrollRows = this.getMaxLabelScrollRows();
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
-        this.refreshBookmarkScrollState();
+        this.labelScrollRows = Math.clamp(labelRow, 0, this.maxLabelScrollRows);
+        this.bookmarkScrollRows = Math.clamp(bookmarkRow, 0, this.maxBookmarkScrollRows);
+        top = 0;
+        for (int i = 0; i < index && i < this.parsedComponents.size(); i++)
+            top += this.parsedComponents.get(i).getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + this.rowsMargin();
+        if (index < this.parsedComponents.size()) within = Math.min(within,
+            this.parsedComponents.get(index).getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE));
+        this.contentScroll = Math.clamp(top + within, 0, this.maxContentScroll);
         this.activeMouseComponent = null;
         this.activeMouseButton = -1;
     }
@@ -519,7 +598,7 @@ public class GuideScreen extends Screen {
         }
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
-        pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1.0f);
+        pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1);
         mouseX = (int) Math.round(mouseX * this.scale);
         mouseY = (int) Math.round(mouseY * this.scale);
         this.lastMouseX = mouseX;
@@ -532,21 +611,24 @@ public class GuideScreen extends Screen {
         pose.pushPose();
         // 将坐标系移动到界面左上角，方便后续使用相对坐标
         pose.translate(i, j, 0);
-        this.renderLabel(guiGraphics, partialTick, mouseX - i, mouseY - j);
-        this.renderBookmarks(guiGraphics, partialTick, mouseX - i, mouseY - j);
+        if (this.panelView == null) {
+            this.renderLabel(guiGraphics, partialTick, mouseX - i, mouseY - j);
+            this.renderBookmarks(guiGraphics, partialTick, mouseX - i, mouseY - j);
+        } else this.panelView.render(guiGraphics, mouseX - i, mouseY - j);
         this.renderBg(guiGraphics, partialTick, mouseX - i, mouseY - j);
         this.renderContent(guiGraphics, partialTick, mouseX - i, mouseY - j);
+        this.renderScrollbar(guiGraphics, mouseX - i, mouseY - j);
         pose.popPose();
 
         // 显示悬停提示信息
-        if (this.mouseInContentRange(mouseX, mouseY)) {
+        if (this.mouseInContentRange(mouseX, mouseY) && !this.contentScrollbar.contains(mouseX - i, mouseY - j)
+            && !this.contentScrollbar.dragging()) {
             this.renderHoverTooltip(guiGraphics, mouseX, mouseY);
         }
-
         // 渲染侧边标签 tooltip
-        this.renderLabelTooltips(guiGraphics, mouseX - i, mouseY - j);
+        if (this.panelView == null) this.renderLabelTooltips(guiGraphics, mouseX - i, mouseY - j);
         pose.popPose();
-        this.zoomSlider.render(guiGraphics, zoomMouseX, zoomMouseY);
+        this.zoomSlider.render(guiGraphics, this.layout, zoomMouseX, zoomMouseY);
         this.structureGuiPreview.render(guiGraphics);
     }
 
@@ -557,8 +639,8 @@ public class GuideScreen extends Screen {
             0,
             this.width + AgeratumConstants.GuideScreenUI.Positions.BACKGROUND_EXTRA_PADDING,
             this.height + AgeratumConstants.GuideScreenUI.Positions.BACKGROUND_EXTRA_PADDING,
-            AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_1,
-            AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_2
+            this.layout.color("colors.background_gradient_start", AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_1),
+            this.layout.color("colors.background_gradient_end", AgeratumConstants.GuideScreenUI.Colors.BACKGROUND_GRADIENT_2)
         );
     }
 
@@ -586,7 +668,8 @@ public class GuideScreen extends Screen {
         double contentX = mouseX * this.scale, contentY = mouseY * this.scale;
         boolean onSlider = this.zoomSlider.contains(mouseX, mouseY) || this.zoomSlider.dragging();
         double acceleration = control || shift || hasAltDown() ? 3 : 1;
-        if (!onSlider && this.minecraft != null && this.mouseInContentRange(contentX, contentY)) {
+        if (!onSlider && this.minecraft != null && this.mouseInContentRange(contentX, contentY)
+            && !this.contentScrollbar.contains(contentX - this.leftPos, contentY - this.topPos) && !this.contentScrollbar.dragging()) {
             ComponentMouseHit hit = this.getComponentHitAtContentPosition(contentX, contentY);
             if (hit != null) {
                 var handler = hit.component().scrollHandler(this.minecraft, hit.mouseX(), hit.mouseY(), this.getContentWidth());
@@ -603,7 +686,7 @@ public class GuideScreen extends Screen {
         if (onSlider) return this.scrollGesture.begin(scrollY, now, delta -> true);
         if (this.mouseInPageRange(contentX, contentY)) {
             return this.scrollGesture.begin(scrollY, now, delta -> {
-                this.scrollBy((float) (-delta * acceleration * SCROLL_STEP));
+                this.scrollBy((float) (-delta * acceleration * this.layout.number("interaction.scroll_step", SCROLL_STEP)));
                 return true;
             });
         }
@@ -645,6 +728,7 @@ public class GuideScreen extends Screen {
             } else if (button == 0 && this.zoomSlider.press(mouseX, mouseY)) {
                 this.activeMouseComponent = null;
                 this.activeMouseButton = -1;
+                this.contentScrollbar.cancel();
                 this.applyZoom(this.zoomSlider.zoom());
             }
             return true;
@@ -652,20 +736,26 @@ public class GuideScreen extends Screen {
         if (this.zoomSlider.dismiss(hasControlDown())) return true;
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
-        if (button == 0 && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
+        this.updateScrollBounds();
+        if (button == 0 && this.contentScrollbar.press(mouseX - this.leftPos, mouseY - this.topPos)) {
+            this.contentScroll = (float) this.contentScrollbar.position();
             return true;
         }
-        if (button == 0 && this.mouseInLabelRange(mouseX, mouseY)) {
+        if (this.panelView != null && this.panelView.click(mouseX - this.leftPos, mouseY - this.topPos, button, hasControlDown())) return true;
+        if (button == 0 && this.panelView == null && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
+            return true;
+        }
+        if (this.panelView == null && button == 0 && this.mouseInLabelRange(mouseX, mouseY)) {
             if (this.tryOpenLabelAt(mouseX, mouseY)) {
                 return true;
             }
         }
-        if (button == 0 && this.mouseInBookmarkRange(mouseX, mouseY)) {
+        if (this.panelView == null && button == 0 && this.mouseInBookmarkRange(mouseX, mouseY)) {
             if (this.tryOpenBookmarkAt(mouseX, mouseY)) {
                 return true;
             }
         }
-        if (button == 1 && hasControlDown() && this.mouseInBookmarkRange(mouseX, mouseY)) {
+        if (this.panelView == null && button == 1 && hasControlDown() && this.mouseInBookmarkRange(mouseX, mouseY)) {
             if (this.tryRemoveBookmarkAt(mouseX, mouseY)) {
                 return true;
             }
@@ -711,6 +801,10 @@ public class GuideScreen extends Screen {
         mouseY = mouseY * this.scale;
         dragX = dragX * this.scale;
         dragY = dragY * this.scale;
+        if (button == 0 && this.contentScrollbar.dragging()) {
+            this.contentScroll = (float) this.contentScrollbar.drag(mouseY - this.topPos);
+            return true;
+        }
         if (this.activeMouseComponent != null && this.minecraft != null && button == this.activeMouseButton) {
             ComponentMouseHit hit = this.getComponentMousePosition(this.activeMouseComponent, mouseX, mouseY);
             double componentX = hit != null ? hit.mouseX() : 0.0d;
@@ -743,6 +837,11 @@ public class GuideScreen extends Screen {
         }
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
+        if (button == 0 && this.contentScrollbar.dragging()) {
+            this.contentScroll = (float) this.contentScrollbar.drag(mouseY - this.topPos);
+            this.contentScrollbar.cancel();
+            return true;
+        }
         if (this.activeMouseComponent != null && this.minecraft != null) {
             ComponentMouseHit hit = this.getComponentMousePosition(this.activeMouseComponent, mouseX, mouseY);
             double componentX = hit != null ? hit.mouseX() : 0.0d;
@@ -830,7 +929,7 @@ public class GuideScreen extends Screen {
             if (mdY >= currentY && mdY <= currentY + componentHeight) {
                 return new ComponentMouseHit(component, relX, mdY - currentY);
             }
-            currentY += componentHeight + CONTENT_ROWS_MARGIN;
+            currentY += componentHeight + this.rowsMargin();
         }
         return null;
     }
@@ -850,7 +949,7 @@ public class GuideScreen extends Screen {
             if (component == target) {
                 return new ComponentMouseHit(component, relX, mdY - currentY);
             }
-            currentY += componentHeight + CONTENT_ROWS_MARGIN;
+            currentY += componentHeight + this.rowsMargin();
         }
         return null;
     }
@@ -927,14 +1026,17 @@ public class GuideScreen extends Screen {
      * @param mouseY      相对鼠标 Y（未使用）
      */
     private void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        // 将纹理左上角（UV 0,0）贴到界面左上角
-        PoseStack pose = guiGraphics.pose();
-        pose.pushPose();
-        float scaleX = (float) this.imageWidth / GUIDE_IMAGE_WIDTH;
-        float scaleY = (float) this.imageHeight / GUIDE_IMAGE_HEIGHT;
-        pose.scale(this.getBgImageScale(), this.getBgImageScale(), 1.0f);
-        guiGraphics.blit(GuideTheme.texture(GUIDE_LOCATION), 0, 0, 0, 0, 0, GUIDE_IMAGE_WIDTH, GUIDE_IMAGE_HEIGHT, GUIDE_IMAGE_SIZE, GUIDE_IMAGE_SIZE);
-        pose.popPose();
+        if (this.layout.value("content.background") == null) return;
+        LayoutTexture texture = this.backgroundTexture();
+        if (this.layoutGeometry == null) texture.draw(guiGraphics, 0, 0, this.imageWidth, this.imageHeight, false);
+        else {
+            var rect = this.layoutGeometry.contentBackground();
+            texture.draw(guiGraphics, rect.x(), rect.y(), rect.width(), rect.height(), false);
+        }
+    }
+
+    private LayoutTexture backgroundTexture() {
+        return this.layout.texture("content.background", LayoutTexture.of(GUIDE_LOCATION, 256, 232, 256, 256));
     }
 
     private int getLabelScaleCountDown() {
@@ -994,59 +1096,28 @@ public class GuideScreen extends Screen {
         int originY = this.getCloseButtonY();
         boolean isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
         pose.pushPose();
-        pose.scale(labelImageScale, labelImageScale, labelImageScale);
-        guiGraphics.blit(
-            GuideTheme.texture(BUTTON_CLOSE_LOCATION),
-            originX * this.getLabelScaleCountDown(),
-            originY * this.getLabelScaleCountDown(),
-            0,
-            0,
-            isHover ? BUTTON_IMAGE_HEIGHT : 0,
-            BUTTON_IMAGE_WIDTH,
-            BUTTON_IMAGE_HEIGHT,
-            BUTTON_IMAGE_SIZE,
-            BUTTON_IMAGE_SIZE
+        pose.scale(labelImageScale, labelImageScale, 1);
+        this.layout.controlTexture("button_close").draw(
+            guiGraphics, originX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, isHover
         );
         if (!this.preview) {
             originY += BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-            guiGraphics.blit(
-                GuideTheme.texture(BUTTON_SHARE_LOCATION),
-                originX * this.getLabelScaleCountDown(),
-                originY * this.getLabelScaleCountDown(),
-                0,
-                0,
-                isHover ? BUTTON_IMAGE_HEIGHT : 0,
-                BUTTON_IMAGE_WIDTH,
-                BUTTON_IMAGE_HEIGHT,
-                BUTTON_IMAGE_SIZE,
-                BUTTON_IMAGE_SIZE
+            this.layout.controlTexture("button_share").draw(
+                guiGraphics, originX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, isHover
             );
         }
-        // 主题切换按钮，放在底部返回按钮上方并预留书签空间。
         originY = this.getThemeButtonY();
         isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-        guiGraphics.blit(
-            GuideTheme.texture(Ageratum.location("textures/gui/guide/button_dark.png")),
+        this.layout.controlTexture("button_dark").draw(guiGraphics,
             originX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(),
-            0, 0, isHover ? BUTTON_IMAGE_HEIGHT : 0,
-            BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, BUTTON_IMAGE_SIZE, BUTTON_IMAGE_SIZE
-        );
+            BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, isHover);
         // 返回按钮
         if (this.hasReturnButton()) {
             originY = this.getReturnButtonY();
             isHover = this.mouseInRange(originX, originY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
-            guiGraphics.blit(
-                GuideTheme.texture(BUTTON_RETURN_LOCATION),
-                originX * this.getLabelScaleCountDown(),
-                originY * this.getLabelScaleCountDown(),
-                0,
-                0,
-                isHover ? BUTTON_IMAGE_HEIGHT : 0,
-                BUTTON_IMAGE_WIDTH,
-                BUTTON_IMAGE_HEIGHT,
-                BUTTON_IMAGE_SIZE,
-                BUTTON_IMAGE_SIZE
+            this.layout.controlTexture("button_return").draw(
+                guiGraphics, originX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, isHover
             );
         }
         pose.popPose();
@@ -1074,11 +1145,11 @@ public class GuideScreen extends Screen {
     }
 
     private int getThemeButtonY() {
-        return this.getReturnButtonY() - (this.hasReturnButton()
+        return this.getAddButtonY() + (this.isBookmarkEnabled()
             ? BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING : 0);
     }
 
-    private boolean hasReturnButton() {
+    boolean hasReturnButton() {
         return !this.breadCrumbs.isEmpty();
     }
 
@@ -1110,7 +1181,7 @@ public class GuideScreen extends Screen {
             }
         }
         if (this.mouseInRange(closeButtonX, this.getThemeButtonY(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, relMouseX, relMouseY)) {
-            GuideTheme.toggle();
+            this.toggleDarkMode();
             return true;
         }
         if (!this.hasReturnButton()) {
@@ -1127,7 +1198,7 @@ public class GuideScreen extends Screen {
         ) && this.tryReturnToPreviousGuide();
     }
 
-    private boolean tryReturnToPreviousGuide() {
+    boolean tryReturnToPreviousGuide() {
         ArrayList<ResourceLocation> remainingBreadCrumbs = new ArrayList<>(this.breadCrumbs);
         while (!remainingBreadCrumbs.isEmpty()) {
             ResourceLocation previousLocation = remainingBreadCrumbs.removeLast();
@@ -1140,7 +1211,7 @@ public class GuideScreen extends Screen {
     }
 
     private void renderLabelScrollHint(GuiGraphics guiGraphics) {
-        if (this.getMaxLabelScrollRows() <= 0) {
+        if (!this.layout.bool("tree.scroll_hint", true) || this.maxLabelScrollRows <= 0) {
             return;
         }
 
@@ -1150,41 +1221,19 @@ public class GuideScreen extends Screen {
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         float labelImageScale = this.getLabelImageScale();
-        pose.scale(labelImageScale, labelImageScale, labelImageScale);
+        pose.scale(labelImageScale, labelImageScale, 1);
         if (this.labelScrollRows > 0) {
             float alpha = this.computeArrowAlpha(this.labelScrollRows);
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-            guiGraphics.blit(
-                GuideTheme.texture(BUTTON_UP_LOCATION),
-                arrowX * this.getLabelScaleCountDown(),
-                arrowUpY * this.getLabelScaleCountDown(),
-                0,
-                0,
-                0,
-                BUTTON_IMAGE_WIDTH,
-                BUTTON_IMAGE_HEIGHT,
-                BUTTON_IMAGE_SIZE,
-                BUTTON_IMAGE_SIZE
+            this.layout.controlTexture("button_up").draw(
+                guiGraphics, arrowX * this.getLabelScaleCountDown(), arrowUpY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, false, alpha
             );
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
-        int rowsToBottom = this.getMaxLabelScrollRows() - this.labelScrollRows;
+        int rowsToBottom = this.maxLabelScrollRows - this.labelScrollRows;
         if (rowsToBottom > 0) {
             float alpha = this.computeArrowAlpha(rowsToBottom);
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-            guiGraphics.blit(
-                GuideTheme.texture(BUTTON_DOWN_LOCATION),
-                arrowX * this.getLabelScaleCountDown(),
-                arrowDownY * this.getLabelScaleCountDown(),
-                0,
-                0,
-                0,
-                BUTTON_IMAGE_WIDTH,
-                BUTTON_IMAGE_HEIGHT,
-                BUTTON_IMAGE_SIZE,
-                BUTTON_IMAGE_SIZE
+            this.layout.controlTexture("button_down").draw(
+                guiGraphics, arrowX * this.getLabelScaleCountDown(), arrowDownY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, false, alpha
             );
-            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
         pose.popPose();
     }
@@ -1221,7 +1270,9 @@ public class GuideScreen extends Screen {
     }
 
     private int getBookmarkViewportBottomY() {
-        int bottom = this.getThemeButtonY() - AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING;
+        int bottom = this.hasReturnButton()
+            ? this.getReturnButtonY() - AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING
+            : this.getContentStartY() + this.getContentHeight();
         return Math.max(
             this.getBookmarkViewportTopY() + this.labelHeight,
             bottom - (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING)
@@ -1241,19 +1292,20 @@ public class GuideScreen extends Screen {
     }
 
     private int getBookmarkVisibleRows() {
+        if (this.layoutGeometry != null) return this.panelView.bookmarkRows();
         int availableHeight = Math.max(this.labelHeight, this.getBookmarkViewportBottomY() - this.getBookmarkViewportTopY());
         return Math.max(1, (availableHeight - this.labelHeight) / this.getLabelRowOffset() + 1);
     }
 
-    private boolean isBookmarkEnabled() {
+    boolean isBookmarkEnabled() {
         return !this.preview;
     }
 
-    private String getBookmarkNamespace() {
+    String getBookmarkNamespace() {
         return this.documentLocation.getNamespace();
     }
 
-    private List<GuideBookmarkStore.BookmarkEntry> getBookmarks() {
+    List<GuideBookmarkStore.BookmarkEntry> getBookmarks() {
         if (!this.isBookmarkEnabled()) {
             return List.of();
         }
@@ -1275,7 +1327,8 @@ public class GuideScreen extends Screen {
         this.maxBookmarkScrollRows = Math.max(0, this.getBookmarks().size() - this.getBookmarkVisibleRows());
     }
 
-    private void refreshBookmarkScrollState() {
+    void refreshBookmarkScrollState() {
+        this.calculateLayoutGeometry();
         this.updateBookmarkScrollBounds();
         this.bookmarkScrollRows = Mth.clamp(this.bookmarkScrollRows, 0, this.maxBookmarkScrollRows);
         if (!this.isBookmarkEnabled() || this.maxBookmarkScrollRows == 0) {
@@ -1300,18 +1353,9 @@ public class GuideScreen extends Screen {
         int addY = this.getAddButtonY();
         boolean addHover = this.mouseInRange(addX, addY, BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, mouseX, mouseY);
         pose.pushPose();
-        pose.scale(labelScale, labelScale, labelScale);
-        guiGraphics.blit(
-            GuideTheme.texture(BUTTON_ADD_LOCATION),
-            addX * this.getLabelScaleCountDown(),
-            addY * this.getLabelScaleCountDown(),
-            0,
-            0,
-            addHover ? BUTTON_IMAGE_HEIGHT : 0,
-            BUTTON_IMAGE_WIDTH,
-            BUTTON_IMAGE_HEIGHT,
-            BUTTON_IMAGE_SIZE,
-            BUTTON_IMAGE_SIZE
+        pose.scale(labelScale, labelScale, 1);
+        this.layout.controlTexture("button_add").draw(
+            guiGraphics, addX * this.getLabelScaleCountDown(), addY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, addHover
         );
         pose.popPose();
 
@@ -1327,32 +1371,19 @@ public class GuideScreen extends Screen {
             int originX = this.getBookmarkBaseX();
             int originY = this.getBookmarkStartY() + row * this.getLabelRowOffset();
             boolean isHover = this.mouseInRange(originX, originY, this.labelWidth + BOOKMARK_HOVER_SHIFT, this.labelHeight, mouseX, mouseY);
-            int renderX = isHover ? originX + BOOKMARK_HOVER_SHIFT : originX;
+            int markX = isHover ? originX + BOOKMARK_HOVER_SHIFT : originX;
             pose.pushPose();
-            pose.scale(labelScale, labelScale, labelScale);
-            guiGraphics.blit(
-                GuideTheme.texture(LABEL_BOOKMARK_LOCATION),
-                renderX * this.getLabelScaleCountDown(),
-                originY * this.getLabelScaleCountDown(),
-                0,
-                0,
-                0,
-                LABEL_IMAGE_WIDTH,
-                LABEL_IMAGE_HEIGHT,
-                LABEL_IMAGE_WIDTH,
-                LABEL_IMAGE_HEIGHT
+            pose.scale(labelScale, labelScale, 1);
+            this.layout.controlTexture("label_bookmark").draw(
+                guiGraphics, markX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(), LABEL_IMAGE_WIDTH, LABEL_IMAGE_HEIGHT, false
             );
             pose.popPose();
-            int textColor = GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT, 0xFFE0D2BD);
-            int width = this.font.width(this.fitLabelTitle(entry.title()));
-            guiGraphics.drawString(
-                this.font,
-                this.fitLabelTitle(entry.title()),
-                renderX + AgeratumConstants.GuideScreenUI.Positions.BOOKMARK_TEXT_BASE_X - width,
-                originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
-                textColor,
-                false
-            );
+            int textColor = this.layout.color("colors.bookmark_text", AgeratumConstants.GuideScreenUI.Colors.BOOKMARK_TEXT);
+            int width = Math.min(GuideFont.get().width(entry.title()), Math.max(1,
+                this.labelWidth - AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_MAX_WIDTH_PADDING));
+            this.marquee.draw(guiGraphics, this.layout, "bookmarks", "bookmark:" + index, entry.title().getString(),
+                markX + AgeratumConstants.GuideScreenUI.Positions.BOOKMARK_TEXT_BASE_X - width,
+                originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL, width, textColor, isHover);
         }
 
         // ── 渲染书签滚动提示箭头 ───────────────────────────────────────────────
@@ -1361,41 +1392,19 @@ public class GuideScreen extends Screen {
             int arrowUpY = this.getBookmarkViewportTopY() - (BUTTON_IMAGE_HEIGHT + AgeratumConstants.GuideScreenUI.Positions.BUTTON_SPACING);
             int arrowDownY = this.getBookmarkViewportBottomY();
             pose.pushPose();
-            pose.scale(labelScale, labelScale, labelScale);
+            pose.scale(labelScale, labelScale, 1);
             if (this.bookmarkScrollRows > 0) {
                 float alpha = this.computeArrowAlpha(this.bookmarkScrollRows);
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-                guiGraphics.blit(
-                    GuideTheme.texture(BUTTON_UP_LOCATION),
-                    arrowX * this.getLabelScaleCountDown(),
-                    arrowUpY * this.getLabelScaleCountDown(),
-                    0,
-                    0,
-                    0,
-                    BUTTON_IMAGE_WIDTH,
-                    BUTTON_IMAGE_HEIGHT,
-                    BUTTON_IMAGE_SIZE,
-                    BUTTON_IMAGE_SIZE
+                this.layout.controlTexture("button_up").draw(
+                    guiGraphics, arrowX * this.getLabelScaleCountDown(), arrowUpY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, false, alpha
                 );
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
             int rowsToBottom = this.maxBookmarkScrollRows - this.bookmarkScrollRows;
             if (rowsToBottom > 0) {
                 float alpha = this.computeArrowAlpha(rowsToBottom);
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, alpha);
-                guiGraphics.blit(
-                    GuideTheme.texture(BUTTON_DOWN_LOCATION),
-                    arrowX * this.getLabelScaleCountDown(),
-                    arrowDownY * this.getLabelScaleCountDown(),
-                    0,
-                    0,
-                    0,
-                    BUTTON_IMAGE_WIDTH,
-                    BUTTON_IMAGE_HEIGHT,
-                    BUTTON_IMAGE_SIZE,
-                    BUTTON_IMAGE_SIZE
+                this.layout.controlTexture("button_down").draw(
+                    guiGraphics, arrowX * this.getLabelScaleCountDown(), arrowDownY * this.getLabelScaleCountDown(), BUTTON_IMAGE_WIDTH, BUTTON_IMAGE_HEIGHT, false, alpha
                 );
-                guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
             pose.popPose();
         }
@@ -1441,6 +1450,7 @@ public class GuideScreen extends Screen {
      * 判断鼠标是否位于书签列表可交互区域。
      */
     private boolean mouseInBookmarkRange(double mouseX, double mouseY) {
+        if (this.layoutGeometry != null) return this.layoutGeometry.section("bookmarks").contains(mouseX - this.leftPos, mouseY - this.topPos);
         if (!this.isBookmarkEnabled() || this.getBookmarks().isEmpty()) {
             return false;
         }
@@ -1498,7 +1508,7 @@ public class GuideScreen extends Screen {
     /**
      * 将当前页面添加到书签（已存在则忽略）。
      */
-    private void addCurrentPageToBookmarks() {
+    void addCurrentPageToBookmarks() {
         if (!this.isBookmarkEnabled()) {
             return;
         }
@@ -1540,7 +1550,7 @@ public class GuideScreen extends Screen {
         return rowDelta;
     }
 
-    private void scrollLabelsBy(int deltaRows) {
+    void scrollLabelsBy(int deltaRows) {
         this.labelScrollRows = Mth.clamp(this.labelScrollRows + deltaRows, 0, this.getMaxLabelScrollRows());
     }
 
@@ -1562,6 +1572,7 @@ public class GuideScreen extends Screen {
         }
         if (cachedTree.isEmpty()) {
             this.labelEntries = List.of();
+            this.visibleLabelIndices = List.of();
             this.maxLabelScrollRows = 0;
             this.labelScrollRows = 0;
             return;
@@ -1588,13 +1599,15 @@ public class GuideScreen extends Screen {
         this.labelEntries = List.copyOf(finalEntries);
         if (this.preserveLabelState) {
             this.applyLabelGroupState(this.inheritedCollapsedLabelGroups);
+        } else if (this.layout.string("tree.collapse_mode", "auto").equals("expanded")) {
+            this.collapsedLabelGroups.clear();
+            this.rebuildVisibleLabelIndices();
         } else {
-            // 默认折叠所有父标签组
             this.collapseAllLabelGroups();
         }
         this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
-        if (!this.preserveLabelState) {
+        if (!this.preserveLabelState && !this.layout.string("tree.collapse_mode", "auto").equals("collapsed")) {
             this.scrollLabelToCurrentDocument();
         }
         this.maxLabelScrollRows = this.getMaxLabelScrollRows();
@@ -1604,6 +1617,7 @@ public class GuideScreen extends Screen {
         Path previewRoot = AgeratumClient.getPreviewRootPath();
         if (!Files.isDirectory(previewRoot)) {
             this.labelEntries = List.of();
+            this.visibleLabelIndices = List.of();
             this.maxLabelScrollRows = 0;
             this.labelScrollRows = 0;
             return;
@@ -1616,6 +1630,7 @@ public class GuideScreen extends Screen {
                 .forEach(path -> this.insertPreviewDocument(root, previewRoot, path));
         } catch (Exception ignored) {
             this.labelEntries = List.of();
+            this.visibleLabelIndices = List.of();
             this.maxLabelScrollRows = 0;
             this.labelScrollRows = 0;
             return;
@@ -1632,19 +1647,21 @@ public class GuideScreen extends Screen {
         }
 
         for (PreviewDirectoryNode childDirectory : root.children.values()) {
-            this.appendPreviewDirectoryLabels(finalEntries, childDirectory);
+            this.appendPreviewDirectoryLabels(finalEntries, childDirectory, 1);
         }
 
         this.labelEntries = List.copyOf(finalEntries);
         if (this.preserveLabelState) {
             this.applyLabelGroupState(this.inheritedCollapsedLabelGroups);
+        } else if (this.layout.string("tree.collapse_mode", "auto").equals("expanded")) {
+            this.collapsedLabelGroups.clear();
+            this.rebuildVisibleLabelIndices();
         } else {
-            // 默认折叠所有父标签组
             this.collapseAllLabelGroups();
         }
         this.maxLabelScrollRows = Math.max(0, this.getVisibleLabelCount() - this.getLabelVisibleRows());
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
-        if (!this.preserveLabelState) {
+        if (!this.preserveLabelState && !this.layout.string("tree.collapse_mode", "auto").equals("collapsed")) {
             this.scrollLabelToCurrentDocument();
         }
         this.maxLabelScrollRows = this.getMaxLabelScrollRows();
@@ -1690,20 +1707,22 @@ public class GuideScreen extends Screen {
         }
     }
 
-    private void appendPreviewDirectoryLabels(List<LabelEntry> target, PreviewDirectoryNode directory) {
+    private void appendPreviewDirectoryLabels(List<LabelEntry> target, PreviewDirectoryNode directory, int depth) {
         if (directory.indexDocument != null) {
-            target.add(this.toPreviewLabel(directory.indexDocument, 1));
+            target.add(this.toPreviewLabel(directory.indexDocument, depth));
         } else {
-            target.add(new LabelEntry(null, null, 1, Component.literal(this.previewDirectoryTitle(directory.name)), false));
+            target.add(new LabelEntry(null, null, depth, Component.literal(this.previewDirectoryTitle(directory.name)), false));
         }
 
         directory.documents.sort(Comparator.comparing(PreviewDocument::fileArgument));
         for (PreviewDocument document : directory.documents) {
-            target.add(this.toPreviewLabel(document, 2));
+            target.add(this.toPreviewLabel(document, depth + 1));
         }
 
         for (PreviewDirectoryNode childDirectory : directory.children.values()) {
-            if (childDirectory.indexDocument != null) {
+            if (this.panelView != null) {
+                this.appendPreviewDirectoryLabels(target, childDirectory, depth + 1);
+            } else if (childDirectory.indexDocument != null) {
                 target.add(this.toPreviewLabel(childDirectory.indexDocument, 2));
             }
         }
@@ -1749,6 +1768,7 @@ public class GuideScreen extends Screen {
     }
 
     private void appendDirectoryLabels(List<LabelEntry> target, GuideDocumentCache.NavigationDirectory directory) {
+        if (this.panelView != null) { this.appendLayoutDirectory(target, directory, 1); return; }
         GuideDocumentCache.NavigationDocument indexDocument = directory.indexDocument();
         if (indexDocument != null) {
             target.add(new LabelEntry(
@@ -1795,10 +1815,23 @@ public class GuideScreen extends Screen {
         }
     }
 
+    private void appendLayoutDirectory(List<LabelEntry> target, GuideDocumentCache.NavigationDirectory directory, int depth) {
+        var index = directory.indexDocument();
+        target.add(index == null ? new LabelEntry(null, null, depth, Component.literal(directory.name()), false)
+            : new LabelEntry(index.fileArgument(), index.location(), depth, Component.literal(index.title()), true, parseHexColor(index.color())));
+        for (var document : directory.documents()) {
+            if (index != null && document.location().equals(index.location())) continue;
+            target.add(new LabelEntry(document.fileArgument(), document.location(), depth + 1,
+                Component.literal(document.title()), true, parseHexColor(document.color())));
+        }
+        for (var child : directory.children()) this.appendLayoutDirectory(target, child, depth + 1);
+    }
+
     private boolean handleLabelEntryClick(LabelEntry entry, int entryIndexInFull) {
         // 左键点击大章时切换展开/收起，并继续打开其 index 内容
         if (entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull)) {
             this.toggleLabelGroup(entryIndexInFull);
+            if (hasShiftDown()) return true;
         }
         if (!entry.clickable || entry.location == null) {
             return entry.level == 1 && this.labelGroupHasChildren(entryIndexInFull);
@@ -1810,6 +1843,20 @@ public class GuideScreen extends Screen {
             breadCrumbs = List.copyOf(breadCrumbs);
         }
         return AgeratumClient.openGuideOnClientPreservingLabelState(entry.location, breadCrumbs);
+    }
+
+    boolean openLayoutLabel(int index, boolean fold) {
+        LabelEntry entry = this.labelEntries.get(index);
+        if (this.labelGroupHasChildren(index) && (fold || hasShiftDown() || !entry.clickable)) {
+            this.toggleLabelGroup(index);
+            return true;
+        }
+        if (!entry.clickable || entry.location == null) return false;
+        List<ResourceLocation> history = this.breadCrumbs;
+        if (AgeratumClient.CONFIG.breadCrumbsHasLabel && !entry.location.equals(this.documentLocation)) {
+            history = new ArrayList<>(history); history.add(this.documentLocation); history = List.copyOf(history);
+        }
+        return AgeratumClient.openGuideOnClientPreservingLabelState(entry.location, history);
     }
 
     private boolean tryOpenLabelAt(double mouseX, double mouseY) {
@@ -1858,6 +1905,12 @@ public class GuideScreen extends Screen {
         int fullIndex = this.findCurrentDocumentLabelIndex();
         if (fullIndex < 0) {
             return;
+        }
+        if (this.panelView != null) {
+            for (int parent = this.findParentGroupIndex(fullIndex); parent >= 0; parent = this.findParentGroupIndex(parent)) {
+                this.collapsedLabelGroups.remove(parent);
+            }
+            this.rebuildVisibleLabelIndices();
         }
         // 如果父组被折叠，先展开
         int parentIndex = this.findParentGroupIndex(fullIndex);
@@ -1927,6 +1980,11 @@ public class GuideScreen extends Screen {
      * 查找给定标签索引所属的父标签组（level==1）索引。
      */
     private int findParentGroupIndex(int childIndex) {
+        if (this.panelView != null) {
+            int level = this.labelEntries.get(childIndex).level;
+            for (int i = childIndex - 1; i >= 0; i--) if (this.labelEntries.get(i).level < level) return i;
+            return -1;
+        }
         // 如果 childIndex 本身是 level==1，则无父组
         if (this.labelEntries.get(childIndex).level == 1) {
             return -1;
@@ -1939,7 +1997,7 @@ public class GuideScreen extends Screen {
         return -1;
     }
 
-    private String getCurrentFileArgument() {
+    String getCurrentFileArgument() {
         if (AgeratumClient.isPreviewLocation(this.documentLocation)) {
             String path = this.documentLocation.getPath();
             if (path.endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)) {
@@ -2069,7 +2127,7 @@ public class GuideScreen extends Screen {
                     return true;
                 }
             }
-            offsetY += component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
+            offsetY += component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + this.rowsMargin();
         }
         return false;
     }
@@ -2214,17 +2272,12 @@ public class GuideScreen extends Screen {
         if (this.minecraft == null) return;
         this.updateScrollBounds();
 
-        // 计算屏幕坐标系下的裁剪矩形（需还原到屏幕绝对坐标）
-        int scissorX1 = this.leftPos + this.getContentStartX();
-        int scissorY1 = this.topPos + this.getContentStartY();
-        int scissorX2 = scissorX1 + this.getContentWidth();
-        int scissorY2 = scissorY1 + this.getContentHeight();
-        guiGraphics.enableScissor(
-            (int) (scissorX1 / this.scale),
-            (int) (scissorY1 / this.scale),
-            (int) (scissorX2 / this.scale),
-            (int) (scissorY2 / this.scale)
-        );
+        if (this.contentScrollbar.contains(mouseX, mouseY) || this.contentScrollbar.dragging()) {
+            mouseX = -100000;
+            mouseY = -100000;
+        }
+        new LayoutGeometry.Rect(this.getContentStartX(), this.getContentStartY(),
+            this.getContentWidth(), this.getContentHeight()).enableScissor(guiGraphics);
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         // 移至内容区左上角，并向上平移以实现滚动（不再额外缩放）
@@ -2250,7 +2303,8 @@ public class GuideScreen extends Screen {
             1.0f,
             this.leftPos,
             this.topPos,
-            new ArrayList<>()
+            new ArrayList<>(),
+            this.layout
         );
         String nearestAnchor = null;
         int nearestAnchorOffsetY = Integer.MAX_VALUE;
@@ -2263,7 +2317,7 @@ public class GuideScreen extends Screen {
             }
             pose.pushPose();
             component.render(rootContext.child(
-                this.getContentWidth() - 2,
+                this.getContentWidth(),
                 Integer.MAX_VALUE,
                 translatedMouseX,
                 translatedMouseY,
@@ -2272,7 +2326,7 @@ public class GuideScreen extends Screen {
                 (float) this.scale
             ));
             pose.popPose();
-            int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
+            int offsetY = component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + this.rowsMargin();
             pose.translate(0, offsetY, 0);
             totalOffsetY += offsetY;
             translatedMouseY = translatedMouseY - offsetY;
@@ -2282,6 +2336,21 @@ public class GuideScreen extends Screen {
         guiGraphics.disableScissor();
         rootContext.renderTooltip();
         rootContext.onEnd(this);
+    }
+
+    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+        float opacity = this.contentScrollbar.opacity(mouseX, mouseY,
+            this.layout.number("content.scrollbar.fade_distance", 48), this.layout.bool("content.scrollbar.auto_hide", true));
+        if (opacity <= 0) return;
+        this.drawScrollbarPart(graphics, "scrollbar_track", this.contentScrollbar.track(), opacity);
+        this.drawScrollbarPart(graphics, "scrollbar_thumb", this.contentScrollbar.thumb(), opacity);
+    }
+
+    private void drawScrollbarPart(GuiGraphics graphics, String name, LayoutGeometry.Rect bounds, float opacity) {
+        LayoutTexture fallback = new LayoutTexture(ResourceLocation.parse("ageratum:textures/gui/guide/light/" + name + ".png"),
+            6, 6, 6, 6, 2, 2, 2, 2, name.equals("scrollbar_thumb") ? 0xFF8B7355 : -1);
+        this.layout.texture("textures." + name, fallback).draw(graphics,
+            bounds.x(), bounds.y(), bounds.width(), bounds.height(), false, opacity);
     }
 
     public void onShare() {
@@ -2310,6 +2379,7 @@ public class GuideScreen extends Screen {
     }
 
     public int getLabelVisibleRows() {
+        if (this.layoutGeometry != null) return this.panelView.treeRows();
         int rows = (int) Math.floor((double) (this.getContentHeight() + MIN_LABEL_ROW_MARGIN) / (this.labelHeight + MIN_LABEL_ROW_MARGIN));
         return Math.max(1, rows);
     }
@@ -2352,19 +2422,30 @@ public class GuideScreen extends Screen {
     }
 
     public int getContentWidth() {
-        return Math.max(1, this.imageWidth - 2 * this.getContentStartX());
+        int width = this.getContentViewportWidth();
+        return this.layout.bool("content.scrollbar.enabled", true)
+            ? LayoutScrollbar.contentWidth(width, this.layout.integer("content.scrollbar.width", 6),
+                this.layout.integer("content.scrollbar.hit_width", 12)) : width;
+    }
+
+    protected int getContentViewportWidth() {
+        if (this.layoutGeometry != null) return this.layoutGeometry.content().width();
+        return Math.max(1, this.imageWidth - this.getContentStartX() - (int) Math.ceil(this.layout.integer("content.padding.right", 15) * this.getBgImageScale()));
     }
 
     public int getContentHeight() {
-        return Math.max(1, this.imageHeight - 2 * this.getContentStartY());
+        if (this.layoutGeometry != null) return this.layoutGeometry.content().height();
+        return Math.max(1, this.imageHeight - this.getContentStartY() - (int) Math.ceil(this.layout.integer("content.padding.bottom", 18) * this.getBgImageScale()));
     }
 
     public int getContentStartX() {
-        return (int) Math.ceil(AgeratumConstants.GuideScreenUI.Positions.CONTENT_START_X_OFFSET * this.getBgImageScale());
+        if (this.layoutGeometry != null) return this.layoutGeometry.content().x();
+        return (int) Math.ceil(this.layout.integer("content.padding.left", 15) * this.getBgImageScale());
     }
 
     public int getContentStartY() {
-        return (int) Math.ceil(AgeratumConstants.GuideScreenUI.Positions.CONTENT_START_Y_OFFSET * this.getBgImageScale());
+        if (this.layoutGeometry != null) return this.layoutGeometry.content().y();
+        return (int) Math.ceil(this.layout.integer("content.padding.top", 18) * this.getBgImageScale());
     }
 
     /**
@@ -2374,15 +2455,19 @@ public class GuideScreen extends Screen {
      * 防止窗口改变大小或内容变化后滚动量越界。</p>
      */
     private void updateScrollBounds() {
-        if (this.minecraft == null) return;
         int totalHeight = 0;
         // 累加所有组件高度及组件间距
         for (MDComponent component : this.parsedComponents) {
-            totalHeight += component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
+            totalHeight += component.getHeight(this.minecraft, this.getContentWidth(), Integer.MAX_VALUE) + this.rowsMargin();
         }
         // 超出可见高度的部分即为最大滚动量
         this.maxContentScroll = Math.max(0, totalHeight - this.getContentHeight());
         this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
+        this.contentScrollbar.update(new LayoutGeometry.Rect(this.getContentStartX(), this.getContentStartY(),
+                this.getContentViewportWidth(), this.getContentHeight()),
+            this.layout.integer("content.scrollbar.width", 6), this.layout.integer("content.scrollbar.hit_width", 12),
+            this.layout.integer("content.scrollbar.min_thumb_height", 12),
+            this.layout.bool("content.scrollbar.enabled", true) ? this.maxContentScroll : 0, this.contentScroll);
     }
 
     /**
@@ -2402,6 +2487,9 @@ public class GuideScreen extends Screen {
      * @return 在内容区域内返回 {@code true}
      */
     private boolean mouseInPageRange(double mouseX, double mouseY) {
+        if (this.layoutGeometry != null) {
+            return this.layoutGeometry.contentBackground().contains(mouseX - this.leftPos, mouseY - this.topPos);
+        }
         return mouseX >= this.leftPos && mouseX <= this.leftPos + this.imageWidth
             && mouseY >= this.topPos && mouseY <= this.topPos + this.imageHeight;
     }
@@ -2410,31 +2498,18 @@ public class GuideScreen extends Screen {
     private boolean mouseInContentRange(double mouseX, double mouseY) {
         int contentLeft = this.leftPos + this.getContentStartX();
         int contentTop = this.topPos + this.getContentStartY();
-        int contentRight = contentLeft + this.getContentWidth();
+        int contentRight = contentLeft + this.getContentViewportWidth();
         int contentBottom = contentTop + this.getContentHeight();
         return mouseX >= contentLeft && mouseX <= contentRight && mouseY >= contentTop && mouseY <= contentBottom;
     }
 
     private boolean mouseInLabelRange(double mouseX, double mouseY) {
+        if (this.layoutGeometry != null) return this.layoutGeometry.section("tree").contains(mouseX - this.leftPos, mouseY - this.topPos);
         int labelLeft = this.leftPos + this.getLabelBaseX() - LABEL_HOVER_SHIFT;
         int labelRight = this.leftPos + this.getLabelBaseX() + LABEL_LEVEL2_INDENT + this.labelWidth;
         int labelTop = this.topPos + this.getArrowUpY();
         int labelBottom = this.topPos + this.getArrowDownY() + this.labelHeight;
         return mouseX >= labelLeft && mouseX <= labelRight && mouseY >= labelTop && mouseY <= labelBottom;
-    }
-
-    private String fitLabelTitle(Component title) {
-        String text = title.getString();
-        int maxWidth = Math.max(1, this.labelWidth - AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_MAX_WIDTH_PADDING);
-        if (this.font.width(text) <= maxWidth) {
-            return text;
-        }
-        String ellipsis = "...";
-        int ellipsisWidth = this.font.width(ellipsis);
-        if (ellipsisWidth >= maxWidth) {
-            return this.font.plainSubstrByWidth(text, maxWidth);
-        }
-        return this.font.plainSubstrByWidth(text, maxWidth - ellipsisWidth) + ellipsis;
     }
 
     /**
@@ -2466,41 +2541,26 @@ public class GuideScreen extends Screen {
             originX -= LABEL_HOVER_SHIFT;
         }
         pose.pushPose();
-        pose.scale(labelImageScale, labelImageScale, labelImageScale);
-        guiGraphics.blit(
-            GuideTheme.texture(entry.level == 1 ? LABEL_PRIMARY_LOCATION : LABEL_SECONDARY_LOCATION),
-            originX * this.getLabelScaleCountDown(),
-            originY * this.getLabelScaleCountDown(),
-            0,
-            0,
-            0,
-            LABEL_IMAGE_WIDTH,
-            LABEL_IMAGE_HEIGHT,
-            LABEL_IMAGE_WIDTH,
-            LABEL_IMAGE_HEIGHT
+        pose.scale(labelImageScale, labelImageScale, 1);
+        this.layout.controlTexture(entry.level == 1 ? "label_primary" : "label_secondary").draw(
+            guiGraphics, originX * this.getLabelScaleCountDown(), originY * this.getLabelScaleCountDown(), LABEL_IMAGE_WIDTH, LABEL_IMAGE_HEIGHT, false
         );
         pose.popPose();
         int textColor = isActive
-                        ? GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE, 0xFFFFD18A)
+                        ? this.layout.color("colors.label_text_active", AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_ACTIVE)
                         : (
                             entry.clickable
-                            ? GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE, 0xFFE0D2BD)
-                            : GuideTheme.color(AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED, 0xFFAAAAAA)
+                            ? this.layout.color("colors.label_text_clickable", AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_CLICKABLE)
+                            : this.layout.color("colors.label_text_disabled", AgeratumConstants.GuideScreenUI.Colors.LABEL_TEXT_DISABLED)
                         );
         int resolvedColor = (entry.color != null && !isActive) ? entry.color : textColor;
-        String displayTitle = this.fitLabelTitle(entry.title);
-        guiGraphics.drawString(
-            this.font,
-            displayTitle,
-            originX + (
-                entry.level == 1
-                ? AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT
-                : AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2
-            ),
-            originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
-            resolvedColor,
-            false
-        );
+        int textX = originX + (entry.level == 1
+            ? AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT
+            : AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_LEFT_LEVEL2);
+        this.marquee.draw(guiGraphics, this.layout, "tree", "tree:" + entryIndexInFull, entry.title.getString(),
+            textX, originY + AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_PADDING_VERTICAL,
+            Math.min(this.getContentStartX() - textX, Math.max(1, this.labelWidth - AgeratumConstants.GuideScreenUI.Positions.LABEL_TEXT_MAX_WIDTH_PADDING)),
+            resolvedColor, isHover);
     }
 
     /**
@@ -2594,7 +2654,15 @@ public class GuideScreen extends Screen {
      * <p>第 1 行固定为“首个可见标签”所属的大章；当首行已经滚到章节标题时，
      * 沿用上一行所属大章，避免滚动一格后顶部大章提前切换。</p>
      */
-    private int findPinnedParentIndex() {
+    int findPinnedParentIndex() {
+        if (!this.layout.bool("tree.pinned_parent", true)) return -1;
+        if (this.panelView != null) {
+            int active = this.findCurrentDocumentLabelIndex();
+            if (active < 0) return -1;
+            int parent = this.findParentGroupIndex(active);
+            int visible = this.visibleLabelIndices.indexOf(parent);
+            return visible >= 0 && visible < this.labelScrollRows ? parent : -1;
+        }
         if (this.visibleLabelIndices.isEmpty()) {
             return -1;
         }
@@ -2695,7 +2763,7 @@ public class GuideScreen extends Screen {
     private void collapseAllLabelGroups() {
         this.collapsedLabelGroups.clear();
         for (int i = 0; i < this.labelEntries.size(); i++) {
-            if (this.labelEntries.get(i).level == 1) {
+            if (this.labelGroupHasChildren(i)) {
                 this.collapsedLabelGroups.add(i);
             }
         }
@@ -2708,7 +2776,7 @@ public class GuideScreen extends Screen {
     private void applyLabelGroupState(Set<Integer> inheritedState) {
         this.collapsedLabelGroups.clear();
         for (int i = 0; i < this.labelEntries.size(); i++) {
-            if (this.labelEntries.get(i).level == 1 && inheritedState.contains(i)) {
+            if (inheritedState.contains(i) && this.labelGroupHasChildren(i)) {
                 this.collapsedLabelGroups.add(i);
             }
         }
@@ -2725,6 +2793,7 @@ public class GuideScreen extends Screen {
             this.collapsedLabelGroups.add(groupIndex);
         }
         this.rebuildVisibleLabelIndices();
+        this.calculateLayoutGeometry();
         // 折叠/展开后重新约束滚动范围
         this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
         this.ensureCurrentDocumentVisible();
@@ -2738,6 +2807,18 @@ public class GuideScreen extends Screen {
      * （前一个最近的 level==1 条目）未被折叠时可见。</p>
      */
     private void rebuildVisibleLabelIndices() {
+        if (this.panelView != null) {
+            List<Integer> visible = new ArrayList<>();
+            int collapsedDepth = Integer.MAX_VALUE;
+            for (int index = 0; index < this.labelEntries.size(); index++) {
+                int level = this.labelEntries.get(index).level;
+                if (level > collapsedDepth) continue;
+                visible.add(index);
+                collapsedDepth = this.collapsedLabelGroups.contains(index) ? level : Integer.MAX_VALUE;
+            }
+            this.visibleLabelIndices = List.copyOf(visible);
+            return;
+        }
         List<Integer> indices = new ArrayList<>();
         boolean currentGroupCollapsed = false;
         for (int i = 0; i < this.labelEntries.size(); i++) {
@@ -2762,7 +2843,9 @@ public class GuideScreen extends Screen {
     /**
      * 判断 labelEntries 中位于 groupIndex 的 level==1 标签是否拥有子标签。
      */
-    private boolean labelGroupHasChildren(int groupIndex) {
+    boolean labelGroupHasChildren(int groupIndex) {
+        if (this.panelView != null) return groupIndex + 1 < this.labelEntries.size()
+            && this.labelEntries.get(groupIndex + 1).level > this.labelEntries.get(groupIndex).level;
         if (this.labelEntries.get(groupIndex).level != 1) {
             return false;
         }
@@ -2783,6 +2866,7 @@ public class GuideScreen extends Screen {
     public void removed() {
         this.scrollGesture.reset();
         this.structureGuiPreview.clear();
+        this.contentScrollbar.cancel();
         this.zoomSlider.cancel();
         GuideZoomStore.instance().flush();
         super.removed();

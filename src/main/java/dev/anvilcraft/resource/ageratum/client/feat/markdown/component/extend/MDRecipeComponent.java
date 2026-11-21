@@ -8,7 +8,9 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager;
 import dev.anvilcraft.resource.ageratum.client.layout.LayoutResourceProvider;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutTexture;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -62,10 +64,20 @@ public abstract class MDRecipeComponent extends MDImageComponent {
             this.hoveredDocLink = null;
 }
 
+    /** Override with a namespaced key for third-party recipe skins. Logical slot coordinates stay fixed. */
+    protected String layoutTextureKey() {
+        String path = this.getImageLocation().getPath();
+        String name = path.substring(path.lastIndexOf('/') + 1).replace(".png", "");
+        String namespace = this.getImageLocation().getNamespace();
+        return namespace.equals("ageratum") ? "recipe_" + name : namespace + ":recipe_" + name;
+    }
+
     @Override
     protected void renderContent(MDRenderContext context, Size size, float mouseX, float mouseY) {
         GuiGraphics guiGraphics = context.graphics();
-        this.innerBlit(guiGraphics, this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        LayoutTexture skin = LayoutTexture.of(this.getImageLocation(), this.width, this.height, size.width(), size.height());
+        context.layout().componentTexture(GuideLayoutManager.relativeId(this.layoutTextureKey(), "ageratum"), skin)
+            .draw(guiGraphics, 0, 0, this.width, this.height, false);
         // 子类只关心配方元素绘制，底图缩放由基类统一处理。
         this.hoveredDocLink = null;  // 每帧重置
         this.renderRecipe(context, mouseX, mouseY);

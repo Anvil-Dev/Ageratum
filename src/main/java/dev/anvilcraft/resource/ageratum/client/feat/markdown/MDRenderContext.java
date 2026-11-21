@@ -1,6 +1,9 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayout;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutGeometry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -29,8 +32,19 @@ public record MDRenderContext(
     float scale,
     int leftPos,
     int topPos,
-    List<BiConsumer<GuideScreen, MDRenderContext>> onEnd
+    List<BiConsumer<GuideScreen, MDRenderContext>> onEnd,
+    GuideLayout layout
 ) {
+
+    /** Compatibility constructor for third-party components. Child contexts inherit the theme. */
+    public MDRenderContext(@Nullable MDRenderContext parent, Minecraft minecraft, GuiGraphics graphics,
+        List<Tooltip> tooltips, int screenWidth, int screenHeight, int maxX, int maxY,
+        float mouseX, float mouseY, int offsetX, int offsetY, float scale, int leftPos, int topPos,
+        List<BiConsumer<GuideScreen, MDRenderContext>> onEnd) {
+        this(parent, minecraft, graphics, tooltips, screenWidth, screenHeight, maxX, maxY, mouseX, mouseY,
+            offsetX, offsetY, scale, leftPos, topPos, onEnd,
+            parent != null ? parent.layout() : minecraft.screen instanceof GuideScreen guide ? guide.getLayout() : GuideLayoutManager.defaults());
+    }
 
     public MDRenderContext child() {
         return this.child(this.maxX, this.maxY, this.mouseX, this.mouseY, this.scale);
@@ -57,7 +71,8 @@ public record MDRenderContext(
             scale,
             this.leftPos,
             this.topPos,
-            this.onEnd
+            this.onEnd,
+            this.layout
         );
     }
 
@@ -85,11 +100,7 @@ public record MDRenderContext(
     }
 
     public void enableScissor(int minX, int minY, int maxX, int maxY) {
-        minX = Math.round((minX + this.offsetX() + this.leftPos()) / this.scale());
-        maxX = Math.round((maxX + this.offsetX() + this.leftPos()) / this.scale());
-        minY = Math.round((minY + this.offsetY() + this.topPos()) / this.scale());
-        maxY = Math.round((maxY + this.offsetY() + this.topPos()) / this.scale());
-        this.graphics().enableScissor(minX, minY, maxX, maxY);
+        new LayoutGeometry.Rect(minX, minY, Math.max(0, maxX - minX), Math.max(0, maxY - minY)).enableScissor(this.graphics);
     }
 
     public void disableScissor() {
