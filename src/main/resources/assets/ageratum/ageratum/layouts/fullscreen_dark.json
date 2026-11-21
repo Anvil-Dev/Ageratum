@@ -1,0 +1,150 @@
+{
+  "name": "fullscreen_dark",
+  "extends": "ageratum:fullscreen",
+  "content": {
+    "background": {
+      "location": "ageratum:gui/guide/dark/guide"
+    }
+  },
+  "textures": {
+    "label_primary": {
+      "location": "ageratum:gui/guide/dark/label_primary"
+    },
+    "label_secondary": {
+      "location": "ageratum:gui/guide/dark/label_secondary"
+    },
+    "label_bookmark": {
+      "location": "ageratum:gui/guide/dark/label_bookmark"
+    },
+    "button_close": {
+      "location": "ageratum:gui/guide/dark/button_close"
+    },
+    "button_share": {
+      "location": "ageratum:gui/guide/dark/button_share"
+    },
+    "button_return": {
+      "location": "ageratum:gui/guide/dark/button_back"
+    },
+    "button_add": {
+      "location": "ageratum:gui/guide/dark/button_add"
+    },
+    "button_empty": {
+      "location": "ageratum:gui/guide/dark/button_empty"
+    },
+    "button_up": {
+      "location": "ageratum:gui/guide/dark/button_up"
+    },
+    "button_down": {
+      "location": "ageratum:gui/guide/dark/button_down"
+    },
+    "components": {
+      "item_slot": {
+        "location": "ageratum:gui/dark/component/slot"
+      },
+      "recipe_crafting_table": {
+        "location": "ageratum:gui/dark/component/crafting_table"
+      },
+      "recipe_furnace": {
+        "location": "ageratum:gui/dark/component/furnace"
+      },
+      "recipe_smithing_table": {
+        "location": "ageratum:gui/dark/component/smithing_table"
+      },
+      "recipe_stonecutter": {
+        "location": "ageratum:gui/dark/component/stonecutter"
+      },
+      "structure_button_projection": {
+        "location": "ageratum:gui/guide/dark/button_projection"
+      },
+      "recipe_anvil": {
+        "location": "ageratum:gui/dark/component/anvil"
+      },
+      "recipe_arrow": {
+        "location": "ageratum:gui/dark/component/arrow"
+      },
+      "recipe_ember_smithing_table": {
+        "location": "ageratum:gui/dark/component/ember_smithing_table"
+      },
+      "recipe_jewelcrafting_table": {
+        "location": "ageratum:gui/dark/component/jewelcrafting_table"
+      },
+      "recipe_plus": {
+        "location": "ageratum:gui/dark/component/plus"
+      },
+      "recipe_slot": {
+        "location": "ageratum:gui/dark/component/slot"
+      },
+      "recipe_slots_1n": {
+        "location": "ageratum:gui/dark/component/slots_1n"
+      },
+      "recipe_slots_2n": {
+        "location": "ageratum:gui/dark/component/slots_2n"
+      },
+      "recipe_slots_3n": {
+        "location": "ageratum:gui/dark/component/slots_3n"
+      }
+    },
+    "button_dark": {
+      "location": "ageratum:gui/guide/dark/button_dark"
+    },
+    "scrollbar_track": {
+      "location": "ageratum:gui/guide/dark/scrollbar_track"
+    },
+    "scrollbar_thumb": {
+      "location": "ageratum:gui/guide/dark/scrollbar_thumb"
+    },
+    "zoom_track": {
+      "tint": "#FF837D87",
+      "location": "ageratum:gui/guide/dark/scrollbar_thumb"
+    },
+    "zoom_thumb": {
+      "tint": "#FFE8E0D0",
+      "location": "ageratum:gui/guide/dark/scrollbar_thumb"
+    },
+    "button_import": {
+      "location": "ageratum:gui/guide/dark/button_import",
+      "width": 16,
+      "height": 16,
+      "texture_width": 16,
+      "texture_height": 32
+    }
+  },
+  "colors": {
+    "link": "#8AD4FF",
+    "broken_link": "#FF6E6E",
+    "content_text": "#E8E0D0",
+    "panel_text": "#B0A894",
+    "label_text_active": "#FFD75F",
+    "label_text_clickable": "#E8E0D0",
+    "label_text_disabled": "#A0A0A0",
+    "bookmark_text": "#E8E0D0",
+    "background_gradient_start": "#F0080808",
+    "background_gradient_end": "#F0080808",
+    "components": {
+      "code_block": {
+        "background": "#40202830",
+        "border": "#88555566",
+        "gutter_background": "#30202828",
+        "gutter_line": "#55444455",
+        "line_number": "#99AAAAAA",
+        "highlight_line": "#40657585",
+        "text": "#D8DEE9",
+        "syntax": {
+          "keyword": "#C792EA",
+          "type": "#FFCB6B",
+          "literal": "#F78C6C",
+          "comment": "#A0A0A0",
+          "operator": "#89DDFF",
+          "separator": "#B0BEC5"
+        }
+      }
+    }
+  },
+  "panels": {
+    "sidebar": {
+      "background": {
+        "location": "ageratum:gui/guide/dark/guide"
+      }
+    }
+  }
+}

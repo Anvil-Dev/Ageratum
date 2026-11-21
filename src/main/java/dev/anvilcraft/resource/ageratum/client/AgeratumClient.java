@@ -12,6 +12,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
 import dev.anvilcraft.resource.ageratum.client.feat.structure.AgeratumStructureTemplateManager;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideScreen;
 import dev.anvilcraft.resource.ageratum.client.gui.GuideTheme;
+import dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinExtensionComponents;
 import dev.anvilcraft.resource.ageratum.client.registries.BuiltinInlineComponents;
@@ -90,6 +91,7 @@ public class AgeratumClient {
      */
     @SubscribeEvent
     public static void onReloadListenerRegister(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(GuideLayoutManager.reloadListener());
         event.registerReloadListener(GuideDocumentCache.reloadListener());
         event.registerReloadListener(AgeratumStructureTemplateManager.reloadListener());
     }
