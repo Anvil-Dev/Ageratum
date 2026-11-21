@@ -90,6 +90,7 @@ navigation:
 | Field                                               | Type                      | Description                                                         |
 |-----------------------------------------------------|---------------------------|---------------------------------------------------------------------|
 | `title`                                             | `string`                  | Document title (overrides first heading)                            |
+| `layout` | `string` | Reader layout, for example `ageratum:fullscreen`. See [layouts and inheritance](11-layouts.md). |
 | `navigation.title`                                  | `string`                  | Title shown in the sidebar navigation (takes priority over `title`) |
 | `guide.items` or `items`                            | `string` / `list<string>` | Bound item rules used for the "contemplate" feature                 |
 | `guide.item_id`, `item_id`, `guide.item`, or `item` | `string`                  | Legacy compatibility fields; still read, but `items` is recommended |
@@ -200,7 +201,7 @@ Images referenced in documents use `namespace:path` format, corresponding to `as
 
 ```markdown
 ![Description](mymod:gui/my_image.png)
-![Description](ageratum:gui/guide/guide.png)
+![Description](ageratum:gui/guide/light/guide.png)
 ```
 
 Images **must occupy their own line** in the document. Inline images (within a paragraph) are not currently supported.

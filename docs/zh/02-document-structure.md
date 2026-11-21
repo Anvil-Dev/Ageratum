@@ -92,6 +92,7 @@ navigation:
 | 字段                                            | 类型                        | 说明                         |
 |-----------------------------------------------|---------------------------|----------------------------|
 | `title`                                       | `string`                  | 文档标题（覆盖一级标题）               |
+| `layout` | `string` | 阅读器布局，例如 `ageratum:fullscreen`。详见[布局与继承规则](11-layouts.md)。 |
 | `navigation.title`                            | `string`                  | 侧边栏导航中显示的标题（优先于 `title`）   |
 | `guide.items` 或 `items`                       | `string` / `list<string>` | 绑定物品规则，用于"寻思"功能            |
 | `guide.item_id`、`item_id`、`guide.item`、`item` | `string`                  | 旧版兼容字段，仍可读取，但推荐迁移到 `items` |
@@ -201,7 +202,7 @@ assets/mymod/ageratum/en_us/
 
 ```markdown
 ![描述](mymod:gui/my_image.png)
-![描述](ageratum:gui/guide/guide.png)
+![描述](ageratum:gui/guide/light/guide.png)
 ```
 
 图片在文档中**独占一行**，内联图片（段落内）当前不支持。

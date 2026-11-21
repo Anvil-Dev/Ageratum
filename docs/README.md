@@ -23,6 +23,7 @@
 | [API 参考](zh/07-api-reference.md)               | 所有公共 API 详细说明           |
 | [架构设计](zh/08-architecture.md)                  | 模块划分、数据流与扩展机制           |
 | [配置参考](zh/09-config.md)                        | 客户端配置选项说明               |
+| [布局与深色模式](zh/11-layouts.md) | 布局继承、面板、纹理、配色与扩展 API |
 | [结构预览渲染](zh/10-structure-preview-rendering.md) | NBT 结构组件的渲染链路与关键类说明     |
 
 ---
@@ -40,6 +41,7 @@
 | [API Reference](en/07-api-reference.md)                             | Detailed documentation of all public APIs              |
 | [Architecture](en/08-architecture.md)                               | Module layout, data flow, and extension mechanisms     |
 | [Configuration](en/09-config.md)                                    | Client configuration options                           |
+| [Layouts and Dark Mode](en/11-layouts.md) | Layout inheritance, panels, textures, colors and extension API |
 | [Structure Preview Rendering](en/10-structure-preview-rendering.md) | NBT structure preview pipeline and key classes         |
 
 ---

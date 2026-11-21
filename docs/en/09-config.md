@@ -16,30 +16,35 @@ Ageratum provides a client-side configuration file to adjust the document reader
 
 ### `darkMode`
 
-**Type**: `boolean`
-**Default**: `false`
-**Description**: Use dark backgrounds, tabs, buttons, item slots and recipe textures with matching default text colors. The theme button near the bottom of the guide's right sidebar switches immediately and saves the preference across pages and restarts.
+**Type**: `boolean`, default `false`. Enables dark layout variants for current and subsequently opened guides. The theme button immediately updates and saves `dark_mode` in `config/ageratum-client.toml`, so navigating, reopening and restarting preserve the selected mode. See [Layouts and dark mode](11-layouts.md).
+
+### `directorySide` (configuration key: `directory_side`)
+
+**Type**: `LEFT` / `RIGHT`, default **`LEFT`**.
 
 ```toml
-# Use dark guide textures and colors
-dark_mode = false
+# Navigation on the left, content on the right (default)
+directory_side = "LEFT"
+# Set to "RIGHT" for navigation on the right and content on the left.
 ```
 
----
+Changes reflow the open guide while preserving the reading position. The player preference applies after layout inheritance and dark-variant resolution, overriding the `edge` of panels containing `tree`. Bookmarks/actions in the same panel move with it; independent panels keep their positions. The built-in fullscreen layout also defaults to left navigation.
 
 ### `scale`
 
-Sets the default guide zoom. It accepts decimal values from `0.5` (50%) to `4.0` (400%) and defaults to `2.0` (200%).
-
-Hold Ctrl and scroll to change the guide zoom by 2 percentage points per notch, or 10 with Shift held as well. Scrolling over a structure changes its preview size. When zooming the guide, a horizontal slider fades in on the top roll, or at the top of the stone tablet in dark mode. Click the track to select a zoom level or drag the thumb. The slider stays visible during a drag and fades out after a short pause. With Ctrl released, clicking outside dismisses the slider and consumes the click.
+Hold Ctrl and use the wheel to change guide zoom by 2 percentage points per notch, or 10 with Shift held as well. Scrolling over a structure changes only its preview size. A horizontal slider fades in on the top roll of the guide, or at the top of the stone tablet in dark mode. Click the track to set the zoom or drag the thumb. The slider stays visible during a drag and fades out after a short pause. With Ctrl released, clicking outside the slider dismisses it early and consumes the click.
 
 Zoom is saved per document namespace in `config/ageratum/zoom.json` across page changes, closing the guide and game restarts. Press Default or Ctrl+0 (including keypad 0) to clear the current namespace override and restore the configured scale.
+
+**Type**: `double`, default `2.0`, range **0.5–4.0**. Accepts arbitrary fractional values such as `0.75`, `1.25` and `1.375`, without rounding to integer steps.
 
 ```toml
 scale = 1.25
 ```
 
----
+Changes to the configured scale apply to namespaces without a saved override; namespaces with saved zoom retain it until Default or Ctrl+0 is used. Reflow preserves the reading component and folded groups where possible. Minecraft's own GUI scale does not change the guide zoom preference. Mouse input, scrolling, clipping and structure components use the inverse of the drawing transform.
+
+Body text, headings, tables, code blocks, navigation, bookmarks and structure layer labels use **AnvilLib Font**. Select the font in AnvilLib-Font's configuration screen. Wrapping, widths, ellipsis and link hit testing share its SDF glyph metrics, retaining bold, italic, colors and click styles. Native item count decorations and native tooltips remain game-rendered.
 
 ### `breadCrumbsHasLabel`
 
