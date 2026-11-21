@@ -24,6 +24,7 @@ public class MDHeaderComponent extends MDComponent {
      * 标题级别（1-6）。
      */
     protected final int level;
+    private final boolean sourceHeading;
 
     /**
      * 创建标题组件。
@@ -32,8 +33,18 @@ public class MDHeaderComponent extends MDComponent {
      * @param text  标题文本
      */
     public MDHeaderComponent(int level, String text) {
+        this(level, text, true);
+    }
+
+    private MDHeaderComponent(int level, String text, boolean sourceHeading) {
         super(MDComponent.textFormat(text, MDHeaderComponent.getStyle(level)));
         this.level = level;
+        this.sourceHeading = sourceHeading;
+    }
+
+    /** A display heading outside the source outline, such as a directory title. */
+    public static MDHeaderComponent generated(int level, String text) {
+        return new MDHeaderComponent(level, text, false);
     }
 
     /**

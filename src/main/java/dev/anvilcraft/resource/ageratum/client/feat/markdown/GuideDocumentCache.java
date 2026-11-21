@@ -52,15 +52,15 @@ public final class GuideDocumentCache {
                                 && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
                 // Pass 1: extract front matter, build item binding cache
-                Map<Identifier, String> rawMarkdowns = new LinkedHashMap<>();
+                Map<Identifier, FrontMatter> sources = new LinkedHashMap<>();
                 Map<Identifier, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
                 for (Map.Entry<Identifier, Resource> entry : resources.entrySet()) {
                     Identifier location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        rawMarkdowns.put(location, markdown);
-                        Map<String, Object> frontMatter = MarkdownParser.extractFrontMatter(markdown).frontMatter();
-                        MDDocument tempDoc = new MDDocument(location, frontMatter, List.of());
+                        FrontMatter source = FrontMatter.read(markdown);
+                        sources.put(location, source);
+                        MDDocument tempDoc = new MDDocument(location, source.values(), List.of());
                         for (GuideItemBinding binding : tempDoc.getGuideItemBindings()) {
                             itemDocuments
                                 .computeIfAbsent(binding.itemId(), ignored -> new ArrayList<>())
@@ -78,10 +78,10 @@ public final class GuideDocumentCache {
                 // Pass 2: full parse with item cache available
                 Map<Identifier, MDDocument> prepared = new HashMap<>();
                 Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
-                for (Map.Entry<Identifier, String> entry : rawMarkdowns.entrySet()) {
+                for (Map.Entry<Identifier, FrontMatter> entry : sources.entrySet()) {
                     Identifier location = entry.getKey();
                     try {
-                        MDDocument document = parser.parseDocument(location, entry.getValue());
+                        MDDocument document = parser.parseBody(location, entry.getValue());
                         prepared.put(location, document);
                         registerNavigationNode(treeRoots, location, document);
                     } catch (RuntimeException exception) {

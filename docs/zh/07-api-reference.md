@@ -452,25 +452,21 @@ public abstract class MDComponent {
 
 ## `MarkdownParser`
 
-Markdown 块级解析器。
+`parseDocument` 返回文档的 front matter 和渲染组件。只需要组件列表时可调用 `parse`，只尝试已注册的单行规则时用 `parseComponent`。
+
+单行规则接收文档的来源位置和行文本。匹配时返回组件，返回 `null` 会让下一个规则继续尝试。优先级数值较小的规则先执行，相同优先级的规则按注册顺序执行。
 
 ```java
 public class MarkdownParser {
     public MarkdownParser();
-
-    /**
-     * 注册行级组件解析器（用于扩展解析流程）。
-     * @param priority 优先级，值越小越优先
-     * @param parser   解析函数：接收行文本，返回组件或 null
-     */
     public void registerComponentParser(int priority, MDComponentParser parser);
 
-    /**
-     * 将原始 Markdown 文本解析为文档对象。
-     * @param location 文档来源位置（可为 null）
-     * @param markdown 原始 Markdown 文本
-     */
-    public MDDocument parseDocument(@Nullable ResourceLocation location, String markdown);
+    public MDDocument parseDocument(Identifier sourceLocation, String markdown);
+    public List<MDComponent> parse(Identifier sourceLocation, String markdown);
+    public @Nullable MDComponent parseComponent(Identifier sourceLocation, String line);
+
+    @FunctionalInterface
+    public interface MDComponentParser extends BiFunction<Identifier, String, MDComponent> {}
 }
 ```
 

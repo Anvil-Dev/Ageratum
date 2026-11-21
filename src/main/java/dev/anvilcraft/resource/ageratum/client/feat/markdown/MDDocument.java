@@ -6,6 +6,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDHeaderC
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,7 +29,7 @@ public record MDDocument(@Nullable Identifier sourceLocation, Map<String, Object
         for (Map.Entry<String, Object> entry : source.entrySet()) {
             copy.put(entry.getKey(), freezeValue(entry.getValue()));
         }
-        return Map.copyOf(copy);
+        return Collections.unmodifiableMap(copy);
     }
 
     private static Object freezeValue(@Nullable Object value) {
@@ -47,7 +48,7 @@ public record MDDocument(@Nullable Identifier sourceLocation, Map<String, Object
             for (Object element : listValue) {
                 frozen.add(freezeValue(element));
             }
-            return List.copyOf(frozen);
+            return Collections.unmodifiableList(frozen);
         }
         return value;
     }

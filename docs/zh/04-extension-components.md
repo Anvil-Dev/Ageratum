@@ -270,7 +270,9 @@ String raw = context.rawParams(); // "raw param string"
 
 `context.renderedContent()` 包含块内容解析后的 `MDComponent` 列表，顺序与文档中一致。可以直接将它们传给子容器组件渲染。
 
-`context.rawContent()` 包含块内容的原始文本，适合需要再次解析或处理的场景。
+`context.rawContent()` 提供块内原文，保留嵌套定界符和引用链接的写法，换行统一为 `\n`。需要已解析的子组件时使用 `renderedContent()`。
+
+每个块都有自己的结束标记。内层 `::: tip` 由对应的 `:::` 闭合，同名标签也可以嵌套。围栏代码和缩进代码中的结束标记按代码原文显示。缺少结束标记时，开始标记按普通文本显示，后续行继续解析。
 
 ---
 
@@ -344,6 +346,8 @@ public static final DeferredHolder<MDExtensionComponentFactory, MDExtensionCompo
 ## 内置扩展组件
 
 Ageratum 自带若干内置扩展组件，可在任意文档中直接使用。
+
+使用内置扩展 `<directory />` 可以生成指向本页标题的目录，写法见 [Markdown 语法](03-markdown-syntax.md#自动目录)。
 
 ### 提示框
 

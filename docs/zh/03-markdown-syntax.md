@@ -280,6 +280,20 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 - 参数使用 `key="value"` 或 `key=value` 格式
 - 自闭合标签（`/>`）不含块内容
 
+### 自动目录
+
+在单独一行写下 `<directory />`，手册会在该处插入二级标题“目录”，并列出页面顶层的所有标题。条目按原文顺序排列，缩进对应标题级别。点击条目可跳到对应标题，包括目录之后的标题。
+
+```markdown
+<directory />
+
+# 机器
+
+## 供电
+```
+
+也可以写成 `<directory>` 或 `<directory/>`。三种写法都支持 `ageratum:` 命名空间，例如 `<ageratum:directory />`。同一页的多个目录使用同一组原文标题。即使标题重名或只包含标点，目录条目也会跳到各自的标题。页面没有标题时只显示“目录”。
+
 ### 结构 NBT 组件
 
 使用 `structure` 扩展，可以在文档中渲染结构文件（`.nbt` / `.snbt`）的摘要、俯视方块预览与 NBT 树状视图：
@@ -312,6 +326,7 @@ CommonMark 可转义标点符号（`!`、`"`、`#`、`$`、`%`、`&`、`'`、`(`
 | `ageratum:tip`       | `::: tip` 或 `<tip/>`                     | 🟢 绿色建议框        |
 | `ageratum:warning`   | `::: warning` 或 `<warning/>`             | 🟠 橙色警告框        |
 | `ageratum:danger`    | `::: danger` 或 `<danger/>`               | 🔴 红色危险框        |
+| `ageratum:directory` | `<directory />` | 可点击的页内目录 |
 | `ageratum:recipe`    | `<recipe id="..."/>`                     | 配方渲染            |
 | `ageratum:structure` | `<structure id="..."/>`                  | 结构 NBT 摘要 + 树视图 |
 | `ageratum:latex`     | `<latex formula="..."/>` 或 `[latex:...]` | LaTeX 公式图片      |

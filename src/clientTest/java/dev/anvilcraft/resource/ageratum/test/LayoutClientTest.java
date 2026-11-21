@@ -58,6 +58,7 @@ final class LayoutClientTest {
             inherited.sourceLocation(), java.util.Map.of("layout", "light"), List.of());
         check(dev.anvilcraft.resource.ageratum.client.layout.GuideLayoutManager.forDocument(overridden, resources, false).id()
             .equals(Identifier.parse("ageratum:light")), "document declaration overrides ancestor");
+        DirectoryClientTest.verify();
         this.open("ageratum:light", false);
         this.advance();
     }
@@ -285,6 +286,19 @@ final class LayoutClientTest {
                 new MarkdownParser().parseDocument(Identifier.parse(namespace + ":ageratum/en_us/layout_test.md"), markdown), List.of(), false);
         }
         void adjustZoom() { this.mouseScrolled(0, 0, 0, 1, true, true); }
+
+        @Override
+        protected boolean mouseScrolled(double x, double y, double scrollX, double scrollY, boolean control, boolean shift) {
+            // Each layout assertion starts a new wheel gesture. Momentum capture has a separate regression.
+            try {
+                var field = GuideScreen.class.getDeclaredField("scrollGesture");
+                field.setAccessible(true);
+                ((dev.anvilcraft.resource.ageratum.client.gui.GuideScrollGesture) field.get(this)).reset();
+            } catch (ReflectiveOperationException e) {
+                throw new AssertionError(e);
+            }
+            return super.mouseScrolled(x, y, scrollX, scrollY, control, shift);
+        }
         @Override
         public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
             check(graphics.guiWidth() == this.width && graphics.guiHeight() == this.height, "graphics viewport matches fractional guide viewport");
@@ -420,8 +434,11 @@ final class LayoutClientTest {
             check(Math.abs(this.getZoom() - 2.25) < 0.00001, "track midpoint sets 225 percent");
             var up = new MouseButtonEvent(x - 150, track.y() - 100, new MouseButtonInfo(0, 0));
             check(this.mouseDragged(up, -150, -100) && this.getZoom() == 4, "drag capture reaches upper bound");
-            check(this.getContentWidth() >= 32 && this.getContentHeight() >= 32,
-                "new wide tabs retain a usable reading area at 400 percent");
+            int minimumTextWidth = dev.anvilcraft.resource.ageratum.client.layout.LayoutScrollbar.contentWidth(32,
+                this.layout.integer("content.scrollbar.width", 6), this.layout.integer("content.scrollbar.hit_width", 12));
+            check(this.getContentViewportWidth() >= 32 && this.getContentWidth() >= minimumTextWidth && this.getContentHeight() >= 32,
+                "400 percent zoom retains the reading viewport including its scrollbar gutter; viewport="
+                    + this.getContentViewportWidth() + "x" + this.getContentHeight() + ", text width=" + this.getContentWidth());
             check(this.mouseReleased(new MouseButtonEvent(x, track.bottom(), new MouseButtonInfo(1, 0))), "other button cannot release zoom");
             var down = new MouseButtonEvent(x, track.bottom() + 100, new MouseButtonInfo(0, 0));
             check(this.mouseDragged(down, 150, 200) && this.getZoom() == 0.5, "drag capture reaches lower bound");
