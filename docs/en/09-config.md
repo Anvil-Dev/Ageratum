@@ -27,6 +27,20 @@ dark_mode = false
 
 ---
 
+### `scale`
+
+Sets the default guide zoom. It accepts decimal values from `0.5` (50%) to `4.0` (400%) and defaults to `2.0` (200%).
+
+Hold Ctrl and scroll to change the guide zoom by 2 percentage points per notch, or 10 with Shift held as well. Scrolling over a structure changes its preview size. When zooming the guide, a horizontal slider fades in on the top roll, or at the top of the stone tablet in dark mode. Click the track to select a zoom level or drag the thumb. The slider stays visible during a drag and fades out after a short pause. With Ctrl released, clicking outside dismisses the slider and consumes the click.
+
+Zoom is saved per document namespace in `config/ageratum/zoom.json` across page changes, closing the guide and game restarts. Press Default or Ctrl+0 (including keypad 0) to clear the current namespace override and restore the configured scale.
+
+```toml
+scale = 1.25
+```
+
+---
+
 ### `breadCrumbsHasLabel`
 
 **Type**: `boolean`  

@@ -19,8 +19,9 @@ import javax.annotation.Nullable;
 public final class GuideTheme {
     private static final Set<String> TEXTURES = Set.of(
         "guide/guide", "guide/label_primary", "guide/label_secondary", "guide/label_bookmark",
-        "guide/button_add", "guide/button_back", "guide/button_close", "guide/button_dark",
+        "guide/button_add", "guide/button_back", "guide/button_close", "guide/button_dark", "guide/button_empty",
         "guide/button_down", "guide/button_import", "guide/button_projection", "guide/button_share", "guide/button_up",
+        "guide/scrollbar_thumb",
         "component/anvil", "component/arrow", "component/crafting_table", "component/ember_smithing_table",
         "component/furnace", "component/jewelcrafting_table", "component/plus", "component/slot",
         "component/slots_1n", "component/slots_2n", "component/slots_3n", "component/smithing_table", "component/stonecutter"

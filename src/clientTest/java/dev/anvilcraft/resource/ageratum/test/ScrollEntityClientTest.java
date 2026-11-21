@@ -34,12 +34,13 @@ public final class ScrollEntityClientTest {
                 mc.setScreen(guide);
             }
             case 1 -> guide.pageBurst();
-            case 2 -> guide.structureBurst();
-            case 3 -> {
+            case 2 -> guide.structureBurst(false);
+            case 3 -> guide.structureBurst(true);
+            case 4 -> {
                 guide.pageAfterPause();
                 mc.setScreen(new EntityScreen());
             }
-            case 4 -> {
+            case 5 -> {
                 Screenshot.grab(mc.gameDirectory, "entity-scroll-regression.png", mc.getMainRenderTarget(), message -> {});
                 mc.setScreen(new ListRecipeClientScreen());
             }
@@ -79,12 +80,16 @@ public final class ScrollEntityClientTest {
             check(this.wheel(70 - first, -1), "wheel over structure remains captured by page");
             check(this.contentScroll > first && this.structure.delta == 0, "crossing structure does not interrupt page");
         }
-        private void structureBurst() {
+        private void structureBurst(boolean control) {
             this.contentScroll = 0;
-            check(this.wheel(70, -1), "structure accepts first wheel after pause");
-            check(this.structure.delta == -1, "structure zooms");
+            double zoom = this.getZoom();
+            double x = (this.leftPos + this.getContentStartX() + this.getContentWidth() / 2.0) / this.scale;
+            double y = (this.topPos + this.getContentStartY() + 70) / this.scale;
+            check(this.mouseScrolled(x, y, 0, -1, control, false), "structure accepts first wheel after pause");
+            check(this.structure.delta == (control ? -3 : -1), "structure zooms with its regular modifier acceleration");
             check(this.mouseScrolled(0, 0, 0, 1), "structure retains wheel outside page");
-            check(this.structure.delta == 0 && this.contentScroll == 0, "reversal stays with structure");
+            check(this.structure.delta == 0 && this.contentScroll == 0 && this.getZoom() == zoom,
+                "reversal and Ctrl+wheel stay with the structure");
         }
         private void pageAfterPause() {
             this.contentScroll = 70;

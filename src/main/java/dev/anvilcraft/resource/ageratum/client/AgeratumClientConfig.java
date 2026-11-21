@@ -40,7 +40,7 @@ public class AgeratumClientConfig {
     @BoundedDiscrete(min = 100, max = 5000)
     public int itemBindingHoldDurationMs = 750;
 
-   @Comment("The scaling ratio of the interface")
-    @BoundedDiscrete(min = 1, max = 4)
-    public int scale = 2;
+    @Comment("Continuous guide zoom from 0.5 to 4.0 (for example 0.75 or 1.25); applies to open guides")
+    @BoundedDiscrete(min = 0.5, max = 4.0)
+    public double scale = 2.0;
 }
