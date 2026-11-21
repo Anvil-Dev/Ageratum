@@ -54,7 +54,7 @@ keywords:
 
 ### 使用所有功能
 
-```markdown
+````markdown
 # 标题
 
 ## 小标题
@@ -76,7 +76,7 @@ System.out.println("Hello");
 ::: tip
 提示框
 :::
-```
+````
 
 ## 最佳实践
 

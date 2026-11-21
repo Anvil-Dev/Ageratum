@@ -9,6 +9,7 @@ import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
+import dev.anvilcraft.resource.ageratum.client.feat.markdown.HeadingAnchor;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDDocument;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.MarkdownParser;
@@ -33,11 +34,9 @@ import net.minecraft.util.Mth;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -1924,16 +1923,22 @@ public class GuideScreen extends Screen {
         if (this.minecraft == null) {
             return false;
         }
-        String normalizedAnchor = this.normalizeAnchor(anchor);
+        int targetOrdinal = HeadingAnchor.ordinal(anchor);
+        String normalizedAnchor = HeadingAnchor.fromFragment(anchor);
         if (normalizedAnchor.isEmpty()) {
             return false;
         }
 
+        int ordinal = 0;
         float offsetY = 0.0f;
         for (MDComponent component : this.parsedComponents) {
             if (component instanceof MDHeaderComponent header) {
                 String headingText = header.getText().getString();
-                if (this.matchesAnchor(normalizedAnchor, headingText)) {
+                boolean sourceHeading = header.isSourceHeading() && !headingText.trim().isEmpty();
+                if (sourceHeading) ordinal++;
+                boolean matches = targetOrdinal == 0
+                    ? this.matchesAnchor(normalizedAnchor, headingText) : sourceHeading && ordinal == targetOrdinal;
+                if (matches) {
                     this.updateScrollBounds();
                     this.contentScroll = Mth.clamp(offsetY, 0.0f, this.maxContentScroll);
                     return true;
@@ -1948,44 +1953,11 @@ public class GuideScreen extends Screen {
         if (headingText.isBlank()) {
             return false;
         }
-        String normalizedHeading = this.normalizeAnchor(headingText);
+        String normalizedHeading = HeadingAnchor.fromTitle(headingText);
         if (normalizedAnchor.equals(normalizedHeading)) {
             return true;
         }
         return normalizedAnchor.equals(headingText.trim().toLowerCase(Locale.ROOT));
-    }
-
-    /**
-     * 将标题或原始锚点规范化为可比较的 slug。
-     */
-    private String normalizeAnchor(String rawAnchor) {
-        String decoded = URLDecoder.decode(rawAnchor, StandardCharsets.UTF_8).trim();
-        if (decoded.isEmpty()) {
-            return "";
-        }
-        String normalized = Normalizer.normalize(decoded, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
-        StringBuilder builder = new StringBuilder(normalized.length());
-        boolean previousWasSeparator = false;
-        for (int index = 0; index < normalized.length(); index++) {
-            char current = normalized.charAt(index);
-            if (Character.isLetterOrDigit(current)) {
-                builder.append(current);
-                previousWasSeparator = false;
-                continue;
-            }
-            if (Character.isWhitespace(current) || current == '-' || current == '_') {
-                if (!previousWasSeparator && !builder.isEmpty()) {
-                    builder.append('-');
-                    previousWasSeparator = true;
-                }
-            }
-        }
-        int length = builder.length();
-        while (length > 0 && builder.charAt(length - 1) == '-') {
-            builder.deleteCharAt(length - 1);
-            length--;
-        }
-        return builder.toString();
     }
 
     /**

@@ -280,21 +280,19 @@ Block content here — supports Markdown syntax.
 - Parameters use `key="value"` or `key=value` format
 - Self-closing tags (`/>`) have no block content
 
-### Automatic Directory Component
+### Automatic table of contents
 
-Use the `directory` extension to generate a clickable table of contents from all Markdown headings in the current
-document:
+Place `<directory />` on its own line. The guide inserts a level-two heading labeled **目录** and a list of links to the headings in the main body of the page. Entries follow source order and indent by heading level. Clicking an entry scrolls to that heading, including headings written after the directory.
 
 ```markdown
-<directory>
+<directory />
 
-<directory/>
+# Machines
+
+## Power supply
 ```
 
-- The component always renders `## 目录` at its position
-- All `#` headings are rendered as clickable list entries indented by heading level
-- Clicking an entry jumps to the corresponding heading in the current document
-- `<directory>` and `<directory/>` are equivalent
+`<directory>` and `<directory/>` also work. Each spelling accepts the `ageratum:` namespace, for example `<ageratum:directory />`. Multiple directories list the same original headings. Each entry jumps to its own heading, even when headings repeat or contain only punctuation. A page with no headings displays only **目录**.
 
 ### Structure NBT Component
 
