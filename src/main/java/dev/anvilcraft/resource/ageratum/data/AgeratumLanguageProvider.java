@@ -15,6 +15,7 @@ public class AgeratumLanguageProvider extends LanguageProvider {
     @Override
     protected void addTranslations() {
         ConfigData.readConfigClass(this, AgeratumClientConfig.class);
+        this.add("ageratum.guide.zoom.default", "Default");
         this.add("commands.ageratum.preview.disable", "Preview is not enabled");
         this.add("commands.ageratum.item.empty_hand", "No item in main hand");
         this.add("commands.ageratum.item.id_copy_hint", "Click to copy item id");

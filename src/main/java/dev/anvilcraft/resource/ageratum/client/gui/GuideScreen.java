@@ -6,6 +6,7 @@ import dev.anvilcraft.resource.ageratum.Ageratum;
 import dev.anvilcraft.lib.v2.rendering.preview.gui.StructureGuiPreview;
 import dev.anvilcraft.resource.ageratum.client.AgeratumClient;
 import dev.anvilcraft.resource.ageratum.client.GuideBookmarkStore;
+import dev.anvilcraft.resource.ageratum.client.GuideZoomStore;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentCache;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.GuideDocumentLoader;
@@ -19,6 +20,7 @@ import dev.anvilcraft.resource.ageratum.client.util.RelativePathResolver;
 import dev.anvilcraft.resource.ageratum.network.ShareGuidePayload;
 import lombok.Getter;
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -142,6 +144,11 @@ public class GuideScreen extends Screen {
     protected double lastMouseX;
     protected double lastMouseY;
     private final GuideScrollGesture scrollGesture = new GuideScrollGesture();
+    protected final GuideZoomSlider zoomSlider = new GuideZoomSlider();
+    private double configuredZoom = GuideScale.clamp(AgeratumClient.CONFIG.scale);
+    @Getter
+    private double zoom;
+    private long zoomSaveAt;
     protected @Nullable MDComponent activeMouseComponent;
     protected int activeMouseButton = -1;
     /**
@@ -232,6 +239,7 @@ public class GuideScreen extends Screen {
     public GuideScreen(ResourceLocation documentLocation, MDDocument document, List<ResourceLocation> breadCrumbs, boolean preview) {
         super(Component.literal("Guide - " + documentLocation));
         this.documentLocation = documentLocation;
+        this.zoom = GuideZoomStore.instance().get(documentLocation.getNamespace(), this.configuredZoom);
         this.parser = new MarkdownParser();
         this.document = document;
         this.parsedComponents = new ArrayList<>(document.components());
@@ -252,6 +260,15 @@ public class GuideScreen extends Screen {
     public void tick() {
         super.tick();
         this.tryRefreshPreviewDocument();
+        if (this.zoomSaveAt != 0 && Util.getMillis() >= this.zoomSaveAt) {
+            GuideZoomStore.instance().flush();
+            this.zoomSaveAt = 0;
+        }
+        double configured = GuideScale.clamp(AgeratumClient.CONFIG.scale);
+        if (configured != this.configuredZoom) {
+            this.configuredZoom = configured;
+            this.reflowZoom(GuideZoomStore.instance().get(this.documentLocation.getNamespace(), configured));
+        }
     }
 
     private void tryRefreshPreviewDocument() {
@@ -344,17 +361,33 @@ public class GuideScreen extends Screen {
      */
     @Override
     protected void init() {
+        this.updatePageGeometry();
+        if (this.minecraft != null) {
+            this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
+            this.rebuildLabelEntries(this.minecraft.getResourceManager());
+            this.updateScrollBounds();
+            this.tryScrollToPendingAnchor();
+        }
+        this.ensureBookmarksLoaded();
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
+        this.refreshBookmarkScrollState();
+    }
+
+    private void updatePageGeometry() {
         if (this.minecraft != null) {
             Window window = this.minecraft.getWindow();
-            int calculateScale = GuideScreen.calculateScale(window, 1, true);
-            this.width = window.getWidth() / calculateScale;
-            this.height = window.getHeight() / calculateScale;
-            this.scale = window.getGuiScale() / calculateScale;
+            double physicalScale = GuideScale.physicalScale(window.getWidth(), window.getHeight(), window.calculateScale(1, true), this.zoom);
+            this.width = GuideScale.logicalSize(window.getWidth(), physicalScale);
+            this.height = GuideScale.logicalSize(window.getHeight(), physicalScale);
+            this.scale = window.getGuiScale() / physicalScale;
             this.scaleCountDown = 1.0d / this.scale;
         }
 
-        int maxBgWidth = Math.max(1, this.width - 2 * MIN_HORIZONTAL_MARGIN);
-        int maxBgHeight = Math.max(1, this.height - 2 * MIN_VERTICAL_MARGIN);
+        // Leave room for the tabs and buttons; keep a reading area even when the whole book cannot fit.
+        int rightMargin = this.width - this.getRightButtonBound() - this.imageWidth;
+        int availableWidth = this.width - this.getLabelLeftBound() - rightMargin;
+        int maxBgWidth = Math.max(Math.min(this.width, 64), Math.min(availableWidth, this.width - 2 * MIN_HORIZONTAL_MARGIN));
+        int maxBgHeight = Math.max(Math.min(this.height, 40), this.height - 2 * MIN_VERTICAL_MARGIN);
 
         // 先尽可能放大背景，再通过 leftPos 约束保证侧栏与按钮可见。
         float imageRatio = (float) GUIDE_IMAGE_WIDTH / GUIDE_IMAGE_HEIGHT;
@@ -380,29 +413,75 @@ public class GuideScreen extends Screen {
         int maxTopPos = this.height - MIN_VERTICAL_MARGIN - this.imageHeight;
         int centeredTopPos = (this.height - this.imageHeight) / 2;
         this.topPos = Mth.clamp(centeredTopPos, Math.min(minTopPos, maxTopPos), Math.max(minTopPos, maxTopPos));
-        if (this.minecraft != null) {
-            this.currentLanguageCode = this.getClientLanguageCode(this.minecraft);
-            this.rebuildLabelEntries(this.minecraft.getResourceManager());
-            this.updateScrollBounds();
-            this.tryScrollToPendingAnchor();
-        }
-        this.ensureBookmarksLoaded();
-        // 防止窗口缩小后滚动量超出边界
-        this.contentScroll = Mth.clamp(this.contentScroll, 0.0f, this.maxContentScroll);
-        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.getMaxLabelScrollRows());
-        this.refreshBookmarkScrollState();
+        int left = (int) Math.round(this.leftPos / this.scale);
+        int top = (int) Math.round(this.topPos / this.scale);
+        int right = (int) Math.round((this.leftPos + this.imageWidth) / this.scale);
+        int bottom = (int) Math.round((this.topPos + 16 * this.getBgImageScale()) / this.scale);
+        this.zoomSlider.update(new GuideZoomSlider.Rect(left, top, right - left, bottom - top), this.zoom);
     }
 
+    /** Compatibility for callers that require a whole-number scale. */
+    @Deprecated
     public static int calculateScale(Window window, int guiScale, boolean forceUnicode) {
-        int calculateScale = window.calculateScale(guiScale, forceUnicode);
-        calculateScale *= AgeratumClient.CONFIG.scale;
-        if (window.getWidth() > AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_WIDTH && window.getHeight() > AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_HEIGHT) {
-            double widthScale = window.getWidth() / (double) AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_WIDTH;
-            double heightScale = window.getHeight() / (double) AgeratumConstants.GuideScreenUI.Positions.SCREEN_THRESHOLD_HEIGHT;
-            int scale = (int) Math.round(Math.min(widthScale, heightScale));
-            if (scale > 1) calculateScale *= scale;
+        return Math.max(1, (int) Math.round(calculateContinuousScale(window, guiScale, forceUnicode)));
+    }
+
+    public static double calculateContinuousScale(Window window, int guiScale, boolean forceUnicode) {
+        return GuideScale.physicalScale(window.getWidth(), window.getHeight(), window.calculateScale(guiScale, forceUnicode),
+            AgeratumClient.CONFIG.scale);
+    }
+
+    @Override
+    public void resize(Minecraft minecraft, int width, int height) {
+        this.zoomSlider.cancel();
+        super.resize(minecraft, width, height);
+    }
+
+    private void applyZoom(double zoom) {
+        if (zoom == this.zoom) return;
+        GuideZoomStore.instance().set(this.documentLocation.getNamespace(), zoom);
+        this.zoomSaveAt = Util.getMillis() + 300;
+        this.reflowZoom(zoom);
+    }
+
+    private void resetZoom() {
+        this.zoomSlider.cancel();
+        this.zoomSlider.show();
+        GuideZoomStore.instance().reset(this.documentLocation.getNamespace());
+        GuideZoomStore.instance().flush();
+        this.zoomSaveAt = 0;
+        this.reflowZoom(GuideScale.clamp(AgeratumClient.CONFIG.scale));
+    }
+
+    /** Keep the component being read and its scroll offset as paragraphs rewrap. */
+    private void reflowZoom(double zoom) {
+        if (zoom == this.zoom) return;
+        int index = 0;
+        float within = this.contentScroll;
+        int width = this.getContentWidth();
+        while (index < this.parsedComponents.size()) {
+            int height = this.parsedComponents.get(index).getHeight(this.minecraft, width, Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
+            if (within < height) break;
+            within -= height;
+            index++;
         }
-        return calculateScale;
+        this.zoom = zoom;
+        this.updatePageGeometry();
+        this.updateScrollBounds();
+        width = this.getContentWidth();
+        int top = 0;
+        for (int i = 0; i < index; i++) {
+            top += this.parsedComponents.get(i).getHeight(this.minecraft, width, Integer.MAX_VALUE) + CONTENT_ROWS_MARGIN;
+        }
+        if (index < this.parsedComponents.size()) {
+            within = Math.min(within, this.parsedComponents.get(index).getHeight(this.minecraft, width, Integer.MAX_VALUE));
+        }
+        this.contentScroll = Mth.clamp(top + within, 0, this.maxContentScroll);
+        this.maxLabelScrollRows = this.getMaxLabelScrollRows();
+        this.labelScrollRows = Mth.clamp(this.labelScrollRows, 0, this.maxLabelScrollRows);
+        this.refreshBookmarkScrollState();
+        this.activeMouseComponent = null;
+        this.activeMouseButton = -1;
     }
 
     private int getLabelLeftBound() {
@@ -433,6 +512,11 @@ public class GuideScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.structureGuiPreview.beginFrame();
         if (this.structureGuiPreview.contains(mouseX, mouseY)) { mouseX = -100000; mouseY = -100000; }
+        int zoomMouseX = mouseX, zoomMouseY = mouseY;
+        if (this.zoomSlider.contains(mouseX, mouseY) || this.zoomSlider.dragging()) {
+            mouseX = -100000;
+            mouseY = -100000;
+        }
         PoseStack pose = guiGraphics.pose();
         pose.pushPose();
         pose.scale((float) this.scaleCountDown, (float) this.scaleCountDown, 1.0f);
@@ -462,6 +546,7 @@ public class GuideScreen extends Screen {
         // 渲染侧边标签 tooltip
         this.renderLabelTooltips(guiGraphics, mouseX - i, mouseY - j);
         pose.popPose();
+        this.zoomSlider.render(guiGraphics, zoomMouseX, zoomMouseY);
         this.structureGuiPreview.render(guiGraphics);
     }
 
@@ -488,6 +573,10 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        return this.mouseScrolled(mouseX, mouseY, scrollX, scrollY, hasControlDown(), hasShiftDown());
+    }
+
+    protected boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY, boolean control, boolean shift) {
         if (scrollY == 0) return super.mouseScrolled(mouseX * this.scale, mouseY * this.scale, scrollX, scrollY);
         long now = System.nanoTime();
         if (this.scrollGesture.continueScroll(scrollY, now)) return true;
@@ -495,16 +584,24 @@ public class GuideScreen extends Screen {
             return this.scrollGesture.begin(scrollY, now, delta -> true);
         }
         double contentX = mouseX * this.scale, contentY = mouseY * this.scale;
-        double acceleration = Screen.hasControlDown() || Screen.hasAltDown() || Screen.hasShiftDown() ? 3 : 1;
-        // 先处理大卷轴内容，避免被伸入卷轴的左侧标签命中区域截获。
-        if (this.mouseInPageRange(contentX, contentY)) {
-            if (this.minecraft != null && this.mouseInContentRange(contentX, contentY)) {
-                ComponentMouseHit hit = this.getComponentHitAtContentPosition(contentX, contentY);
-                if (hit != null) {
-                    var handler = hit.component().scrollHandler(this.minecraft, hit.mouseX(), hit.mouseY(), this.getContentWidth());
-                    if (this.scrollGesture.begin(scrollY, now, delta -> handler.test(delta * acceleration))) return true;
-                }
+        boolean onSlider = this.zoomSlider.contains(mouseX, mouseY) || this.zoomSlider.dragging();
+        double acceleration = control || shift || hasAltDown() ? 3 : 1;
+        if (!onSlider && this.minecraft != null && this.mouseInContentRange(contentX, contentY)) {
+            ComponentMouseHit hit = this.getComponentHitAtContentPosition(contentX, contentY);
+            if (hit != null) {
+                var handler = hit.component().scrollHandler(this.minecraft, hit.mouseX(), hit.mouseY(), this.getContentWidth());
+                if (this.scrollGesture.begin(scrollY, now, delta -> handler.test(delta * acceleration))) return true;
             }
+        }
+        if (control) {
+            return this.scrollGesture.begin(scrollY, now, delta -> {
+                this.zoomSlider.show();
+                this.applyZoom(GuideScale.scroll(this.zoom, delta, shift));
+                return true;
+            });
+        }
+        if (onSlider) return this.scrollGesture.begin(scrollY, now, delta -> true);
+        if (this.mouseInPageRange(contentX, contentY)) {
             return this.scrollGesture.begin(scrollY, now, delta -> {
                 this.scrollBy((float) (-delta * acceleration * SCROLL_STEP));
                 return true;
@@ -542,6 +639,17 @@ public class GuideScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (this.structureGuiPreview.mouseClicked(mouseX, mouseY, button)) return true;
+        if (this.zoomSlider.contains(mouseX, mouseY)) {
+            if (button == 0 && this.zoomSlider.resetContains(mouseX, mouseY)) {
+                this.resetZoom();
+            } else if (button == 0 && this.zoomSlider.press(mouseX, mouseY)) {
+                this.activeMouseComponent = null;
+                this.activeMouseButton = -1;
+                this.applyZoom(this.zoomSlider.zoom());
+            }
+            return true;
+        }
+        if (this.zoomSlider.dismiss(hasControlDown())) return true;
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         if (button == 0 && this.tryHandleSidebarButtonClick(mouseX, mouseY)) {
@@ -595,6 +703,10 @@ public class GuideScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (this.structureGuiPreview.mouseDragged(mouseX, mouseY, button)) return true;
+        if (this.zoomSlider.dragging()) {
+            if (button == 0) this.applyZoom(this.zoomSlider.drag(mouseX));
+            return true;
+        }
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         dragX = dragX * this.scale;
@@ -621,6 +733,14 @@ public class GuideScreen extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (this.structureGuiPreview.mouseReleased(button)) return true;
+        if (this.zoomSlider.dragging()) {
+            if (button == 0) {
+                this.applyZoom(this.zoomSlider.drag(mouseX));
+                this.zoomSlider.cancel();
+                GuideZoomStore.instance().flush();
+            }
+            return true;
+        }
         mouseX = mouseX * this.scale;
         mouseY = mouseY * this.scale;
         if (this.activeMouseComponent != null && this.minecraft != null) {
@@ -742,6 +862,11 @@ public class GuideScreen extends Screen {
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int control = Minecraft.ON_OSX ? GLFW.GLFW_MOD_SUPER : GLFW.GLFW_MOD_CONTROL;
+        if ((modifiers & control) != 0 && (keyCode == GLFW.GLFW_KEY_0 || keyCode == GLFW.GLFW_KEY_KP_0)) {
+            this.resetZoom();
+            return true;
+        }
         if (this.minecraft != null && this.mouseInContentRange(this.lastMouseX, this.lastMouseY)) {
             ComponentMouseHit hit = this.getComponentHitAtContentPosition(this.lastMouseX, this.lastMouseY);
             if (hit != null) {
@@ -2227,11 +2352,11 @@ public class GuideScreen extends Screen {
     }
 
     public int getContentWidth() {
-        return this.imageWidth - 2 * this.getContentStartX();
+        return Math.max(1, this.imageWidth - 2 * this.getContentStartX());
     }
 
     public int getContentHeight() {
-        return this.imageHeight - 2 * this.getContentStartY();
+        return Math.max(1, this.imageHeight - 2 * this.getContentStartY());
     }
 
     public int getContentStartX() {
@@ -2658,6 +2783,8 @@ public class GuideScreen extends Screen {
     public void removed() {
         this.scrollGesture.reset();
         this.structureGuiPreview.clear();
+        this.zoomSlider.cancel();
+        GuideZoomStore.instance().flush();
         super.removed();
     }
 

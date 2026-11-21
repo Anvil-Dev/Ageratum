@@ -51,6 +51,10 @@ public final class StructureTest {
     private Path export;
 
     public StructureTest(IEventBus bus) {
+        if (Boolean.getBoolean("ageratum.guideZoomTest")) {
+            new GuideZoomClientTest(bus);
+            return;
+        }
         MarkdownBlockClientTest.register(bus);
         bus.addListener((ModelEvent.BakingCompleted event) -> this.ready = true);
         NeoForge.EVENT_BUS.addListener(this::tick);
