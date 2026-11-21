@@ -5,6 +5,7 @@ import dev.anvilcraft.lib.v2.config.BoundedDiscrete;
 import dev.anvilcraft.lib.v2.config.Comment;
 import dev.anvilcraft.lib.v2.config.Config;
 import dev.anvilcraft.resource.ageratum.Ageratum;
+import dev.anvilcraft.resource.ageratum.client.layout.DirectorySide;
 import net.neoforged.fml.config.ModConfig;
 
 @Config(
@@ -12,7 +13,10 @@ import net.neoforged.fml.config.ModConfig;
     type = ModConfig.Type.CLIENT
 )
 public class AgeratumClientConfig {
-    @Comment("Use dark guide textures and colors")
+    @Comment("Directory panel position: LEFT puts navigation left and content right; RIGHT reverses them. Applies to open guides")
+    public DirectorySide directorySide = DirectorySide.LEFT;
+
+    @Comment("Use dark guide layouts; applies to open guides and persists across pages")
     public boolean darkMode = false;
 
     @Comment("Reduce motion in structure GUI previews; keep gentle fades")

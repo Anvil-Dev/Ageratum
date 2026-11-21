@@ -1,6 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown;
 
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutResourceProvider;
 
 /**
  * Markdown 扩展语法组件工厂接口。
@@ -9,7 +10,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDCompone
  * 工厂会接收完整的扩展上下文，包括参数、渲染内容和原始文本。</p>
  */
 @FunctionalInterface
-public interface MDExtensionComponentFactory {
+public interface MDExtensionComponentFactory extends LayoutResourceProvider {
     /**
      * 根据扩展上下文创建 Markdown 组件。
      *

@@ -8,6 +8,7 @@ import dev.anvilcraft.resource.ageratum.client.feat.markdown.MDRenderContext;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDImageComponent;
 import dev.anvilcraft.resource.ageratum.client.feat.markdown.component.MDTextComponent;
+import dev.anvilcraft.resource.ageratum.client.layout.LayoutResourceProvider;
 import dev.anvilcraft.resource.ageratum.client.registries.AgeratumRegistries;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -143,7 +144,7 @@ public abstract class MDRecipeComponent extends MDImageComponent {
     /**
      * 不同 {@link RecipeType} 到具体渲染组件的工厂接口。
      */
-    public interface RecipeComponentFactory<T extends Recipe<?>> {
+    public interface RecipeComponentFactory<T extends Recipe<?>> extends LayoutResourceProvider {
         /**
          * 当前工厂支持的配方类型。
          */
