@@ -139,7 +139,7 @@ public interface AgeratumConstants {
          * 尖括号形式扩展标签打开模式。
          */
         Pattern EXTENSION_TAG_OPEN_PATTERN = Pattern.compile(
-            "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+)(?:\\s+([^>]*?))?\\s*(/?)>\\s*$",
+            "^<\\s*((?:[a-z0-9_.-]+:)?[a-z0-9_./-]+?)(?:\\s+([^>]*?))?\\s*(/?)>\\s*$",
             Pattern.CASE_INSENSITIVE
         );
 

@@ -60,15 +60,15 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                                 && location.getPath().endsWith(AgeratumConstants.Guide.MARKDOWN_EXTENSION)
                 );
                 // 第一趟：读取文件、提取 front matter、建立物品绑定缓存
-                Map<ResourceLocation, String> rawMarkdowns = new LinkedHashMap<>();
+                Map<ResourceLocation, FrontMatter> sources = new LinkedHashMap<>();
                 Map<ResourceLocation, List<ItemDocumentBinding>> itemDocuments = new HashMap<>();
                 for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
                     ResourceLocation location = entry.getKey();
                     try (var stream = entry.getValue().open()) {
                         String markdown = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        rawMarkdowns.put(location, markdown);
-                        Map<String, Object> frontMatter = MarkdownParser.extractFrontMatter(markdown).frontMatter();
-                        MDDocument tempDoc = new MDDocument(location, frontMatter, List.of());
+                        FrontMatter source = FrontMatter.read(markdown);
+                        sources.put(location, source);
+                        MDDocument tempDoc = new MDDocument(location, source.values(), List.of());
                         for (GuideItemBinding binding : tempDoc.getGuideItemBindings()) {
                             itemDocuments
                                 .computeIfAbsent(binding.itemId(), ignored -> new ArrayList<>())
@@ -86,10 +86,10 @@ private static final PreparableReloadListener RELOAD_LISTENER =
                 // 第二趟：完整解析文档，<ref> 可查新的物品绑定缓存
                 Map<ResourceLocation, MDDocument> prepared = new HashMap<>();
                 Map<NavigationTreeKey, MutableDirectoryNode> treeRoots = new HashMap<>();
-                for (Map.Entry<ResourceLocation, String> entry : rawMarkdowns.entrySet()) {
+                for (Map.Entry<ResourceLocation, FrontMatter> entry : sources.entrySet()) {
                     ResourceLocation location = entry.getKey();
                     try {
-                        MDDocument document = parser.parseDocument(location, entry.getValue());
+                        MDDocument document = parser.parseBody(location, entry.getValue());
                         prepared.put(location, document);
                         registerNavigationNode(treeRoots, location, document);
                     } catch (RuntimeException exception) {

@@ -51,6 +51,7 @@ public final class StructureTest {
     private Path export;
 
     public StructureTest(IEventBus bus) {
+        MarkdownBlockClientTest.register(bus);
         bus.addListener((ModelEvent.BakingCompleted event) -> this.ready = true);
         NeoForge.EVENT_BUS.addListener(this::tick);
         if (Boolean.getBoolean("ageratum.scrollEntityTest")) {
@@ -70,6 +71,7 @@ public final class StructureTest {
             return;
         }
         if (mc.getOverlay() != null || this.stage != 0 || !this.ready) return;
+        DirectoryClientTest.verify();
         this.stage = 1;
         GameRules rules = new GameRules();
         rules.getRule(GameRules.RULE_SPAWN_CHUNK_RADIUS).set(0, null);

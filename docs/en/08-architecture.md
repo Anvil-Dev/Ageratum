@@ -73,78 +73,30 @@ maintenance and contribution.
 - Registers the `/ageratum` client command
 - Registers the document pre-load reload listener (`RegisterClientReloadListenersEvent`)
 
-### Parsing Pipeline
+### Parsing pipeline
 
-```
-Raw .md file text
-        │
-        ▼
-  MarkdownParser.parseDocument()
-        │
-        ├─ Extract Front Matter (--- ... ---)
-        │
-        ├─ Collect reference link definitions ([ref]: url)
-        │
-        ├─ Block-level parsing (line-by-line scan)
-        │   ├─ Code fence detection
-        │   ├─ Extension syntax (::: and <tag>)
-        │   ├─ Lists, blockquotes, tables
-        │   ├─ Headings, horizontal rules
-        │   ├─ Images
-        │   └─ Paragraphs (default)
-        │
-        └─ MDDocument { frontMatter, components }
-                │
-                ▼
-         Component list passed to GuideScreen for rendering
+1. `MarkdownParser.parseDocument()` reads the front matter and normalizes line endings.
+2. `MarkdownBlockSource` identifies code fences, pairs extension delimiters, and indexes reference-link definitions outside code. This lets a paragraph use a reference defined later on the page.
+3. `MarkdownBlockParser` consumes blocks in source order. It passes parsed children and the original body to registered extension factories. Single-line parsers accept or pass on each candidate in ascending priority order. Ties follow registration order.
+4. `InlineMarkdownParser` formats inline content. Backtick code spans preserve literal text, including strings that resemble links or extension tags.
+5. After the top-level blocks are known, directory placeholders expand into links to those headings. `GuideScreen` uses the same anchor normalization when handling clicks.
+
+`parseDocument()` returns an `MDDocument` with its source, metadata and renderable components. `parse()` returns the component list.
+
+### Inline parsing (`MDComponent.textFormat()`)
+
+```text
+InlineMarkdownParser.format()
+  ├─ Backtick code span → literal text with code styling
+  └─ Text between spans → protect Markdown escapes
+       → parse links, images, emphasis and strikethrough
+       → restore escaped literals and resolve registered inline styles and tags
+  → combine spans and text in source order as FormattedText
 ```
 
-### Inline Parsing (`MDComponent.textFormat()`)
+### Resource reload (`GuideDocumentCache`)
 
-```
-Raw text
-    │
-    ├─ Pre-process escape characters (\* → %%MDESC42%%)
-    │
-    ├─ Expand reference links
-    │
-    ├─ Extract code spans (`code`) to prevent inner content parsing
-    │
-    ├─ Autolinks (<url>, <email>)
-    │
-    ├─ Standard links ([text](url))
-    │
-    ├─ Bold / Italic / Strikethrough
-    │
-    ├─ Custom inline styles
-    │   (query INLINE_STYLE_PARSER_REGISTRY, sorted by priority)
-    │
-    └─ Restore escape characters
-    │
-    ▼
-  FormattedText
-```
-
-### Cache Mechanism (`GuideDocumentCache`)
-
-```
-Resource pack load/reload event
-        │
-        ▼
-  RELOAD_LISTENER.prepare()
-        │
-        ├─ Scan all ageratum/**/*.md files
-        ├─ Parse each into MDDocument
-        └─ Build NavigationTree (directory structure)
-        │
-        ▼
-  RELOAD_LISTENER.apply()
-        │
-        ├─ Atomically replace PARSED_DOCUMENT_CACHE (volatile Map)
-        └─ Atomically replace NAVIGATION_TREE_CACHE
-```
-
-The cache uses `volatile` variables for thread visibility and `Map.copyOf()` for immutability.
+During the first pass, the loader reads each guide's front matter once and indexes item bindings across all pages. The second pass parses each saved body using that index. A `<ref>` can therefore resolve an item bound to a page encountered later in the scan. The reload listener builds navigation from the resulting documents and publishes the prepared caches in `apply()`.
 
 ---
 
@@ -207,7 +159,7 @@ Output FormattedText
 
 Each class has a single responsibility:
 
-- `MarkdownParser`: text → component list only
+- `MarkdownParser` coordinates front matter, block parsing and construction of the document model.
 - `GuideDocumentLoader`: path normalization and IO only
 - `GuideDocumentCache`: preload cache management only
 - `GuideScreen`: GUI rendering and user interaction only
