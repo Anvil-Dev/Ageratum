@@ -1,7 +1,15 @@
 dependencies {
-    implementation libs.bundles.anvillib
+    implementation libs.anvillib.config
+    implementation libs.anvillib.font
+    implementation libs.anvillib.registrum
+    implementation libs.anvillib.rendering
     interfaceInjectionData libs.anvillib.font
-    jarJar libs.bundles.anvillib
+
+    jarJar libs.anvillib.config
+    // Font already carries the same Rendering module, so do not embed a second copy.
+    jarJar libs.anvillib.font
+    // Registrum carries its required Util and Codec modules.
+    jarJar libs.anvillib.registrum
     implementation(libs.jhighlight) { transitive = false }
     jarJar libs.jhighlight
     implementation(libs.jsoup) { transitive = false }
