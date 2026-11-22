@@ -15,9 +15,6 @@ anvillib-font = { group = "dev.anvilcraft.lib", name = "anvillib-font-neoforge-2
 jhighlight = { group = "org.codelibs", name = "jhighlight", version.ref = "jhighlight" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
-[bundles]
-anvillib = ["anvillib-config", "anvillib-registrum", "anvillib-font", "anvillib-rendering"]
-
 [plugins]
 modDevGradle = { id = "net.neoforged.moddev", version.ref = "modDevGradle" }
 lombok = { id = "io.freefair.lombok", version.ref = "lombok" }
