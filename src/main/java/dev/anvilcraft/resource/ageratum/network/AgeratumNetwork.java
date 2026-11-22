@@ -32,6 +32,8 @@ public final class AgeratumNetwork {
             OpenGuidePayload.STREAM_CODEC,
             ClientPayloadHandler::handleOpenGuide
         );
+        registrar.playToClient(GitHubOpenGuidePayload.TYPE, GitHubOpenGuidePayload.STREAM_CODEC,
+            ClientPayloadHandler::handleOpenGitHubGuide);
         registrar.playToServer(
             ExportStructurePayload.TYPE,
             ExportStructurePayload.STREAM_CODEC,
@@ -50,5 +52,7 @@ public final class AgeratumNetwork {
     public static void sendOpenGuide(ServerPlayer serverPlayer, ResourceLocation location) {
         PacketDistributor.sendToPlayer(serverPlayer, new OpenGuidePayload(location));
     }
+    public static void sendOpenGitHubGuide(ServerPlayer player, String uri) {
+        PacketDistributor.sendToPlayer(player, new GitHubOpenGuidePayload(uri));
+    }
 }
-

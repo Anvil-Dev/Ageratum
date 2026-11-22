@@ -100,5 +100,7 @@
   "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.2": "10 游戏刻",
   "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.item_collector.Cooldown.value.3": "60 游戏刻",
   "ageratum.configuration.reduced_motion": "减少动态效果",
-  "ageratum.configuration.reduced_motion.tooltip": "减弱结构界面浮窗的缩放动画，保留淡入淡出"
+  "ageratum.configuration.reduced_motion.tooltip": "减弱结构界面浮窗的缩放动画，保留淡入淡出",
+  "gui.ageratum.github.loading": "加载中，请稍后...",
+  "gui.ageratum.github.load_failed": "加载失败..."
 }

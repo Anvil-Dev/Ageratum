@@ -1,5 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client;
 
+import dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver;
+import dev.anvilcraft.resource.ageratum.client.feat.github.GitHubGuideSource;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.logging.LogUtils;
 import dev.anvilcraft.lib.v2.config.ConfigManager;
@@ -208,7 +210,7 @@ public class AgeratumClient {
             currentGuideScreen = guideScreen;
         }
         ResourceManager resourceManager = minecraft.getResourceManager();
-        if (!GuideDocumentLoader.exists(resourceManager, location)) {
+        if (!GitHubAssetResolver.isGitHubLocation(location) && !GuideDocumentLoader.exists(resourceManager, location)) {
             return false;
         }
 
@@ -217,6 +219,13 @@ public class AgeratumClient {
         if (currentGuideScreen != null) {
             inheritedLabelScrollRows = currentGuideScreen.getLabelScrollRows();
             inheritedLabelScrollRemainder = currentGuideScreen.getLabelScrollRemainder();
+        }
+
+        if (GitHubAssetResolver.isGitHubLocation(location)) {
+            String content = GitHubGuideSource.readDocument(location);
+            if (content == null) return false;
+            return AgeratumClient.parseDocumentAndSetScreen(location, anchor, breadCrumbs, minecraft,
+                inheritedLabelScrollRows, inheritedLabelScrollRemainder, currentGuideScreen, preserveLabelState, content, false);
         }
 
         // 优先使用预解析缓存，缺失时回退为即时解析
