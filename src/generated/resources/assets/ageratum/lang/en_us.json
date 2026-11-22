@@ -100,5 +100,7 @@
   "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.pulse_generator.ExtraData.State.value.1": "Waiting",
   "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.pulse_generator.ExtraData.State.value.2": "Outputting",
   "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.pulse_generator.ExtraData.WaitingTime": "Delay",
-  "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.pulse_generator.ExtraData.WaitingTime.format": "%s ticks"
+  "tooltip.anvillib_rendering.structure_preview.nbt.anvilcraft.pulse_generator.ExtraData.WaitingTime.format": "%s ticks",
+  "gui.ageratum.github.load_failed": "Load failed...",
+  "gui.ageratum.github.loading": "Loading, wait please..."
 }

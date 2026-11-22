@@ -1,24 +1,20 @@
 package dev.anvilcraft.resource.ageratum;
 
+import dev.anvilcraft.resource.ageratum.init.AgeratumDataComponents;
+import dev.anvilcraft.resource.ageratum.item.GuideBookItem;
+import dev.anvilcraft.resource.ageratum.item.component.Doc;
 import dev.anvilcraft.resource.ageratum.client.constants.AgeratumConstants;
 import dev.anvilcraft.resource.ageratum.network.AgeratumNetwork;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -39,7 +35,8 @@ public class Ageratum {
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Ageratum.MOD_ID);
     public static final DeferredItem<Item> DEFAULT_GUIDE_ITEM = ITEMS.register(
         "guidebook",
-        () -> new Item(new Item.Properties().stacksTo(1))
+        () -> new GuideBookItem(new Item.Properties().stacksTo(1)
+            .component(AgeratumDataComponents.DOC.get(), Doc.of(location(AgeratumConstants.Guide.INDEX_FILE))))
     );
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DEFAULT_TAB = TABS.register(
         "default",
@@ -60,9 +57,9 @@ public class Ageratum {
      * @param modContainer 模组容器
      */
     public Ageratum(IEventBus modEventBus, ModContainer modContainer) {
+        AgeratumDataComponents.register(modEventBus);
         ITEMS.register(modEventBus);
         TABS.register(modEventBus);
-        NeoForge.EVENT_BUS.register(this);
     }
 
     /**
@@ -86,13 +83,8 @@ public class Ageratum {
         AgeratumNetwork.sendOpenGuide(player, location);
     }
 
-    @SubscribeEvent
-    public void useGuideItem(PlayerInteractEvent.RightClickItem event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        ItemStack stack = event.getItemStack();
-        if (!stack.is(Ageratum.DEFAULT_GUIDE_ITEM.get())) return;
-        Ageratum.openGuide(player, Ageratum.location(AgeratumConstants.Guide.INDEX_FILE));
-        event.getLevel().playSound(null, player, SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);
-        event.setCancellationResult(InteractionResult.SUCCESS);
+    /** Open a GitHub guide on the client that is holding or reading the book. */
+    public static void openGitHubGuide(ServerPlayer player, String uri) {
+        AgeratumNetwork.sendOpenGitHubGuide(player, uri);
     }
 }

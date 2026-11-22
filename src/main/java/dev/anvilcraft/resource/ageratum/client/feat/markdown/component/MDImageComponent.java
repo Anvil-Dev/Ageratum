@@ -1,5 +1,6 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component;
 
+import dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -86,6 +87,9 @@ public class MDImageComponent extends MDComponent {
         while (file.startsWith("/")) {
             file = file.substring(1);
         }
+        if (GitHubAssetResolver.isGitHubLocation(sourceLocation)) {
+            return GitHubImageComponent.of(sourceLocation, namespace + ":" + file);
+        }
         try {
             ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(namespace, file).withPrefix("textures/");
             return new MDImageComponent(imageLocation);
@@ -100,6 +104,9 @@ public class MDImageComponent extends MDComponent {
             return null;
         }
         try {
+            if (GitHubAssetResolver.isGitHubLocation(sourceLocation)) {
+                return GitHubImageComponent.of(sourceLocation, matcher.group(1));
+            }
             String path = getParsedPath(sourceLocation, matcher.group(1));
             return new MDImageComponent(sourceLocation.withPath(path));
         } catch (RuntimeException exception) {

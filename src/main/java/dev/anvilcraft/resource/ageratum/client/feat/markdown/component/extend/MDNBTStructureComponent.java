@@ -1,5 +1,7 @@
 package dev.anvilcraft.resource.ageratum.client.feat.markdown.component.extend;
 
+import dev.anvilcraft.resource.ageratum.client.feat.github.GitHubAssetResolver;
+import dev.anvilcraft.resource.ageratum.client.feat.github.GitHubRepoCache;
 import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.brigadier.StringReader;
@@ -817,6 +819,9 @@ public final class MDNBTStructureComponent extends MDComponent {
      * 最后回退到 classpath 路径。
      */
     private static @Nullable InputStream openStructureStream(StructureTarget target) throws IOException {
+        for (Path path : target.githubCandidatePaths()) {
+            if (Files.isRegularFile(path)) return Files.newInputStream(path);
+        }
         if (AgeratumClient.isPreviewLocation(target.location())) {
             for (String candidate : target.previewCandidatePaths()) {
                 Path previewPath = AgeratumClient.resolvePreviewAssetPath(candidate);
@@ -897,12 +902,26 @@ public final class MDNBTStructureComponent extends MDComponent {
         return currentFile.substring(0, slash);
     }
 
-    public record StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths) {
+    public record StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths,
+                                  List<Path> githubCandidatePaths) {
+        public StructureTarget(ResourceLocation location, String displayPath, List<String> previewCandidatePaths) {
+            this(location, displayPath, previewCandidatePaths, List.of());
+        }
+
         /**
          * 基于 markdown 源文档位置解析显式或相对的结构引用。
          */
         public static StructureTarget resolve(ResourceLocation sourceLocation, String rawTarget) {
             String trimmed = rawTarget.trim();
+            if (GitHubAssetResolver.isGitHubLocation(sourceLocation)) {
+                var state = GitHubRepoCache.getActiveState(sourceLocation);
+                List<Path> candidates = state == null ? List.of() : expandStructureExtensions(trimmed).stream()
+                    .map(path -> GitHubAssetResolver.resolve(state, sourceLocation, path))
+                    .filter(java.util.Objects::nonNull).toList();
+                ResourceLocation location = sourceLocation.withPath("structure/" + java.util.UUID.nameUUIDFromBytes(
+                    (sourceLocation + "\0" + trimmed).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                return new StructureTarget(location, trimmed, List.of(), candidates);
+            }
             if (trimmed.contains(":")) {
                 ResourceLocation location = ResourceLocation.parse(trimmed);
                 List<String> previewPaths = AgeratumClient.isPreviewLocation(location)
