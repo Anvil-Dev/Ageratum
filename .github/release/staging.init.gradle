@@ -1,0 +1,9 @@
+// Add a local publication destination without changing any release branch.
+gradle.beforeProject { project ->
+    project.pluginManager.withPlugin('maven-publish') {
+        project.publishing.repositories.maven {
+            name = 'ReleaseStaging'
+            url = project.layout.buildDirectory.dir('release/staging').get().asFile.toURI()
+        }
+    }
+}

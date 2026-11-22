@@ -1,91 +1,215 @@
-name: Upload Release Asset
+name: Create Multi-Version Releases
 on:
   workflow_dispatch:
-  release:
-    types: [ published ]
+    inputs:
+      tag:
+        description: 发布 tag 与构建版本，不带 v（例如 0.0.1 或 0.0.1+rc.1）
+        type: string
+        required: true
+      generate_release_notes:
+        description: Include GitHub-generated release notes from releases/1.21.1
+        type: boolean
+        default: false
+      dry_run:
+        description: Build and verify all four releases without publishing
+        type: boolean
+        default: true
+      bump_patch:
+        description: After a stable release is public, open a patch-bump PR per branch
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+concurrency:
+  group: ageratum-coordinated-release
+  cancel-in-progress: false
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CI_BUILD: 'false'
+  PR_BUILD: 'false'
+  RELEASE_TAG: ${{ inputs.tag }}
+  DRY_RUN: ${{ inputs.dry_run }}
+  GENERATE_RELEASE_NOTES: ${{ inputs.generate_release_notes }}
+  BUMP_PATCH: ${{ inputs.bump_patch }}
 
 jobs:
-  build:
-    permissions: write-all
+  prepare:
     runs-on: ubuntu-latest
-    env:
-      CI_BUILD: false
-      PR_BUILD: false
-      VERSION_TYPE: ${{ github.event.release.prerelease && 'alpha' || 'release' }}
+    # GitHub 的发布说明预览接口也要求 contents: write。
+    permissions: { contents: write, actions: read }
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      bump_patch: ${{ steps.plan.outputs.bump_patch }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
-
-      - name: Read Properties
-        id: 'properties'
-        uses: christian-draeger/read-properties@1.1.1
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - name: Check release recovery and publication gates
+        run: python3 -m unittest discover -s .github/release
+      - name: Check publishing configuration
+        if: ${{ !inputs.dry_run }}
+        env:
+          MAVEN_URL: ${{ secrets.MAVEN_URL }}
+          MAVEN_USER: ${{ secrets.MAVEN_USER }}
+          MAVEN_PASS: ${{ secrets.MAVEN_PASS }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          for key in MAVEN_URL MAVEN_USER MAVEN_PASS MODRINTH_TOKEN CURSEFORGE_TOKEN; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error::Missing required publishing secret: $key"
+              exit 1
+            fi
+          done
+          if [[ "$MAVEN_URL" != https://* ]]; then
+            echo "::error::MAVEN_URL must use HTTPS"
+            exit 1
+          fi
+      - id: plan
+        run: python3 .github/release/release.py prepare
+      - uses: actions/upload-artifact@v7
+        if: steps.plan.outputs.new == 'true'
         with:
-          path: gradle.properties
-          properties: 'mod_id mod_name java_version modrinth_id curseforge_id upload'
+          name: source-plan
+          path: release-plan.json
+          if-no-files-found: error
 
-      - name: Setup Java ${{ steps.properties.outputs.java_version }}
-        uses: actions/setup-java@v3.6.0
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      LINE: ${{ matrix.line }}
+      SOURCE_SHA: ${{ matrix.sha }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with: { path: control, persist-credentials: false }
+      - id: cache
+        working-directory: control/.github/release
+        run: python3 -c 'import os; from common import artifact, output; output("built", bool(artifact("build-" + os.environ["LINE"])))'
+      - uses: actions/checkout@v6
+        if: steps.cache.outputs.built != 'True'
+        with:
+          ref: ${{ matrix.sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        if: steps.cache.outputs.built != 'True'
         with:
           distribution: zulu
-          java-version: ${{ steps.properties.outputs.java_version }}
-
-      - name: make gradle wrapper executable
-        if: ${{ runner.os != 'Windows' }}
-        run: chmod +x ./gradlew
-
-      - name: Build with Gradle
-        uses: gradle/actions/setup-gradle@v4.3.1
-
-      - name: Build
-        run: ./gradlew build
-
-      - name: Get Version
-        id: version
+          java-version: ${{ matrix.java }}
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.cache.outputs.built != 'True'
+      - name: Stage and verify local publications
+        if: steps.cache.outputs.built != 'True'
         run: |
-          MESSAGE=$(ls build/libs/* | grep sources.jar -v | grep shadow.jar -v | grep slim.jar -v | awk -F '${{ steps.properties.outputs.mod_id }}-neoforge-|.jar' '{print $2}')
-          echo "version=$MESSAGE" >> $GITHUB_OUTPUT
-
-      - name: capture build artifacts
-        uses: actions/upload-artifact@v4.3.3
+          (cd source && bash gradlew -I ../control/.github/release/staging.init.gradle "-Pmod_version=$RELEASE_VERSION" \
+            build publishMavenJavaPublicationToReleaseStagingRepository --no-configuration-cache)
+          python3 control/.github/release/artifacts.py source "$LINE" "$SOURCE_SHA" "$RELEASE_VERSION" source/build/release/dist
+      - uses: actions/upload-artifact@v7
+        if: steps.cache.outputs.built != 'True'
         with:
-          name: "${{ steps.properties.outputs.mod_name }} ${{ steps.version.outputs.version }}"
-          path: build/libs/${{ steps.properties.outputs.mod_id }}-neoforge-${{ steps.version.outputs.version }}.jar
+          name: build-${{ matrix.line }}
+          path: source/build/release/
+          if-no-files-found: error
 
-      - name: Publish to maven
-        if: ${{ steps.properties.outputs.upload }}
-        run: ./gradlew publish
+  seal:
+    name: Verify and stage the GitHub release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions: { contents: write, actions: read }
+    steps:
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - uses: actions/download-artifact@v8
+        with: { name: source-plan }
+      - uses: actions/download-artifact@v8
+        with: { pattern: 'build-*', path: bundles }
+      - run: python3 .github/release/release.py seal
+
+  maven:
+    needs: [prepare, seal]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions: { actions: read, contents: read, statuses: write }
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      LINE: ${{ matrix.line }}
+    steps:
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - uses: actions/download-artifact@v8
+        with:
+          name: build-${{ matrix.line }}
+          path: built
+      - name: 上传原版 Maven 文件并核验远端
         env:
           MAVEN_URL: ${{ secrets.MAVEN_URL }}
           MAVEN_USERNAME: ${{ secrets.MAVEN_USER }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASS }}
-        continue-on-error: true
+        run: python3 .github/release/maven.py "$TAG" "$LINE" built/staging
 
-      - name: Upload Release Jar
-        uses: softprops/action-gh-release@v0.1.15
-        with:
-          files: |
-            build/libs/${{ steps.properties.outputs.mod_id }}-neoforge-${{ steps.version.outputs.version }}.jar
+  mod-sites:
+    needs: [prepare, seal]
+    if: ${{ !inputs.dry_run }}
+    permissions: { actions: read, contents: read, statuses: write }
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        target: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+        platform: [modrinth, curseforge]
+    name: ${{ matrix.platform }} / ${{ matrix.target.line }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - name: Upload verified files once
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          LINE: ${{ matrix.target.line }}
+          PLATFORM: ${{ matrix.platform }}
+          MODRINTH_TOKEN: ${{ matrix.platform == 'modrinth' && secrets.MODRINTH_TOKEN || '' }}
+          CURSEFORGE_TOKEN: ${{ matrix.platform == 'curseforge' && secrets.CURSEFORGE_TOKEN || '' }}
+        run: python3 .github/release/mod_sites.py "$TAG" "$LINE" "$PLATFORM"
 
-      - name: publish neoforge mc mod
-        uses: Kir-Antipov/mc-publish@v3.3
-        if: ${{ steps.properties.outputs.upload }}
-        continue-on-error: true
-        with:
-          name: "${{ steps.properties.outputs.mod_name }} For NeoForge v${{ steps.version.outputs.version }}"
-          version: ${{ steps.version.outputs.version }}
-          game-versions: 1.21.1
-          version-type: ${{ env.VERSION_TYPE }}
-          java: 21
-          fail-mode: skip
-          changelog: ${{ github.event.release.body }}
+  publish:
+    needs: [prepare, seal, maven, mod-sites]
+    runs-on: ubuntu-latest
+    permissions: { contents: write, statuses: read }
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - run: python3 .github/release/release.py publish "$TAG"
 
-          modrinth-id: ${{ steps.properties.outputs.modrinth_id }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          modrinth-featured: true
-
-          curseforge-id: ${{ steps.properties.outputs.curseforge_id }}
-          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-
-          files: |
-            build/libs/${{ steps.properties.outputs.mod_id }}-neoforge-${{ steps.version.outputs.version }}.jar
-            build/libs/${{ steps.properties.outputs.mod_id }}-neoforge-${{ steps.version.outputs.version }}-sources.jar
+  bump:
+    needs: [prepare, publish]
+    if: needs.prepare.outputs.bump_patch == 'true'
+    runs-on: ubuntu-latest
+    permissions: { contents: write, pull-requests: write }
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      LINE: ${{ matrix.line }}
+    steps:
+      - uses: actions/checkout@v6
+        with: { persist-credentials: false }
+      - run: python3 .github/release/release.py bump "$TAG" "$LINE"
