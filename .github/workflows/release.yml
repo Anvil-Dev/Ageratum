@@ -15,7 +15,7 @@ on:
         type: boolean
         default: true
       bump_patch:
-        description: After a stable release is public, open a patch-bump PR per branch
+        description: After a stable release is public, commit the patch bump directly to each branch
         type: boolean
         default: false
 
@@ -201,7 +201,7 @@ jobs:
     needs: [prepare, publish]
     if: needs.prepare.outputs.bump_patch == 'true'
     runs-on: ubuntu-latest
-    permissions: { contents: write, pull-requests: write }
+    permissions: { contents: write }
     strategy:
       fail-fast: false
       matrix:

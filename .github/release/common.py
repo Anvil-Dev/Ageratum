@@ -14,9 +14,9 @@ from urllib.request import Request, urlopen
 ANCHOR = "1.21.1"
 BRANCHES = {
     ANCHOR: "releases/1.21.1",
-    "26.1.2": "dev/26.1.2",
-    "26.2": "dev/26.2",
-    "26.3": "dev/26.3",
+    "26.1.2": "releases/26.1.2",
+    "26.2": "releases/26.2",
+    "26.3": "releases/26.3",
 }
 LINES = tuple(BRANCHES)
 VERSION_CORE = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"

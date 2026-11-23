@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from contextlib import contextmanager
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import artifacts
 import maven
@@ -108,7 +108,7 @@ class ReleasePipelineTest(unittest.TestCase):
             api.assert_not_called()
 
     @patch.dict(os.environ, ENV)
-    def test_qualified_release_does_not_open_bump_prs(self):
+    def test_qualified_release_does_not_request_a_bump(self):
         with (temporary_workspace(),
               patch.object(release, "artifact", return_value=None),
               patch.object(release, "github") as api,
@@ -158,26 +158,79 @@ class ReleasePipelineTest(unittest.TestCase):
                 release.bump(TAG, "26.3")
             api.assert_not_called()
 
-    def test_bump_uses_latest_branch_and_opens_pr_instead_of_mutating_branch(self):
-        target = "26.3"
+    @patch.dict(os.environ, ENV)
+    def test_bump_writes_only_a_fast_forward_commit_to_each_release_branch(self):
+        for line in ("1.21.1", "26.1.2", "26.2", "26.3"):
+            with self.subTest(line=line):
+                self.check_bump(line)
+
+    def check_bump(self, line, race=None):
+        branch = f"releases/{line}"
+        ref = f"git/ref/heads/{branch}"
         live_sha = "current-live"
+        current = props(line) + b"\n# preserved live setting\n"
+        expected = current.replace(b"mod_version=0.0.1", b"mod_version=0.0.2")
+        title = "chore(release): 将版本推进到 0.0.2 [skip ci]"
         with (patch.object(release, "tag_manifest", return_value={"version": TAG, "targets": {
-                  target: {"sha": SHAS[target]}}}),
+                  line: {"sha": SHAS[line]}}}),
               patch.object(release, "release_by_tag", return_value={"draft": False}),
-              patch.object(release, "repo", return_value="example/Ageratum"),
-              patch.object(release, "contents", return_value=props(target)),
+              patch.object(release, "contents", side_effect=[current, props(line)]) as read,
+              patch.object(release, "summary") as summary,
               patch.object(release, "github") as api):
             api.side_effect = [
-                {"object": {"sha": live_sha}}, [], None,
-                {"tree": {"sha": "base-tree"}}, {"sha": "new-tree"}, {"sha": "new-commit"}, {},
-                {"number": 7, "title": "chore(release): 将版本推进到 0.0.2 [skip ci]", "html_url": "https://example.org/pr"},
+                {"object": {"sha": live_sha}}, {"tree": {"sha": "base-tree"}},
+                {"sha": "new-tree"}, {"sha": "new-commit"},
+                {"object": {"sha": "another-tip" if race == "ref-read" else live_sha}},
+                RuntimeError("HTTP 422: Update is not a fast forward") if race == "patch" else {},
             ]
-            release.bump(TAG, target)
-            calls = dict((c.args[0], c.args[1] if len(c.args) > 1 else None) for c in api.call_args_list)
-            self.assertIn("mod_version=0.0.2\n", calls["git/trees"]["tree"][0]["content"])
-            self.assertEqual(calls["git/commits"]["parents"], [live_sha])
-            self.assertEqual(calls["git/refs"]["ref"], "refs/heads/release-bump/0.0.1/26.3")
-            self.assertEqual(calls["pulls"]["base"], "dev/26.3")
+            if race:
+                error = ValueError if race == "ref-read" else RuntimeError
+                message = "changed during the bump" if race == "ref-read" else "not a fast forward"
+                with self.assertRaisesRegex(error, message):
+                    release.bump(TAG, line)
+                summary.assert_not_called()
+            else:
+                release.bump(TAG, line)
+                summary.assert_called_once_with(
+                    f"{branch}: [{title}](https://github.com/example/Ageratum/commit/new-commit)")
+            self.assertEqual(read.call_args_list, [
+                call("gradle.properties", live_sha), call("gradle.properties", SHAS[line]),
+            ])
+            calls = [
+                call(ref),
+                call("git/commits/current-live"),
+                call("git/trees", {"base_tree": "base-tree", "tree": [
+                    {"path": "gradle.properties", "mode": "100644", "type": "blob", "content": expected.decode()}]}),
+                call("git/commits", {"message": title, "tree": "new-tree", "parents": [live_sha]}),
+                call(ref),
+            ]
+            if race != "ref-read":
+                calls.append(call(f"git/refs/heads/{branch}", {"sha": "new-commit", "force": False}, method="PATCH"))
+            self.assertEqual(api.call_args_list, calls)
+
+    @patch.dict(os.environ, ENV)
+    def test_bump_rejects_concurrent_branch_updates_without_creating_a_pr_or_ref(self):
+        self.check_bump("26.3", race="ref-read")
+        self.check_bump("26.3", race="patch")
+
+    @patch.dict(os.environ, ENV)
+    def test_bump_is_idempotent_and_preserves_diverged_versions(self):
+        line = "26.2"
+        with (patch.object(release, "tag_manifest", return_value={"version": TAG, "targets": {
+                  line: {"sha": SHAS[line]}}}),
+              patch.object(release, "release_by_tag", return_value={"draft": False}),
+              patch.object(release, "github", return_value={"object": {"sha": "live-tip"}}) as api,
+              patch.object(release, "contents") as read,
+              patch.object(release, "summary") as summary):
+            read.side_effect = [props(line).replace(b"0.0.1", b"0.0.2")]
+            release.bump(TAG, line)
+            api.assert_called_once_with("git/ref/heads/releases/26.2")
+            summary.assert_called_once_with("releases/26.2 is already at 0.0.2.")
+            api.reset_mock()
+            read.side_effect = [props(line).replace(b"0.0.1", b"0.0.3"), props(line)]
+            with self.assertRaisesRegex(ValueError, "expected 0.0.1 from the locked source"):
+                release.bump(TAG, line)
+            api.assert_called_once_with("git/ref/heads/releases/26.2")
 
     def test_ambiguous_mod_site_upload_is_not_repeated(self):
         upload = Mock()

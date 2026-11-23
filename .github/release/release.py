@@ -5,7 +5,6 @@ import os
 import re
 import sys
 from pathlib import Path
-from urllib.parse import quote
 
 from common import (ANCHOR, BRANCHES, LINES, VERSION_LINE, artifact, commit_status, contents, digest, gh, github,
                     mod_version, output, release_type, repo, require, summary, tag_manifest)
@@ -167,8 +166,8 @@ def bump(tag, line):
     major, minor, patch = version.split(".")
     next_version = f"{major}.{minor}.{int(patch) + 1}"
     base = BRANCHES[line]
-    head = f"release-bump/{tag}/{line}"
-    sha = github("git/ref/heads/" + base)["object"]["sha"]
+    ref = "git/ref/heads/" + base
+    sha = github(ref)["object"]["sha"]
     props = contents("gradle.properties", sha)
     current = mod_version(props)
     if current == next_version:
@@ -177,32 +176,14 @@ def bump(tag, line):
     expected = mod_version(contents("gradle.properties", plan["targets"][line]["sha"]))
     require(current == expected, f"{base} is at {current}; expected {expected} from the locked source")
     title = f"chore(release): 将版本推进到 {next_version} [skip ci]"
-    owner = repo().split("/")[0]
-    prior = github(f"pulls?state=all&base={quote(base, safe='')}&head={quote(owner + ':' + head, safe='')}")
-    pr = next((item for item in prior if item["state"] == "open"), None)
-    if prior and not pr:
-        raise ValueError(f"The bump PR for {base} was closed: {prior[0]['html_url']}")
-    ref = github("git/ref/heads/" + head, missing=True)
-    if ref:
-        commit = github("commits/" + ref["object"]["sha"])
-        require(commit["commit"]["message"].splitlines()[0] == title and len(commit["parents"]) == 1
-                and [f["filename"] for f in commit["files"]] == ["gradle.properties"],
-                f"Unexpected content on {head}")
-        parent = contents("gradle.properties", commit["parents"][0]["sha"])
-        require(mod_version(parent) == expected and contents("gradle.properties", ref["object"]["sha"]) ==
-                VERSION_LINE.sub(lambda m: m[1] + next_version.encode() + m[3], parent), f"Conflicting {head}")
-    else:
-        updated = VERSION_LINE.sub(lambda m: m[1] + next_version.encode() + m[3], props)
-        base_tree = github("git/commits/" + sha)["tree"]["sha"]
-        tree = github("git/trees", {"base_tree": base_tree, "tree": [
-            {"path": "gradle.properties", "mode": "100644", "type": "blob", "content": updated.decode()}]})
-        commit = github("git/commits", {"message": title, "tree": tree["sha"], "parents": [sha]})
-        github("git/refs", {"ref": "refs/heads/" + head, "sha": commit["sha"]})
-    if not pr:
-        pr = github("pulls", {"title": title, "head": head, "base": base,
-                             "body": f"发布 {tag} 后推进开发版本。Squash 合并时请保留 [skip ci]。"})
-    require(pr["title"] == title, f"Unexpected title on PR #{pr['number']}")
-    summary(f"{base}: [{title}]({pr['html_url']})")
+    updated = VERSION_LINE.sub(lambda m: m[1] + next_version.encode() + m[3], props)
+    base_tree = github("git/commits/" + sha)["tree"]["sha"]
+    tree = github("git/trees", {"base_tree": base_tree, "tree": [
+        {"path": "gradle.properties", "mode": "100644", "type": "blob", "content": updated.decode()}]})
+    commit = github("git/commits", {"message": title, "tree": tree["sha"], "parents": [sha]})
+    require(github(ref)["object"]["sha"] == sha, f"{base} changed during the bump; rerun the failed job")
+    github("git/refs/heads/" + base, {"sha": commit["sha"], "force": False}, method="PATCH")
+    summary(f"{base}: [{title}](https://github.com/{repo()}/commit/{commit['sha']})")
 
 
 if __name__ == "__main__":
